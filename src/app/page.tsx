@@ -20,7 +20,7 @@ export default function Home() {
 
   return (
     <>
-      <TopBar />
+      <TopBar brandId={brandId} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <BrandSelector value={brandId} onChange={setBrandId} />
@@ -59,7 +59,7 @@ export default function Home() {
 
         <ResearchAssistant />
       </main>
-      <Footer />
+      <Footer brandId={brandId} />
     </>
   );
 }

@@ -48,3 +48,12 @@ export type JobRun = {
   items_inserted: number;
   error: string | null;
 };
+
+export type Overview = {
+  total_mentions: number;
+  mentions_24h: number;
+  mentions_7d: number;
+  total_sources: number;
+  last_sync_at: string | null;
+  next_sync_estimate: string | null;
+};

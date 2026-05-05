@@ -2,6 +2,7 @@ import type {
   Brand,
   JobRun,
   MentionsListResponse,
+  Overview,
   SourceCount,
   TimelinePoint,
 } from "./types";
@@ -54,4 +55,7 @@ export const apiClient = {
     ),
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),
+
+  overview: (brand_id: number) =>
+    api<Overview>(`/api/stats/overview?brand_id=${brand_id}`),
 };
