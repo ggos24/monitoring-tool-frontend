@@ -1,0 +1,261 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { Search } from "lucide-react";
+
+import { apiClient } from "@/lib/api";
+import { KickerLabel } from "@/components/ui/kicker-label";
+import { SentimentPill } from "@/components/ui/sentiment-pill";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+const PAGE_SIZE = 8;
+
+type SentimentFilter = "all" | "positive" | "neutral" | "negative";
+
+const SENTIMENT_FILTERS: { key: SentimentFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "positive", label: "+" },
+  { key: "neutral", label: "~" },
+  { key: "negative", label: "−" },
+];
+
+export function MentionsList({ brandId }: { brandId: number | null }) {
+  const enabled = brandId !== null;
+
+  const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [sentiment, setSentiment] = useState<SentimentFilter>("all");
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debounced, brandId]);
+
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ["mentions", brandId, debounced, page],
+    queryFn: () =>
+      apiClient.mentions({
+        brand_id: brandId!,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        search: debounced || undefined,
+      }),
+    enabled,
+    placeholderData: keepPreviousData,
+  });
+
+  const total = data?.total ?? 0;
+  const items = data?.items ?? [];
+  const start = items.length === 0 ? 0 : page * PAGE_SIZE + 1;
+  const end = page * PAGE_SIZE + items.length;
+  const canPrev = page > 0;
+  const canNext = (page + 1) * PAGE_SIZE < total;
+
+  return (
+    <div className="bg-zinc-950 p-5">
+      <div className="flex items-center justify-between">
+        <KickerLabel>Mentions</KickerLabel>
+        <div className="font-mono text-[11px] text-zinc-600 tabular-nums">
+          {total > 0 && `${total.toLocaleString()} total`}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search title or body..."
+            className={cn(
+              "h-8 w-full border border-zinc-800 bg-zinc-950 pr-2 pl-7 sm:w-72",
+              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
+              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+            )}
+          />
+        </div>
+
+        <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
+          {SENTIMENT_FILTERS.map((f) => {
+            const isActive = f.key === sentiment;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => setSentiment(f.key)}
+                className={cn(
+                  "px-2 py-0.5 font-mono text-[11px] leading-none transition-colors",
+                  isActive
+                    ? "bg-zinc-50 text-black"
+                    : "bg-transparent text-zinc-600 hover:text-zinc-300",
+                )}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        {!enabled ? (
+          <EmptyMessage>Select a brand to load mentions.</EmptyMessage>
+        ) : error ? (
+          <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
+            <span>Failed to load mentions</span>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+            >
+              retry
+            </button>
+          </div>
+        ) : isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full bg-zinc-900" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <EmptyMessage>No mentions in selected period.</EmptyMessage>
+        ) : (
+          <ul
+            className={cn(
+              "divide-y divide-zinc-900",
+              isFetching && "opacity-60 transition-opacity",
+            )}
+          >
+            {items.map((m) => (
+              <MentionRow key={m.id} mention={m} />
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {enabled && total > 0 && (
+        <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3">
+          <div className="font-mono text-[11px] text-zinc-600 tabular-nums">
+            Showing {start}–{end} of {total.toLocaleString()}
+          </div>
+          <div className="flex items-center gap-2">
+            <PageButton
+              disabled={!canPrev}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              ← Prev
+            </PageButton>
+            <PageButton
+              disabled={!canNext}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next →
+            </PageButton>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MentionRow({
+  mention,
+}: {
+  mention: {
+    id: number;
+    url: string | null;
+    title: string | null;
+    body: string | null;
+    source_domain: string | null;
+    published_at: string;
+  };
+}) {
+  const onClick = () => {
+    if (mention.url) window.open(mention.url, "_blank", "noopener,noreferrer");
+  };
+  const ts = formatTimestamp(mention.published_at);
+  return (
+    <li
+      onClick={onClick}
+      className={cn(
+        "-mx-2 cursor-pointer px-2 py-3 transition-colors hover:bg-zinc-900/50",
+      )}
+    >
+      <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-zinc-600">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate">{mention.source_domain ?? "—"}</span>
+          <span aria-hidden>·</span>
+          <span className="shrink-0">{ts}</span>
+        </div>
+        <SentimentPill variant="neutral">Neutral</SentimentPill>
+      </div>
+      <div className="mt-1.5 text-[13px] text-zinc-50">
+        {mention.title ?? "(untitled)"}
+      </div>
+      {mention.body && (
+        <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-600">
+          {mention.body}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function PageButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] transition-colors",
+        disabled
+          ? "cursor-not-allowed text-zinc-700"
+          : "text-zinc-400 hover:border-zinc-700 hover:text-zinc-50",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function EmptyMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="font-mono text-[11px] text-zinc-500">{children}</div>
+  );
+}
+
+function formatTimestamp(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const now = Date.now();
+    const diffMs = now - d.getTime();
+    const diffMin = Math.round(diffMs / 60_000);
+    if (diffMin < 1) return "just now";
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.round(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.round(diffHr / 24);
+    if (diffDay < 30) return `${diffDay}d ago`;
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return iso;
+  }
+}

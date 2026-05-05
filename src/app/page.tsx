@@ -1,60 +1,65 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api";
+import { useState } from "react";
+
+import { TopBar } from "@/components/dashboard/top-bar";
+import { Footer } from "@/components/dashboard/footer";
+import { BrandSelector } from "@/components/dashboard/brand-selector";
+import { PeriodToggle } from "@/components/dashboard/period-toggle";
+import { KpiGrid } from "@/components/dashboard/kpi-grid";
+import { TimelineChart } from "@/components/dashboard/timeline-chart";
+import { SourcesList } from "@/components/dashboard/sources-list";
+import { MentionsList } from "@/components/dashboard/mentions-list";
+import { AnomalyAlert } from "@/components/dashboard/anomaly-alert";
+import { SentimentBreakdown } from "@/components/dashboard/sentiment-breakdown";
+import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 
 export default function Home() {
-  const { data: brands, isLoading, error } = useQuery({
-    queryKey: ["brands"],
-    queryFn: apiClient.brands,
-  });
+  const [brandId, setBrandId] = useState<number | null>(null);
+  const [days, setDays] = useState<number>(7);
 
   return (
-    <main className="min-h-screen bg-background text-foreground p-8 font-mono">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-2 h-2 bg-emerald-400" />
-          <h1 className="text-sm">u24-pulse</h1>
+    <>
+      <TopBar />
+      <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <BrandSelector value={brandId} onChange={setBrandId} />
+          <PeriodToggle value={days} onChange={setDays} />
         </div>
 
-        <div className="border border-zinc-900 bg-zinc-950 p-6">
-          <div className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-            Connection test
+        <div className="mb-6">
+          {brandId !== null && <KpiGrid brandId={brandId} days={days} />}
+        </div>
+
+        <div className="mb-6">
+          <AnomalyAlert />
+        </div>
+
+        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
+          <div className="bg-black lg:col-span-2">
+            {brandId !== null && (
+              <TimelineChart brandId={brandId} days={days} />
+            )}
           </div>
-          {isLoading && (
-            <div className="text-zinc-400 text-sm">
-              Loading brands from {process.env.NEXT_PUBLIC_API_URL}...
-            </div>
-          )}
-          {error && (
-            <div className="text-red-400 text-sm">
-              Error: {(error as Error).message}
-            </div>
-          )}
-          {brands && (
-            <div className="space-y-2">
-              <div className="text-zinc-400 text-sm">
-                ✓ Connected to backend. Found {brands.length} brand(s):
-              </div>
-              {brands.map((b) => (
-                <div key={b.id} className="flex items-center gap-3 text-sm">
-                  <div
-                    className={`w-1.5 h-1.5 ${
-                      b.is_active ? "bg-emerald-400" : "bg-zinc-700"
-                    }`}
-                  />
-                  <span>{b.name}</span>
-                  <span className="text-zinc-600">({b.mentions_count})</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="bg-black">
+            <SentimentBreakdown />
+          </div>
         </div>
 
-        <div className="mt-8 text-xs text-zinc-600">
-          Stage 1 complete · Next: implement DASHBOARD_DESIGN.md components
+        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
+          <div className="bg-black">
+            {brandId !== null && (
+              <SourcesList brandId={brandId} days={days} />
+            )}
+          </div>
+          <div className="bg-black lg:col-span-2">
+            {brandId !== null && <MentionsList brandId={brandId} />}
+          </div>
         </div>
-      </div>
-    </main>
+
+        <ResearchAssistant />
+      </main>
+      <Footer />
+    </>
   );
 }
