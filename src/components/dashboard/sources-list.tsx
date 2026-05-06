@@ -58,7 +58,7 @@ export function SourcesList({
       ) : (
         <>
           <ColumnHeader />
-          <ul className="-mx-2 space-y-2">
+          <ul className="-mx-2">
             {data.map((s) => (
               <SourceRow
                 key={s.domain}
@@ -66,7 +66,6 @@ export function SourcesList({
                 count={s.count}
                 score={s.score}
                 isPropaganda={s.is_propaganda}
-                max={data[0].count || 1}
                 isActive={s.domain === selectedDomain}
                 onToggle={onToggleDomain}
               />
@@ -91,7 +90,6 @@ function SourceRow({
   count,
   score,
   isPropaganda,
-  max,
   isActive,
   onToggle,
 }: {
@@ -99,11 +97,9 @@ function SourceRow({
   count: number;
   score: number;
   isPropaganda: boolean;
-  max: number;
   isActive: boolean;
   onToggle: (domain: string) => void;
 }) {
-  const pct = Math.max(2, Math.round((count / max) * 100));
   return (
     <li>
       <button
@@ -116,11 +112,11 @@ function SourceRow({
             : `Filter mentions to ${domain}`
         }
         className={cn(
-          "group block w-full cursor-pointer px-2 py-1.5 text-left transition-colors",
+          "block w-full cursor-pointer px-2 py-1.5 text-left transition-colors",
           isActive ? "bg-zinc-900" : "hover:bg-zinc-900/60",
         )}
       >
-        <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span
             className={cn(
               "flex min-w-0 items-center gap-2 font-mono text-xs",
@@ -146,22 +142,6 @@ function SourceRow({
             </span>
             <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
           </span>
-        </div>
-        <div
-          className={cn(
-            "h-[3px] transition-colors",
-            isActive
-              ? "bg-zinc-700"
-              : "bg-zinc-800 group-hover:bg-zinc-700",
-          )}
-        >
-          <div
-            className={cn(
-              "h-full transition-colors",
-              isActive ? "bg-zinc-50" : "bg-zinc-700 group-hover:bg-zinc-50",
-            )}
-            style={{ width: `${pct}%` }}
-          />
         </div>
       </button>
     </li>
