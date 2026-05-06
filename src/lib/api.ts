@@ -57,8 +57,14 @@ export const apiClient = {
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 
-  timeline: (topic_id: number, days = 7) =>
-    api<TimelinePoint[]>(`/api/stats/timeline?topic_id=${topic_id}&days=${days}`),
+  timeline: (
+    topic_id: number,
+    days = 7,
+    granularity: "hour" | "day" = "day",
+  ) =>
+    api<TimelinePoint[]>(
+      `/api/stats/timeline?topic_id=${topic_id}&days=${days}&granularity=${granularity}`,
+    ),
 
   topSources: (topic_id: number, days = 7, limit = 10) =>
     api<SourceCount[]>(

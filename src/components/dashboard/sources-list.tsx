@@ -110,7 +110,7 @@ function SourceRow({
           <span className="truncate">{domain}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2">
-          <span className="font-mono text-[11px] text-zinc-600 tabular-nums">
+          <span className="font-mono text-xs font-medium text-zinc-100 tabular-nums">
             {count}
           </span>
           <DomainScoreBadge score={score} isPropaganda={isPropaganda} />

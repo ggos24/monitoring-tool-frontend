@@ -93,10 +93,14 @@ The dashboard composes from these primitives (build them as reusable React compo
 ### 5. ChartCard / LineChart
 - Card holds: kicker label, subtitle, and chart canvas.
 - Chart: line chart with subtle area fill (8% opacity).
-- Line color: emerald (#34d399), stroke-width 1.5, with circular dots at each data point (3px radius, 5px on hover).
+- Line color: emerald (#34d399), stroke-width 1.5, with circular dots at each data point (3px radius, 5px on hover; 2px when there are 24+ points so the hourly view stays clean).
 - Grid: only horizontal lines, color border-default, no vertical grid.
 - Axes: 10px monospace labels, text-faint.
 - Tooltip: bg-elevated, border-strong, no border-radius, monospace 11px.
+- **Bucket granularity** (Mentions over time):
+  - 24h period → **hourly** buckets (24 points), X-axis ticks `HH:00` UTC, subtitle "Hourly mention count, last 24 hours (UTC)". Daily granularity collapses 24h into 1–2 dots and hides intra-day spikes.
+  - 7d / 30d / 90d → **daily** buckets, X-axis ticks `MM-DD`, subtitle "Daily mention count, last N days".
+  - Frontend chooses granularity from `days` and passes it as `granularity=hour|day` to `/api/stats/timeline`.
 - Library: Recharts (preferred) or Chart.js — whichever Claude Code finds cleaner with TypeScript.
 
 ### 6. SentimentBreakdown (coming-soon variant)
@@ -114,7 +118,8 @@ The dashboard composes from these primitives (build them as reusable React compo
 
 ### 8. SourcesList
 - Sidebar-style card.
-- Each source row: domain name (mono, text-secondary) + count (text-faint, tabular).
+- Each source row: domain name (mono, text-secondary) on the left + right cluster `count + DomainScoreBadge`. Count uses **mono medium, text-primary, tabular-nums** so it reads as the row's data anchor next to the colored score square (faint counts got lost on dark cards).
+- DomainScoreBadge: 18×18 sharp square with the score digit 0–5 inside; palette runs red (0, propaganda) → orange (1) → zinc (2, unknown) → lime (3) → green (4) → emerald (5, top trusted). Native tooltip on hover.
 - Below text: 3px-tall bar showing relative count (filled portion = count / max_count percentage).
 - Hover: bar fill turns text-primary, base bar turns border-strong.
 - Footer: "View all 38 sources ↗" — mono, text-faint, opens Sources tab on click. **Use sendPrompt to open natural-language search later.**
@@ -192,7 +197,7 @@ All data comes from FastAPI backend at `NEXT_PUBLIC_API_URL`. Use TanStack Query
 
 Endpoints used by Overview page:
 - `GET /api/topics` — for TopicSelector dropdown
-- `GET /api/stats/timeline?topic_id=X&days=N` — for line chart
+- `GET /api/stats/timeline?topic_id=X&days=N&granularity=hour|day` — for line chart (hourly for 24h, daily otherwise)
 - `GET /api/stats/sources?topic_id=X&days=N&limit=10` — for SourcesList
 - `GET /api/mentions?topic_id=X&limit=8&offset=0&search=&sentiment=` — for MentionsList
 - `GET /api/stats/overview?topic_id=X` — for TopBar live status and Footer counts (added in Stage 2.4; consolidates several KPI inputs in one shot).
