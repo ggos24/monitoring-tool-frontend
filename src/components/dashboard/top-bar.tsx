@@ -136,8 +136,9 @@ function formatCountdown(diffMs: number): string {
   const hr = Math.floor(totalSec / 3600);
   const min = Math.floor((totalSec % 3600) / 60);
   const sec = totalSec % 60;
-  if (hr > 0) return `in ${hr}h ${min}m`;
-  if (min > 0) return `in ${min}m ${String(sec).padStart(2, "0")}s`;
+  const ss = String(sec).padStart(2, "0");
+  if (hr > 0) return `in ${hr}h ${String(min).padStart(2, "0")}m ${ss}s`;
+  if (min > 0) return `in ${min}m ${ss}s`;
   return `in ${sec}s`;
 }
 
