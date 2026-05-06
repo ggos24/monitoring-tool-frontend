@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function BrandSelector({
+export function TopicSelector({
   value,
   onChange,
 }: {
@@ -23,8 +23,8 @@ export function BrandSelector({
   onChange: (id: number) => void;
 }) {
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["brands"],
-    queryFn: apiClient.brands,
+    queryKey: ["topics"],
+    queryFn: apiClient.topics,
   });
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function BrandSelector({
   if (error || !data) {
     return (
       <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-400">
-        <span>Failed to load brands</span>
+        <span>Failed to load topics</span>
         <button
           type="button"
           onClick={() => refetch()}
@@ -52,7 +52,7 @@ export function BrandSelector({
     );
   }
 
-  const selected = data.find((b) => b.id === value) ?? null;
+  const selected = data.find((t) => t.id === value) ?? null;
 
   return (
     <DropdownMenu>
@@ -63,14 +63,14 @@ export function BrandSelector({
           "hover:border-zinc-700 aria-expanded:border-zinc-700",
         )}
       >
-        <span className="text-zinc-600">brand:</span>
+        <span className="text-zinc-600">topic:</span>
         {selected ? (
           <>
             <span className="font-medium">{selected.name}</span>
             <span className="text-zinc-600">({selected.mentions_count})</span>
           </>
         ) : (
-          <span className="text-zinc-500">Select brand</span>
+          <span className="text-zinc-500">Select topic</span>
         )}
         <ChevronDown className="size-3 text-zinc-600" />
       </DropdownMenuTrigger>
@@ -80,26 +80,26 @@ export function BrandSelector({
         sideOffset={4}
         className="min-w-(--anchor-width) border border-zinc-800 bg-zinc-950 p-0 text-zinc-50 ring-0 shadow-none"
       >
-        {data.map((brand) => (
+        {data.map((topic) => (
           <DropdownMenuItem
-            key={brand.id}
-            onClick={() => onChange(brand.id)}
+            key={topic.id}
+            onClick={() => onChange(topic.id)}
             className={cn(
               "flex cursor-default items-center gap-3 px-3 py-2 font-mono text-xs",
               "focus:bg-zinc-900 focus:text-zinc-50",
-              brand.id === value && "bg-zinc-900",
+              topic.id === value && "bg-zinc-900",
             )}
           >
             <span
               aria-hidden
               className={cn(
                 "size-1.5",
-                brand.is_active ? "bg-emerald-400" : "bg-zinc-700",
+                topic.is_active ? "bg-emerald-400" : "bg-zinc-700",
               )}
             />
-            <span className="flex-1">{brand.name}</span>
+            <span className="flex-1">{topic.name}</span>
             <span className="text-zinc-600 tabular-nums">
-              {brand.mentions_count}
+              {topic.mentions_count}
             </span>
           </DropdownMenuItem>
         ))}
@@ -108,7 +108,7 @@ export function BrandSelector({
           disabled
           className="flex cursor-default items-center gap-2 px-3 py-2 font-mono text-xs text-zinc-600"
         >
-          + Add new brand
+          + Add new topic
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

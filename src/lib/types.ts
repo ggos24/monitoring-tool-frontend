@@ -1,13 +1,14 @@
-export type Brand = {
+export type Topic = {
   id: number;
   name: string;
+  query: string;
   is_active: boolean;
   mentions_count: number;
 };
 
 export type Mention = {
   id: number;
-  brand_id: number;
+  topic_id: number;
   source_id: number;
   url: string | null;
   title: string | null;
@@ -56,4 +57,5 @@ export type Overview = {
   total_sources: number;
   last_sync_at: string | null;
   next_sync_estimate: string | null;
+  schedule_interval_seconds: number;
 };

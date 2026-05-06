@@ -6,7 +6,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # u24-pulse-web
 
-Internal brand-monitoring dashboard for the u24 media team. Frontend-only repo — the backend is the FastAPI service in `ggos24/monitoring-tool` (private), deployed to Railway. This app is a pure read-mostly client of that backend, deployed to Vercel.
+Internal topic-monitoring dashboard for the u24 media team. Frontend-only repo — the backend is the FastAPI service in `ggos24/monitoring-tool` (private), deployed to Railway. This app is a pure read-mostly client of that backend, deployed to Vercel.
+
+The data primitive is a **Topic** (saved search query the system tracks across news sources). Internal TS types and API paths use `Topic`/`/api/topics`. UI copy mirrors that. The app was originally scaffolded around "Brand" — that term is fully retired; if you see it anywhere, it's stale and should be renamed.
 
 ## Stack
 
@@ -78,7 +80,7 @@ Deployment is automatic — `git push origin main` triggers a Vercel build via t
 ## Phases
 
 - **Stage 1 (done):** scaffold + connection test on `/`.
-- **Stage 2:** implement components from `DASHBOARD_DESIGN.md` — TopBar, BrandSelector, PeriodToggle, KpiCard, ChartCard, SentimentBreakdown (coming-soon), AnomalyAlert (coming-soon), SourcesList, MentionsList, SentimentPill, ComingSoonBadge, ResearchAssistantTeaser, Footer.
+- **Stage 2:** implement components from `DASHBOARD_DESIGN.md` — TopBar, TopicSelector, PeriodToggle, KpiCard, ChartCard, SentimentBreakdown (coming-soon), AnomalyAlert (coming-soon), SourcesList, MentionsList, SentimentPill, ComingSoonBadge, ResearchAssistantTeaser, Footer.
 - **Stage 3:** compose the Overview page from those components.
 
 ## Repos and URLs

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "u24-pulse",
-  description: "Brand monitoring tool",
+  description: "Topic monitoring tool",
 };
 
 export default function RootLayout({

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
-import { BrandSelector } from "@/components/dashboard/brand-selector";
+import { TopicSelector } from "@/components/dashboard/topic-selector";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
 import { TimelineChart } from "@/components/dashboard/timeline-chart";
@@ -15,20 +15,20 @@ import { SentimentBreakdown } from "@/components/dashboard/sentiment-breakdown";
 import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 
 export default function Home() {
-  const [brandId, setBrandId] = useState<number | null>(null);
+  const [topicId, setTopicId] = useState<number | null>(null);
   const [days, setDays] = useState<number>(7);
 
   return (
     <>
-      <TopBar brandId={brandId} />
+      <TopBar topicId={topicId} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <BrandSelector value={brandId} onChange={setBrandId} />
+          <TopicSelector value={topicId} onChange={setTopicId} />
           <PeriodToggle value={days} onChange={setDays} />
         </div>
 
         <div className="mb-6">
-          {brandId !== null && <KpiGrid brandId={brandId} days={days} />}
+          {topicId !== null && <KpiGrid topicId={topicId} days={days} />}
         </div>
 
         <div className="mb-6">
@@ -37,8 +37,8 @@ export default function Home() {
 
         <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
           <div className="bg-black lg:col-span-2">
-            {brandId !== null && (
-              <TimelineChart brandId={brandId} days={days} />
+            {topicId !== null && (
+              <TimelineChart topicId={topicId} days={days} />
             )}
           </div>
           <div className="bg-black">
@@ -48,18 +48,18 @@ export default function Home() {
 
         <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
           <div className="bg-black">
-            {brandId !== null && (
-              <SourcesList brandId={brandId} days={days} />
+            {topicId !== null && (
+              <SourcesList topicId={topicId} days={days} />
             )}
           </div>
           <div className="bg-black lg:col-span-2">
-            {brandId !== null && <MentionsList brandId={brandId} />}
+            {topicId !== null && <MentionsList topicId={topicId} />}
           </div>
         </div>
 
         <ResearchAssistant />
       </main>
-      <Footer brandId={brandId} />
+      <Footer topicId={topicId} />
     </>
   );
 }

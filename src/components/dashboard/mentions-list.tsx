@@ -21,8 +21,8 @@ const SENTIMENT_FILTERS: { key: SentimentFilter; label: string }[] = [
   { key: "negative", label: "−" },
 ];
 
-export function MentionsList({ brandId }: { brandId: number | null }) {
-  const enabled = brandId !== null;
+export function MentionsList({ topicId }: { topicId: number | null }) {
+  const enabled = topicId !== null;
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -36,13 +36,13 @@ export function MentionsList({ brandId }: { brandId: number | null }) {
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, brandId]);
+  }, [debounced, topicId]);
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["mentions", brandId, debounced, page],
+    queryKey: ["mentions", topicId, debounced, page],
     queryFn: () =>
       apiClient.mentions({
-        brand_id: brandId!,
+        topic_id: topicId!,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         search: debounced || undefined,
@@ -107,7 +107,7 @@ export function MentionsList({ brandId }: { brandId: number | null }) {
 
       <div className="mt-4">
         {!enabled ? (
-          <EmptyMessage>Select a brand to load mentions.</EmptyMessage>
+          <EmptyMessage>Select a topic to load mentions.</EmptyMessage>
         ) : error ? (
           <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
             <span>Failed to load mentions</span>

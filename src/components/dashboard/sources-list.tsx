@@ -7,17 +7,17 @@ import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function SourcesList({
-  brandId,
+  topicId,
   days,
 }: {
-  brandId: number | null;
+  topicId: number | null;
   days: number;
 }) {
-  const enabled = brandId !== null;
+  const enabled = topicId !== null;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", brandId, days, 10],
-    queryFn: () => apiClient.topSources(brandId!, days, 10),
+    queryKey: ["sources", topicId, days, 10],
+    queryFn: () => apiClient.topSources(topicId!, days, 10),
     enabled,
   });
 
@@ -29,7 +29,7 @@ export function SourcesList({
       </div>
 
       {!enabled ? (
-        <EmptyMessage>Select a brand to load sources</EmptyMessage>
+        <EmptyMessage>Select a topic to load sources</EmptyMessage>
       ) : isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (

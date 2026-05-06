@@ -1,10 +1,10 @@
 import type {
-  Brand,
   JobRun,
   MentionsListResponse,
   Overview,
   SourceCount,
   TimelinePoint,
+  Topic,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -22,7 +22,7 @@ async function api<T>(path: string): Promise<T> {
 }
 
 type MentionsParams = {
-  brand_id: number;
+  topic_id: number;
   limit?: number;
   offset?: number;
   search?: string;
@@ -32,11 +32,11 @@ type MentionsParams = {
 };
 
 export const apiClient = {
-  brands: () => api<Brand[]>("/api/brands"),
+  topics: () => api<Topic[]>("/api/topics"),
 
   mentions: (params: MentionsParams) => {
     const qs = new URLSearchParams();
-    qs.set("brand_id", String(params.brand_id));
+    qs.set("topic_id", String(params.topic_id));
     if (params.limit !== undefined) qs.set("limit", String(params.limit));
     if (params.offset !== undefined) qs.set("offset", String(params.offset));
     if (params.search) qs.set("search", params.search);
@@ -46,16 +46,16 @@ export const apiClient = {
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 
-  timeline: (brand_id: number, days = 7) =>
-    api<TimelinePoint[]>(`/api/stats/timeline?brand_id=${brand_id}&days=${days}`),
+  timeline: (topic_id: number, days = 7) =>
+    api<TimelinePoint[]>(`/api/stats/timeline?topic_id=${topic_id}&days=${days}`),
 
-  topSources: (brand_id: number, days = 7, limit = 10) =>
+  topSources: (topic_id: number, days = 7, limit = 10) =>
     api<SourceCount[]>(
-      `/api/stats/sources?brand_id=${brand_id}&days=${days}&limit=${limit}`,
+      `/api/stats/sources?topic_id=${topic_id}&days=${days}&limit=${limit}`,
     ),
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),
 
-  overview: (brand_id: number) =>
-    api<Overview>(`/api/stats/overview?brand_id=${brand_id}`),
+  overview: (topic_id: number) =>
+    api<Overview>(`/api/stats/overview?topic_id=${topic_id}`),
 };

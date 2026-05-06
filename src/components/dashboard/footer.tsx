@@ -4,11 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 
-export function Footer({ brandId }: { brandId: number | null }) {
+export function Footer({ topicId }: { topicId: number | null }) {
   const { data } = useQuery({
-    queryKey: ["overview", brandId],
-    queryFn: () => apiClient.overview(brandId!),
-    enabled: brandId !== null,
+    queryKey: ["overview", topicId],
+    queryFn: () => apiClient.overview(topicId!),
+    enabled: topicId !== null,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });

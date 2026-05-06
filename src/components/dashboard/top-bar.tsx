@@ -15,17 +15,17 @@ const NAV: NavItem[] = [
   { label: "Settings" },
 ];
 
-export function TopBar({ brandId }: { brandId: number | null }) {
+export function TopBar({ topicId }: { topicId: number | null }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["overview", brandId],
-    queryFn: () => apiClient.overview(brandId!),
-    enabled: brandId !== null,
+    queryKey: ["overview", topicId],
+    queryFn: () => apiClient.overview(topicId!),
+    enabled: topicId !== null,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 
   const status = renderStatus({
-    enabled: brandId !== null,
+    enabled: topicId !== null,
     isLoading,
     hasError: !!error,
     lastSyncAt: data?.last_sync_at ?? null,

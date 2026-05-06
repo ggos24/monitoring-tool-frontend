@@ -22,17 +22,17 @@ const TICK_STYLE = {
 };
 
 export function TimelineChart({
-  brandId,
+  topicId,
   days,
 }: {
-  brandId: number | null;
+  topicId: number | null;
   days: number;
 }) {
-  const enabled = brandId !== null;
+  const enabled = topicId !== null;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["timeline", brandId, days],
-    queryFn: () => apiClient.timeline(brandId!, days),
+    queryKey: ["timeline", topicId, days],
+    queryFn: () => apiClient.timeline(topicId!, days),
     enabled,
   });
 
@@ -45,7 +45,7 @@ export function TimelineChart({
 
       <div className="h-64">
         {!enabled ? (
-          <EmptyState message="Select a brand to load timeline" />
+          <EmptyState message="Select a topic to load timeline" />
         ) : isLoading ? (
           <Skeleton className="h-full w-full bg-zinc-900" />
         ) : error ? (

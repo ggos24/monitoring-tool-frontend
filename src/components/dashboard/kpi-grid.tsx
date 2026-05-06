@@ -6,33 +6,33 @@ import { apiClient } from "@/lib/api";
 import { KpiCard } from "./kpi-card";
 
 export function KpiGrid({
-  brandId,
+  topicId,
   days,
 }: {
-  brandId: number | null;
+  topicId: number | null;
   days: number;
 }) {
-  const enabled = brandId !== null;
+  const enabled = topicId !== null;
 
   const mentionsQuery = useQuery({
-    queryKey: ["mentions", brandId, "kpi", days],
-    queryFn: () => apiClient.mentions({ brand_id: brandId!, limit: 1 }),
+    queryKey: ["mentions", topicId, "kpi", days],
+    queryFn: () => apiClient.mentions({ topic_id: topicId!, limit: 1 }),
     enabled,
   });
 
-  const brandsQuery = useQuery({
-    queryKey: ["brands"],
-    queryFn: apiClient.brands,
+  const topicsQuery = useQuery({
+    queryKey: ["topics"],
+    queryFn: apiClient.topics,
   });
 
   const sourcesQuery = useQuery({
-    queryKey: ["sources", brandId, days, 100],
-    queryFn: () => apiClient.topSources(brandId!, days, 100),
+    queryKey: ["sources", topicId, days, 100],
+    queryFn: () => apiClient.topSources(topicId!, days, 100),
     enabled,
   });
 
   const totalMentions = mentionsQuery.data?.total ?? 0;
-  const activeBrands = brandsQuery.data?.filter((b) => b.is_active).length ?? 0;
+  const activeTopics = topicsQuery.data?.filter((t) => t.is_active).length ?? 0;
   const sourceCount = sourcesQuery.data?.length ?? 0;
   const dailyAvg = days > 0 ? Math.round(totalMentions / days) : 0;
 
@@ -60,10 +60,10 @@ export function KpiGrid({
         isLoading={isSourcesLoading}
       />
       <KpiCard
-        kicker="Brands"
-        value={activeBrands}
+        kicker="Topics"
+        value={activeTopics}
         subtitle="monitored"
-        isLoading={brandsQuery.isLoading}
+        isLoading={topicsQuery.isLoading}
       />
     </div>
   );

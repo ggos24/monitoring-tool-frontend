@@ -71,10 +71,10 @@ The dashboard composes from these primitives (build them as reusable React compo
 - Right: live status indicator: pulsing 6×6 emerald square + "Live · last sync 2m ago" in monospace text-faint.
 - Mobile (<780px): hide nav, keep logo + status.
 
-### 2. BrandSelector (dropdown)
-- Trigger button: bg-elevated, border-strong, padding 8/12, monospace prefix "brand:" (text-faint), brand name (medium weight), count in parens (text-faint mono), chevron-down icon.
-- On click: dropdown panel below, same width minimum, list of brands with status dot (emerald if active, neutral if disabled), name, count right-aligned in mono.
-- Footer row of dropdown: "+ Add new brand" — opens modal (out of scope for MVP, just a visual cue).
+### 2. TopicSelector (dropdown)
+- Trigger button: bg-elevated, border-strong, padding 8/12, monospace prefix "topic:" (text-faint), topic name (medium weight), count in parens (text-faint mono), chevron-down icon.
+- On click: dropdown panel below, same width minimum, list of topics with status dot (emerald if active, neutral if disabled), name, count right-aligned in mono.
+- Footer row of dropdown: "+ Add new topic" — opens modal (out of scope for MVP, just a visual cue).
 
 ### 3. PeriodToggle
 - Inline pill group: 24h / 7d / 30d / 90d.
@@ -162,7 +162,7 @@ Vertical stack from top to bottom:
 
 1. TopBar (sticky)
 2. Padding container (max-width 1440px, padding 20px)
-3. Row: BrandSelector (left) + PeriodToggle (right)
+3. Row: TopicSelector (left) + PeriodToggle (right)
 4. KpiCards grid (4 columns desktop, 2×2 mobile)
 5. AnomalyAlert (coming-soon)
 6. Two-column row: ChartCard `Mentions over time` (2/3 width) + SentimentBreakdown coming-soon (1/3 width)
@@ -178,7 +178,7 @@ Vertical stack from top to bottom:
 
 ## Interactions
 
-- **Brand dropdown:** click trigger toggles, click outside closes, ESC closes. Selecting a brand updates dashboard data (refetches).
+- **Topic dropdown:** click trigger toggles, click outside closes, ESC closes. Selecting a topic updates dashboard data (refetches).
 - **Period toggle:** clicking refetches data.
 - **Search:** debounced 300ms, then refetches `/api/mentions?search=...`.
 - **Sentiment filter:** instant — refetches with `sentiment` param.
@@ -191,18 +191,18 @@ Vertical stack from top to bottom:
 All data comes from FastAPI backend at `NEXT_PUBLIC_API_URL`. Use TanStack Query (react-query) for caching and refetching. Default stale time: 60 seconds.
 
 Endpoints used by Overview page:
-- `GET /api/brands` — for BrandSelector dropdown
-- `GET /api/stats/timeline?brand_id=X&days=N` — for line chart
-- `GET /api/stats/sources?brand_id=X&days=N&limit=10` — for SourcesList
-- `GET /api/mentions?brand_id=X&limit=8&offset=0&search=&sentiment=` — for MentionsList
-- KPI cards are derived from `/api/mentions` total + `/api/brands` count + `/api/stats/sources` array length. Compute on the client; later we'll add `/api/stats/overview` to consolidate.
+- `GET /api/topics` — for TopicSelector dropdown
+- `GET /api/stats/timeline?topic_id=X&days=N` — for line chart
+- `GET /api/stats/sources?topic_id=X&days=N&limit=10` — for SourcesList
+- `GET /api/mentions?topic_id=X&limit=8&offset=0&search=&sentiment=` — for MentionsList
+- `GET /api/stats/overview?topic_id=X` — for TopBar live status and Footer counts (added in Stage 2.4; consolidates several KPI inputs in one shot).
 
 ## What is NOT in MVP
 
 - Sentiment pills with REAL sentiment (always show neutral until Phase 2)
 - AnomalyAlert content (always show static placeholder behind blur)
 - AI Research Assistant (visual teaser only)
-- Multi-brand comparison
+- Multi-topic comparison
 - Authentication/login
 - Settings page
 - Mobile-optimized navigation (hamburger menu)
