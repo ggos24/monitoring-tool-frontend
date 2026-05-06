@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -21,7 +21,15 @@ const SENTIMENT_FILTERS: { key: SentimentFilter; label: string }[] = [
   { key: "negative", label: "−" },
 ];
 
-export function MentionsList({ topicId }: { topicId: number | null }) {
+export function MentionsList({
+  topicId,
+  domain,
+  onClearDomain,
+}: {
+  topicId: number | null;
+  domain: string | null;
+  onClearDomain: () => void;
+}) {
   const enabled = topicId !== null;
 
   const [search, setSearch] = useState("");
@@ -36,16 +44,17 @@ export function MentionsList({ topicId }: { topicId: number | null }) {
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, topicId]);
+  }, [debounced, topicId, domain]);
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["mentions", topicId, debounced, page],
+    queryKey: ["mentions", topicId, debounced, domain, page],
     queryFn: () =>
       apiClient.mentions({
         topic_id: topicId!,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         search: debounced || undefined,
+        source_domain: domain || undefined,
       }),
     enabled,
     placeholderData: keepPreviousData,
@@ -66,6 +75,27 @@ export function MentionsList({ topicId }: { topicId: number | null }) {
           {total > 0 && `${total.toLocaleString()} total`}
         </div>
       </div>
+
+      {domain && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-zinc-600">
+            Filter
+          </span>
+          <button
+            type="button"
+            onClick={onClearDomain}
+            title="Clear domain filter"
+            className={cn(
+              "group inline-flex items-center gap-1.5 border border-zinc-700 bg-zinc-900 py-0.5 pr-1 pl-2",
+              "font-mono text-[11px] text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-800",
+            )}
+          >
+            <span className="text-zinc-500">domain:</span>
+            <span>{domain}</span>
+            <X className="size-3 text-zinc-500 transition-colors group-hover:text-zinc-200" />
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative">

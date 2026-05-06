@@ -6,13 +6,18 @@ import { apiClient } from "@/lib/api";
 import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function SourcesList({
   topicId,
   days,
+  selectedDomain,
+  onToggleDomain,
 }: {
   topicId: number | null;
   days: number;
+  selectedDomain: string | null;
+  onToggleDomain: (domain: string) => void;
 }) {
   const enabled = topicId !== null;
 
@@ -53,7 +58,7 @@ export function SourcesList({
       ) : (
         <>
           <ColumnHeader />
-          <ul className="space-y-3">
+          <ul className="-mx-2 space-y-2">
             {data.map((s) => (
               <SourceRow
                 key={s.domain}
@@ -62,6 +67,8 @@ export function SourcesList({
                 score={s.score}
                 isPropaganda={s.is_propaganda}
                 max={data[0].count || 1}
+                isActive={s.domain === selectedDomain}
+                onToggle={onToggleDomain}
               />
             ))}
           </ul>
@@ -85,44 +92,78 @@ function SourceRow({
   score,
   isPropaganda,
   max,
+  isActive,
+  onToggle,
 }: {
   domain: string;
   count: number;
   score: number;
   isPropaganda: boolean;
   max: number;
+  isActive: boolean;
+  onToggle: (domain: string) => void;
 }) {
   const pct = Math.max(2, Math.round((count / max) * 100));
   return (
-    <li className="group cursor-default">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2 font-mono text-xs text-zinc-300">
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
-            alt=""
-            width={16}
-            height={16}
-            loading="lazy"
-            className="size-4 shrink-0"
-            onError={(e) => {
-              e.currentTarget.style.visibility = "hidden";
-            }}
-          />
-          <span className="truncate">{domain}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-6">
-          <span className="w-8 text-right font-mono text-xs font-medium text-zinc-100 tabular-nums">
-            {count}
+    <li>
+      <button
+        type="button"
+        onClick={() => onToggle(domain)}
+        aria-pressed={isActive}
+        title={
+          isActive
+            ? `Clear filter for ${domain}`
+            : `Filter mentions to ${domain}`
+        }
+        className={cn(
+          "group block w-full cursor-pointer px-2 py-1.5 text-left transition-colors",
+          isActive ? "bg-zinc-900" : "hover:bg-zinc-900/60",
+        )}
+      >
+        <div className="mb-1.5 flex items-center justify-between gap-2">
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-2 font-mono text-xs",
+              isActive ? "text-zinc-50" : "text-zinc-300",
+            )}
+          >
+            <img
+              src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+              alt=""
+              width={16}
+              height={16}
+              loading="lazy"
+              className="size-4 shrink-0"
+              onError={(e) => {
+                e.currentTarget.style.visibility = "hidden";
+              }}
+            />
+            <span className="truncate">{domain}</span>
           </span>
-          <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
-        </span>
-      </div>
-      <div className="h-[3px] bg-zinc-800 group-hover:bg-zinc-700">
+          <span className="flex shrink-0 items-center gap-6">
+            <span className="w-8 text-right font-mono text-xs font-medium text-zinc-100 tabular-nums">
+              {count}
+            </span>
+            <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
+          </span>
+        </div>
         <div
-          className="h-full bg-zinc-700 transition-colors group-hover:bg-zinc-50"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+          className={cn(
+            "h-[3px] transition-colors",
+            isActive
+              ? "bg-zinc-700"
+              : "bg-zinc-800 group-hover:bg-zinc-700",
+          )}
+        >
+          <div
+            className={cn(
+              "h-full transition-colors",
+              isActive ? "bg-zinc-50" : "bg-zinc-700 group-hover:bg-zinc-50",
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </button>
     </li>
   );
 }

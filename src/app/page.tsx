@@ -17,13 +17,23 @@ import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 export default function Home() {
   const [topicId, setTopicId] = useState<number | null>(null);
   const [days, setDays] = useState<number>(7);
+  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+
+  const handleSelectTopic = (id: number | null) => {
+    setTopicId(id);
+    setSelectedDomain(null);
+  };
+
+  const toggleDomain = (domain: string) => {
+    setSelectedDomain((prev) => (prev === domain ? null : domain));
+  };
 
   return (
     <>
       <TopBar topicId={topicId} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TopicSelector value={topicId} onChange={setTopicId} />
+          <TopicSelector value={topicId} onChange={handleSelectTopic} />
           <PeriodToggle value={days} onChange={setDays} />
         </div>
 
@@ -49,11 +59,22 @@ export default function Home() {
         <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-800 bg-zinc-800 lg:grid-cols-3">
           <div className="bg-black">
             {topicId !== null && (
-              <SourcesList topicId={topicId} days={days} />
+              <SourcesList
+                topicId={topicId}
+                days={days}
+                selectedDomain={selectedDomain}
+                onToggleDomain={toggleDomain}
+              />
             )}
           </div>
           <div className="bg-black lg:col-span-2">
-            {topicId !== null && <MentionsList topicId={topicId} />}
+            {topicId !== null && (
+              <MentionsList
+                topicId={topicId}
+                domain={selectedDomain}
+                onClearDomain={() => setSelectedDomain(null)}
+              />
+            )}
           </div>
         </div>
 

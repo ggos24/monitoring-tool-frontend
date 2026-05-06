@@ -35,6 +35,7 @@ type MentionsParams = {
   offset?: number;
   search?: string;
   sentiment?: number;
+  source_domain?: string;
   date_from?: string;
   date_to?: string;
 };
@@ -52,6 +53,7 @@ export const apiClient = {
     if (params.offset !== undefined) qs.set("offset", String(params.offset));
     if (params.search) qs.set("search", params.search);
     if (params.sentiment !== undefined) qs.set("sentiment", String(params.sentiment));
+    if (params.source_domain) qs.set("source_domain", params.source_domain);
     if (params.date_from) qs.set("date_from", params.date_from);
     if (params.date_to) qs.set("date_to", params.date_to);
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
