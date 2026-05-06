@@ -21,7 +21,7 @@ export function Footer({ topicId }: { topicId: number | null }) {
   const nextSyncText = renderNextSync(data?.next_sync_estimate ?? null);
 
   return (
-    <footer className="border-t border-zinc-900 py-[18px]">
+    <footer className="border-t border-zinc-800 py-[18px]">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-center gap-x-2 px-5 font-mono text-[11px] text-zinc-700">
         <span>u24-pulse v0.1</span>
         <span aria-hidden>·</span>

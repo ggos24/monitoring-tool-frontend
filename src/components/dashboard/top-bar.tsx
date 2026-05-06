@@ -41,7 +41,7 @@ export function TopBar({ topicId }: { topicId: number | null }) {
   });
 
   return (
-    <header className="sticky top-0 z-30 h-14 border-b border-zinc-900 bg-black/80 backdrop-blur">
+    <header className="sticky top-0 z-30 h-14 border-b border-zinc-800 bg-black/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5">
         <div className="flex items-center gap-2">
           <div className="size-2 bg-emerald-400" aria-hidden />

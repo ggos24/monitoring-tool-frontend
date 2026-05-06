@@ -25,22 +25,24 @@ export function KpiGrid({
     queryFn: apiClient.topics,
   });
 
-  const sourcesQuery = useQuery({
-    queryKey: ["sources", topicId, days, 100],
-    queryFn: () => apiClient.topSources(topicId!, days, 100),
+  const overviewQuery = useQuery({
+    queryKey: ["overview", topicId],
+    queryFn: () => apiClient.overview(topicId!),
     enabled,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 
   const totalMentions = mentionsQuery.data?.total ?? 0;
   const activeTopics = topicsQuery.data?.filter((t) => t.is_active).length ?? 0;
-  const sourceCount = sourcesQuery.data?.length ?? 0;
+  const sourceCount = overviewQuery.data?.total_sources ?? 0;
   const dailyAvg = days > 0 ? Math.round(totalMentions / days) : 0;
 
   const isMentionsLoading = enabled && mentionsQuery.isLoading;
-  const isSourcesLoading = enabled && sourcesQuery.isLoading;
+  const isSourcesLoading = enabled && overviewQuery.isLoading;
 
   return (
-    <div className="grid grid-cols-2 gap-px bg-zinc-900 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-px bg-zinc-800 md:grid-cols-4">
       <KpiCard
         kicker="Total mentions"
         value={totalMentions.toLocaleString()}
@@ -56,7 +58,7 @@ export function KpiGrid({
       <KpiCard
         kicker="Sources"
         value={sourceCount}
-        subtitle={`distinct domains in ${days}d`}
+        subtitle="distinct domains"
         isLoading={isSourcesLoading}
       />
       <KpiCard

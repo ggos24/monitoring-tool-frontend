@@ -130,7 +130,7 @@ export function MentionsList({ topicId }: { topicId: number | null }) {
         ) : (
           <ul
             className={cn(
-              "divide-y divide-zinc-900",
+              "divide-y divide-zinc-800",
               isFetching && "opacity-60 transition-opacity",
             )}
           >
@@ -142,7 +142,7 @@ export function MentionsList({ topicId }: { topicId: number | null }) {
       </div>
 
       {enabled && total > 0 && (
-        <div className="mt-4 flex items-center justify-between border-t border-zinc-900 pt-3">
+        <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-3">
           <div className="font-mono text-[11px] text-zinc-600 tabular-nums">
             Showing {start}–{end} of {total.toLocaleString()}
           </div>

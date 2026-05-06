@@ -35,7 +35,7 @@ export default function Home() {
           <AnomalyAlert />
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
+        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-800 bg-zinc-800 lg:grid-cols-3">
           <div className="bg-black lg:col-span-2">
             {topicId !== null && (
               <TimelineChart topicId={topicId} days={days} />
@@ -46,7 +46,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-900 bg-zinc-900 lg:grid-cols-3">
+        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-800 bg-zinc-800 lg:grid-cols-3">
           <div className="bg-black">
             {topicId !== null && (
               <SourcesList topicId={topicId} days={days} />

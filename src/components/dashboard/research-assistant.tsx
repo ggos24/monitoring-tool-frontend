@@ -10,7 +10,7 @@ const EXAMPLES = [
 
 export function ResearchAssistant() {
   return (
-    <div className="relative border border-zinc-900 bg-zinc-950 px-6 py-5">
+    <div className="relative border border-zinc-800 bg-zinc-950 px-6 py-5">
       <div className="absolute top-3 right-3">
         <ComingSoonBadge>Soon</ComingSoonBadge>
       </div>
@@ -34,7 +34,7 @@ export function ResearchAssistant() {
             {EXAMPLES.map((q) => (
               <li
                 key={q}
-                className="flex items-center border border-zinc-900 bg-black px-3 py-2 font-mono text-xs text-zinc-500"
+                className="flex items-center border border-zinc-800 bg-black px-3 py-2 font-mono text-xs text-zinc-500"
               >
                 <span aria-hidden className="mr-2 text-zinc-700">
                   $

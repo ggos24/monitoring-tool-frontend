@@ -64,7 +64,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
   }
 
   return (
-    <li className="border-b border-zinc-900 last:border-0">
+    <li className="border-b border-zinc-800 last:border-0">
       <div className="flex items-center justify-between gap-3 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <span
@@ -137,7 +137,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
               className={cn(
                 "border px-3 py-1 font-mono text-[11px] transition-colors",
                 !dirty || mutation.isPending
-                  ? "cursor-not-allowed border-zinc-900 bg-zinc-950 text-zinc-700"
+                  ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
                   : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
               )}
             >

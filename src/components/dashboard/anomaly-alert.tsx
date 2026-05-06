@@ -4,7 +4,7 @@ import { ComingSoonBadge } from "@/components/ui/coming-soon-badge";
 
 export function AnomalyAlert() {
   return (
-    <div className="relative overflow-hidden border border-zinc-900 bg-zinc-950/50 px-5 py-4">
+    <div className="relative overflow-hidden border border-zinc-800 bg-zinc-950/50 px-5 py-4">
       <div className="flex items-start gap-3">
         <div className="flex size-8 shrink-0 items-center justify-center border border-amber-900 bg-amber-950">
           <AlertTriangle className="size-3.5 text-amber-400" aria-hidden />

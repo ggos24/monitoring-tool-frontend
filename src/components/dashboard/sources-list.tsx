@@ -61,7 +61,7 @@ export function SourcesList({
               />
             ))}
           </ul>
-          <div className="mt-5 border-t border-zinc-900 pt-3">
+          <div className="mt-5 border-t border-zinc-800 pt-3">
             <a
               href="#"
               className="cursor-default font-mono text-[11px] text-zinc-600 hover:text-zinc-400"
@@ -87,13 +87,26 @@ function SourceRow({
   const pct = Math.max(2, Math.round((count / max) * 100));
   return (
     <li className="group cursor-default">
-      <div className="mb-1.5 flex items-baseline justify-between">
-        <span className="font-mono text-xs text-zinc-300">{domain}</span>
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="flex items-center gap-2 font-mono text-xs text-zinc-300">
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
+            alt=""
+            width={16}
+            height={16}
+            loading="lazy"
+            className="size-4 shrink-0"
+            onError={(e) => {
+              e.currentTarget.style.visibility = "hidden";
+            }}
+          />
+          {domain}
+        </span>
         <span className="font-mono text-[11px] text-zinc-600 tabular-nums">
           {count}
         </span>
       </div>
-      <div className="h-[3px] bg-zinc-900 group-hover:bg-zinc-800">
+      <div className="h-[3px] bg-zinc-800 group-hover:bg-zinc-700">
         <div
           className="h-full bg-zinc-700 transition-colors group-hover:bg-zinc-50"
           style={{ width: `${pct}%` }}

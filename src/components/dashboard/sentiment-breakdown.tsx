@@ -23,7 +23,7 @@ export function SentimentBreakdown() {
                 <span className={row.text}>{row.label}</span>
                 <span className="text-zinc-500 tabular-nums">{row.pct}%</span>
               </div>
-              <div className="h-1 bg-zinc-900">
+              <div className="h-1 bg-zinc-800">
                 <div
                   className={`h-full ${row.bar}`}
                   style={{ width: `${row.pct}%` }}
