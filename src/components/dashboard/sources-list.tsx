@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
+import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -57,6 +58,8 @@ export function SourcesList({
                 key={s.domain}
                 domain={s.domain}
                 count={s.count}
+                score={s.score}
+                isPropaganda={s.is_propaganda}
                 max={data[0].count || 1}
               />
             ))}
@@ -78,17 +81,21 @@ export function SourcesList({
 function SourceRow({
   domain,
   count,
+  score,
+  isPropaganda,
   max,
 }: {
   domain: string;
   count: number;
+  score: number;
+  isPropaganda: boolean;
   max: number;
 }) {
   const pct = Math.max(2, Math.round((count / max) * 100));
   return (
     <li className="group cursor-default">
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-mono text-xs text-zinc-300">
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 font-mono text-xs text-zinc-300">
           <img
             src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`}
             alt=""
@@ -100,10 +107,13 @@ function SourceRow({
               e.currentTarget.style.visibility = "hidden";
             }}
           />
-          {domain}
+          <span className="truncate">{domain}</span>
         </span>
-        <span className="font-mono text-[11px] text-zinc-600 tabular-nums">
-          {count}
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="font-mono text-[11px] text-zinc-600 tabular-nums">
+            {count}
+          </span>
+          <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
         </span>
       </div>
       <div className="h-[3px] bg-zinc-800 group-hover:bg-zinc-700">

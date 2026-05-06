@@ -43,6 +43,8 @@ export type TimelinePoint = {
 export type SourceCount = {
   domain: string;
   count: number;
+  score: number;
+  is_propaganda: boolean;
 };
 
 export type JobRun = {
