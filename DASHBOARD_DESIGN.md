@@ -118,7 +118,8 @@ The dashboard composes from these primitives (build them as reusable React compo
 
 ### 8. SourcesList
 - Sidebar-style card.
-- Each source row: domain name (mono, text-secondary) on the left + right cluster `count + DomainScoreBadge`. Count uses **mono medium, text-primary, tabular-nums** so it reads as the row's data anchor next to the colored score square (faint counts got lost on dark cards).
+- **Column header row** above the list — 9px mono uppercase letterspaced text-faint labels `Domain / Mentions / Score` separated from data by a 1px zinc-900 underline. Minimal — just enough to name the rightmost two columns once.
+- Each source row: domain name (mono, text-secondary) on the left + right cluster `count + DomainScoreBadge` with a generous 24px gap so the number doesn't visually stick to the colored square. Count uses **mono medium, text-primary, tabular-nums** so it reads as the row's data anchor (faint counts got lost on dark cards).
 - DomainScoreBadge: 18×18 sharp square with the score digit 0–5 inside; palette runs red (0, propaganda) → orange (1) → zinc (2, unknown) → lime (3) → green (4) → emerald (5, top trusted). Native tooltip on hover.
 - Below text: 3px-tall bar showing relative count (filled portion = count / max_count percentage).
 - Hover: bar fill turns text-primary, base bar turns border-strong.

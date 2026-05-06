@@ -52,6 +52,7 @@ export function SourcesList({
         <EmptyMessage>No sources in selected period.</EmptyMessage>
       ) : (
         <>
+          <ColumnHeader />
           <ul className="space-y-3">
             {data.map((s) => (
               <SourceRow
@@ -109,8 +110,8 @@ function SourceRow({
           />
           <span className="truncate">{domain}</span>
         </span>
-        <span className="flex shrink-0 items-center gap-2">
-          <span className="font-mono text-xs font-medium text-zinc-100 tabular-nums">
+        <span className="flex shrink-0 items-center gap-6">
+          <span className="w-8 text-right font-mono text-xs font-medium text-zinc-100 tabular-nums">
             {count}
           </span>
           <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
@@ -123,6 +124,20 @@ function SourceRow({
         />
       </div>
     </li>
+  );
+}
+
+function ColumnHeader() {
+  const cls =
+    "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-zinc-600";
+  return (
+    <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-zinc-900 pb-2">
+      <span className={cls}>Domain</span>
+      <span className="flex shrink-0 items-baseline gap-3">
+        <span className={cls}>Mentions</span>
+        <span className={cls}>Score</span>
+      </span>
+    </div>
   );
 }
 
