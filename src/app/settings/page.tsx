@@ -20,7 +20,7 @@ export default function SettingsPage() {
         <SchedulerInfo />
         <TopicsEditor />
       </main>
-      <Footer topicId={null} />
+      <Footer />
     </>
   );
 }
