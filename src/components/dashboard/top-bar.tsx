@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -33,11 +34,15 @@ export function TopBar({ topicId }: { topicId: number | null }) {
     refetchInterval: 60_000,
   });
 
+  const now = useTickingNow(1000);
+
   const status = renderStatus({
     enabled: topicId !== null,
     isLoading,
     hasError: !!error,
     lastSyncAt: data?.last_sync_at ?? null,
+    nextSyncAt: data?.next_sync_estimate ?? null,
+    now,
   });
 
   return (
@@ -93,21 +98,29 @@ function renderStatus({
   isLoading,
   hasError,
   lastSyncAt,
+  nextSyncAt,
+  now,
 }: {
   enabled: boolean;
   isLoading: boolean;
   hasError: boolean;
   lastSyncAt: string | null;
+  nextSyncAt: string | null;
+  now: number;
 }): string {
   if (!enabled || isLoading) return "Live · …";
   if (hasError || !lastSyncAt) return "Awaiting first sync…";
-  return `Live · last sync ${formatAgo(lastSyncAt)}`;
+  const last = `last sync ${formatAgo(lastSyncAt, now)}`;
+  if (!nextSyncAt) return `Live · ${last}`;
+  const target = new Date(nextSyncAt).getTime();
+  if (Number.isNaN(target)) return `Live · ${last}`;
+  return `Live · ${last} · next ${formatCountdown(target - now)}`;
 }
 
-function formatAgo(iso: string): string {
+function formatAgo(iso: string, now: number): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "—";
-  const diffMs = Date.now() - then;
+  const diffMs = now - then;
   if (diffMs < 0) return "just now";
   const min = Math.floor(diffMs / 60_000);
   if (min < 1) return "just now";
@@ -115,4 +128,24 @@ function formatAgo(iso: string): string {
   const hr = Math.floor(min / 60);
   if (hr < 24) return `${hr}h ago`;
   return `${Math.floor(hr / 24)}d ago`;
+}
+
+function formatCountdown(diffMs: number): string {
+  if (diffMs <= 0) return "syncing soon…";
+  const totalSec = Math.floor(diffMs / 1000);
+  const hr = Math.floor(totalSec / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
+  const sec = totalSec % 60;
+  if (hr > 0) return `in ${hr}h ${min}m`;
+  if (min > 0) return `in ${min}m ${String(sec).padStart(2, "0")}s`;
+  return `in ${sec}s`;
+}
+
+function useTickingNow(intervalMs: number): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
 }
