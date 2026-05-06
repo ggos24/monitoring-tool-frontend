@@ -1,21 +1,30 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-type NavItem = { label: string; active?: boolean; info?: boolean };
+type NavItem = {
+  label: string;
+  href: string;
+  routable?: boolean;
+  info?: boolean;
+};
 
 const NAV: NavItem[] = [
-  { label: "Overview", active: true },
-  { label: "Mentions" },
-  { label: "Sources" },
-  { label: "Insights", info: true },
-  { label: "Settings" },
+  { label: "Overview", href: "/", routable: true },
+  { label: "Mentions", href: "#" },
+  { label: "Sources", href: "#" },
+  { label: "Insights", href: "#", info: true },
+  { label: "Settings", href: "/settings", routable: true },
 ];
 
 export function TopBar({ topicId }: { topicId: number | null }) {
+  const pathname = usePathname();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["overview", topicId],
     queryFn: () => apiClient.overview(topicId!),
@@ -40,21 +49,31 @@ export function TopBar({ topicId }: { topicId: number | null }) {
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => (
-            <a
-              key={item.label}
-              href="#"
-              className={cn(
-                "cursor-default px-3 py-1.5 font-mono text-xs transition-colors",
-                item.active
-                  ? "bg-zinc-900 text-zinc-50"
-                  : "text-zinc-600 hover:text-zinc-300",
-              )}
-            >
-              {item.label}
-              {item.info && <span className="ml-1 text-zinc-700">ⓘ</span>}
-            </a>
-          ))}
+          {NAV.map((item) => {
+            const isActive = item.routable && pathname === item.href;
+            const className = cn(
+              "px-3 py-1.5 font-mono text-xs transition-colors",
+              item.routable ? "cursor-pointer" : "cursor-default",
+              isActive
+                ? "bg-zinc-900 text-zinc-50"
+                : "text-zinc-600 hover:text-zinc-300",
+            );
+            const inner = (
+              <>
+                {item.label}
+                {item.info && <span className="ml-1 text-zinc-700">ⓘ</span>}
+              </>
+            );
+            return item.routable ? (
+              <Link key={item.label} href={item.href} className={className}>
+                {inner}
+              </Link>
+            ) : (
+              <a key={item.label} href={item.href} className={className}>
+                {inner}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-600">

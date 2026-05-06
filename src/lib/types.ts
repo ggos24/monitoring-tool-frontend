@@ -6,6 +6,12 @@ export type Topic = {
   mentions_count: number;
 };
 
+export type TopicPatch = {
+  name?: string;
+  query?: string;
+  is_active?: boolean;
+};
+
 export type Mention = {
   id: number;
   topic_id: number;
