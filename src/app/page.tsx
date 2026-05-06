@@ -80,7 +80,7 @@ export default function Home() {
 
         <ResearchAssistant />
       </main>
-      <Footer topicId={topicId} />
+      <Footer />
     </>
   );
 }

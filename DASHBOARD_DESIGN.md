@@ -159,7 +159,7 @@ The dashboard composes from these primitives (build them as reusable React compo
 ### 13. Footer
 - Centered, border-top, 18px vertical padding.
 - Mono 11px, text-disabled.
-- Items separated by " · ": version, sources, "Next sync in 23m", "API docs ↗".
+- Items separated by " · ": version, "API docs ↗". Source count and next-sync countdown live in the TopBar status — keeping them only there avoids two clocks ticking out of phase.
 
 ## Page composition (Overview = `/`)
 
