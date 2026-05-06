@@ -76,41 +76,37 @@ export function MentionsList({
         </div>
       </div>
 
-      {domain && (
-        <div className="mt-3 flex items-center gap-2">
-          <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-zinc-600">
-            Filter
-          </span>
-          <button
-            type="button"
-            onClick={onClearDomain}
-            title="Clear domain filter"
-            className={cn(
-              "group inline-flex items-center gap-1.5 border border-zinc-700 bg-zinc-900 py-0.5 pr-1 pl-2",
-              "font-mono text-[11px] text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-800",
-            )}
-          >
-            <span className="text-zinc-500">domain:</span>
-            <span>{domain}</span>
-            <X className="size-3 text-zinc-500 transition-colors group-hover:text-zinc-200" />
-          </button>
-        </div>
-      )}
-
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title or body..."
-            className={cn(
-              "h-8 w-full border border-zinc-800 bg-zinc-950 pr-2 pl-7 sm:w-72",
-              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
-            )}
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title or body..."
+              className={cn(
+                "h-8 w-full border border-zinc-800 bg-zinc-950 pr-2 pl-7 sm:w-72",
+                "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
+                "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+              )}
+            />
+          </div>
+          {domain && (
+            <button
+              type="button"
+              onClick={onClearDomain}
+              title="Clear domain filter"
+              className={cn(
+                "group inline-flex h-8 items-center gap-1.5 border border-zinc-700 bg-zinc-900 pr-1 pl-2",
+                "font-mono text-[11px] text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-800",
+              )}
+            >
+              <span className="text-zinc-500">domain:</span>
+              <span>{domain}</span>
+              <X className="size-3 text-zinc-500 transition-colors group-hover:text-zinc-200" />
+            </button>
+          )}
         </div>
 
         <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
