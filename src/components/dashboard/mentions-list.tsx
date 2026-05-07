@@ -13,12 +13,27 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 8;
 
 type SentimentFilter = "all" | "positive" | "neutral" | "negative";
+type SourceFilter = "all" | "gn" | "gdelt";
+type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
 
-const SENTIMENT_FILTERS: { key: SentimentFilter; label: string }[] = [
+const SENTIMENT_OPTIONS: { key: SentimentFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "positive", label: "+" },
-  { key: "neutral", label: "~" },
-  { key: "negative", label: "−" },
+  { key: "positive", label: "Positive" },
+  { key: "neutral", label: "Neutral" },
+  { key: "negative", label: "Negative" },
+];
+
+const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "gn", label: "Google News" },
+  { key: "gdelt", label: "GDELT" },
+];
+
+const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "trusted", label: "Trusted" },
+  { key: "suspect", label: "Suspect" },
+  { key: "propaganda", label: "Propaganda" },
 ];
 
 export function MentionsList({
@@ -35,6 +50,8 @@ export function MentionsList({
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [sentiment, setSentiment] = useState<SentimentFilter>("all");
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [quality, setQuality] = useState<QualityFilter>("all");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -44,10 +61,10 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, topicId, domain]);
+  }, [debounced, topicId, domain, source, quality, sentiment]);
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["mentions", topicId, debounced, domain, page],
+    queryKey: ["mentions", topicId, debounced, domain, source, quality, page],
     queryFn: () =>
       apiClient.mentions({
         topic_id: topicId!,
@@ -55,10 +72,27 @@ export function MentionsList({
         offset: page * PAGE_SIZE,
         search: debounced || undefined,
         source_domain: domain || undefined,
+        source: source === "all" ? undefined : source,
+        score_band: quality === "all" ? undefined : quality,
       }),
     enabled,
     placeholderData: keepPreviousData,
   });
+
+  const hasActiveFilters =
+    source !== "all" ||
+    quality !== "all" ||
+    sentiment !== "all" ||
+    domain !== null ||
+    debounced !== "";
+
+  const resetFilters = () => {
+    setSource("all");
+    setQuality("all");
+    setSentiment("all");
+    setSearch("");
+    if (domain) onClearDomain();
+  };
 
   const total = data?.total ?? 0;
   const items = data?.items ?? [];
@@ -76,7 +110,7 @@ export function MentionsList({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
@@ -108,27 +142,39 @@ export function MentionsList({
             </button>
           )}
         </div>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className={cn(
+              "font-mono text-[11px] uppercase tracking-[0.1em]",
+              "text-zinc-500 transition-colors hover:text-zinc-50",
+            )}
+          >
+            Reset
+          </button>
+        )}
+      </div>
 
-        <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
-          {SENTIMENT_FILTERS.map((f) => {
-            const isActive = f.key === sentiment;
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setSentiment(f.key)}
-                className={cn(
-                  "px-2 py-0.5 font-mono text-[11px] leading-none transition-colors",
-                  isActive
-                    ? "bg-zinc-50 text-black"
-                    : "bg-transparent text-zinc-600 hover:text-zinc-300",
-                )}
-              >
-                {f.label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <ToggleGroup
+          label="Source"
+          value={source}
+          onChange={setSource}
+          options={SOURCE_OPTIONS}
+        />
+        <ToggleGroup
+          label="Quality"
+          value={quality}
+          onChange={setQuality}
+          options={QUALITY_OPTIONS}
+        />
+        <ToggleGroup
+          label="Sentiment"
+          value={sentiment}
+          onChange={setSentiment}
+          options={SENTIMENT_OPTIONS}
+        />
       </div>
 
       <div className="mt-4">
@@ -232,6 +278,46 @@ function MentionRow({
         </div>
       )}
     </li>
+  );
+}
+
+function ToggleGroup<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { key: T; label: string }[];
+}) {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-zinc-400">
+        {label}
+      </span>
+      <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
+        {options.map((opt) => {
+          const isActive = opt.key === value;
+          return (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => onChange(opt.key)}
+              className={cn(
+                "px-2 py-0.5 font-mono text-[11px] leading-none transition-colors",
+                isActive
+                  ? "bg-zinc-50 text-black"
+                  : "bg-transparent text-zinc-600 hover:text-zinc-300",
+              )}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

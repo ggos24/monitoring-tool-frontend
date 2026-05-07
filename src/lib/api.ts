@@ -38,6 +38,8 @@ type MentionsParams = {
   source_domain?: string;
   date_from?: string;
   date_to?: string;
+  source?: "gn" | "gdelt";
+  score_band?: "trusted" | "suspect" | "propaganda";
 };
 
 export const apiClient = {
@@ -56,6 +58,8 @@ export const apiClient = {
     if (params.source_domain) qs.set("source_domain", params.source_domain);
     if (params.date_from) qs.set("date_from", params.date_from);
     if (params.date_to) qs.set("date_to", params.date_to);
+    if (params.source) qs.set("source", params.source);
+    if (params.score_band) qs.set("score_band", params.score_band);
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 
