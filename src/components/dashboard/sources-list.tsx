@@ -140,7 +140,11 @@ function SourceRow({
             <span className="w-8 text-right font-mono text-xs font-medium text-zinc-100 tabular-nums">
               {count}
             </span>
-            <DomainScoreBadge score={score} isPropaganda={isPropaganda} />
+            <DomainScoreBadge
+            score={score}
+            isPropaganda={isPropaganda}
+            domain={domain}
+          />
           </span>
         </div>
       </button>

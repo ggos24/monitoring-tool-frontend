@@ -47,6 +47,25 @@ export type SourceCount = {
   is_propaganda: boolean;
 };
 
+export type DomainScoringSignal = {
+  provider: "viginum" | "euvsdisinfo" | "tranco";
+  dimension: "editorial_quality" | "traffic";
+  flag: string | null;
+  raw_value: Record<string, unknown> | null;
+  observed_at: string | null;
+};
+
+export type DomainScoringDetail = {
+  domain: string;
+  score: number;
+  reason: string;
+  is_propaganda: boolean;
+  is_low_quality: boolean;
+  formula_version: string;
+  refreshed_at: string;
+  signals: DomainScoringSignal[];
+};
+
 export type JobRun = {
   id: number;
   job_name: string;

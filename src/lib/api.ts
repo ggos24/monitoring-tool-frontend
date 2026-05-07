@@ -1,4 +1,5 @@
 import type {
+  DomainScoringDetail,
   JobRun,
   MentionsListResponse,
   Overview,
@@ -7,6 +8,13 @@ import type {
   Topic,
   TopicPatch,
 } from "./types";
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -24,7 +32,7 @@ async function api<T>(
     body: init?.body ? JSON.stringify(init.body) : undefined,
   });
   if (!res.ok) {
-    throw new Error(`API ${path} failed: ${res.status}`);
+    throw new ApiError(res.status, `API ${path} failed: ${res.status}`);
   }
   return res.json();
 }
@@ -81,4 +89,9 @@ export const apiClient = {
 
   overview: (topic_id: number) =>
     api<Overview>(`/api/stats/overview?topic_id=${topic_id}`),
+
+  domainScoring: (domain: string) =>
+    api<DomainScoringDetail>(
+      `/api/scoring/news_domain/${encodeURIComponent(domain)}`,
+    ),
 };
