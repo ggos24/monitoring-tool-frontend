@@ -56,8 +56,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-800 bg-zinc-800 lg:grid-cols-3">
-          <div className="bg-black">
+        <div className="mb-6 grid grid-cols-1 gap-px border border-zinc-800 bg-zinc-800 lg:grid-cols-7">
+          <div className="bg-black lg:col-span-2">
             {topicId !== null && (
               <SourcesList
                 topicId={topicId}
@@ -67,7 +67,7 @@ export default function Home() {
               />
             )}
           </div>
-          <div className="bg-black lg:col-span-2">
+          <div className="bg-black lg:col-span-5">
             {topicId !== null && (
               <MentionsList
                 topicId={topicId}

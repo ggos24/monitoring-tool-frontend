@@ -20,18 +20,19 @@ export function SourcesList({
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = topicId !== null;
+  const LIMIT = 25;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", topicId, days, 10],
-    queryFn: () => apiClient.topSources(topicId!, days, 10),
+    queryKey: ["sources", topicId, days, LIMIT],
+    queryFn: () => apiClient.topSources(topicId!, days, LIMIT),
     enabled,
   });
 
   return (
-    <div className="bg-zinc-950 p-5">
+    <div className="flex h-full flex-col bg-zinc-950 p-5">
       <KickerLabel>Top sources</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-zinc-400">
-        Top 10 domains by mention count, last {days}d
+        Top {LIMIT} domains by mention count, last {days}d
       </div>
 
       {!enabled ? (
@@ -56,30 +57,29 @@ export function SourcesList({
       ) : !data || data.length === 0 ? (
         <EmptyMessage>No sources in selected period.</EmptyMessage>
       ) : (
-        <>
-          <ColumnHeader />
-          <ul className="-mx-2">
-            {data.map((s) => (
-              <SourceRow
-                key={s.domain}
-                domain={s.domain}
-                count={s.count}
-                score={s.score}
-                isPropaganda={s.is_propaganda}
-                isActive={s.domain === selectedDomain}
-                onToggle={onToggleDomain}
-              />
-            ))}
-          </ul>
-          <div className="mt-5 border-t border-zinc-800 pt-3">
-            <a
-              href="#"
-              className="cursor-default font-mono text-[11px] text-zinc-600 hover:text-zinc-400"
-            >
-              View all sources ↗
-            </a>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-zinc-950">
+              <ColumnHeader />
+            </div>
+            <ul className="-mx-2">
+              {data.map((s) => (
+                <SourceRow
+                  key={s.domain}
+                  domain={s.domain}
+                  count={s.count}
+                  score={s.score}
+                  isPropaganda={s.is_propaganda}
+                  isActive={s.domain === selectedDomain}
+                  onToggle={onToggleDomain}
+                />
+              ))}
+            </ul>
           </div>
-        </>
+          <div className="mt-3 shrink-0 border-t border-zinc-800 pt-3 font-mono text-[11px] text-zinc-600 tabular-nums">
+            {data.length} {data.length === 1 ? "domain" : "domains"}
+          </div>
+        </div>
       )}
     </div>
   );
