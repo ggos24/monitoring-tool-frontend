@@ -10,7 +10,7 @@ import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 type SentimentFilter = "all" | "positive" | "neutral" | "negative";
 type SourceFilter = "all" | "gn" | "gdelt";
