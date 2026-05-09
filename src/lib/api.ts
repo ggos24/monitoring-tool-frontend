@@ -46,7 +46,7 @@ type MentionsParams = {
   source_domain?: string;
   date_from?: string;
   date_to?: string;
-  source?: "gn" | "gdelt";
+  source?: "gn" | "gdelt" | "firehose";
   score_band?: "trusted" | "suspect" | "propaganda";
 };
 
