@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 
@@ -22,6 +23,7 @@ export function TopicSelector({
   value: number | null;
   onChange: (id: number) => void;
 }) {
+  const router = useRouter();
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["topics"],
     queryFn: apiClient.topics,
@@ -105,8 +107,8 @@ export function TopicSelector({
         ))}
         <DropdownMenuSeparator className="my-0 bg-zinc-900" />
         <DropdownMenuItem
-          disabled
-          className="flex cursor-default items-center gap-2 px-3 py-2 font-mono text-xs text-zinc-600"
+          onClick={() => router.push("/settings/topics/new")}
+          className="flex cursor-pointer items-center gap-2 px-3 py-2 font-mono text-xs text-zinc-300 focus:bg-zinc-900 focus:text-zinc-50"
         >
           + Add new topic
         </DropdownMenuItem>

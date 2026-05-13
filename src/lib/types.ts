@@ -1,9 +1,64 @@
+export type TopicType = "brand" | "topic";
+
+export type TopicTerms = {
+  core: string[];
+  context: string[];
+  phrases: string[];
+  hashtags: string[];
+};
+
+export type TopicProvenance = {
+  validated_by_dataforseo: boolean;
+  dropped_terms: string[];
+  low_confidence_terms: string[];
+  discovered_terms: string[];
+  created_at: string | null;
+};
+
+export type TopicAst = {
+  schema_version: number;
+  canonical_name: string;
+  type: TopicType;
+  wikidata_qids: string[];
+  languages: string[];
+  terms: TopicTerms;
+  must_co_occur: string[];
+  must_not_co_occur: string[];
+  gdelt_gkg_themes: string[];
+  entity_aliases: string[];
+  anchor_text: string;
+  provenance: TopicProvenance | null;
+};
+
+// Partial AST update payload for PATCH /api/topics/{id}/ast.
+// Top-level fields are REPLACED, not deep-merged. schema_version and
+// provenance are NOT editable — backend rejects them (extra="forbid").
+export type TopicAstPatch = Partial<
+  Omit<TopicAst, "schema_version" | "provenance">
+>;
+
 export type Topic = {
   id: number;
   name: string;
   query: string;
+  queries: Record<string, unknown> | null;
+  topic_ast: TopicAst | null;
   is_active: boolean;
   mentions_count: number;
+};
+
+// Response shape for POST /api/topics and PATCH /api/topics/{id}/ast.
+// Same as Topic but without mentions_count (server doesn't compute it on
+// create/edit-ast) and with topic_ast guaranteed non-null + embedding fields.
+export type TopicCreateOut = {
+  id: number;
+  name: string;
+  query: string;
+  queries: Record<string, unknown> | null;
+  topic_ast: TopicAst;
+  anchor_embedding_version: string;
+  anchor_embedded: boolean;
+  is_active: boolean;
 };
 
 export type TopicPatch = {

@@ -6,6 +6,8 @@ import type {
   SourceCount,
   TimelinePoint,
   Topic,
+  TopicAstPatch,
+  TopicCreateOut,
   TopicPatch,
 } from "./types";
 
@@ -37,6 +39,45 @@ async function api<T>(
   return res.json();
 }
 
+// Hits local Next.js Route Handlers that inject the admin key server-side.
+// Distinct from `api<T>` because admin paths live on our own origin, not
+// the backend at API_URL. Error extraction is richer: FastAPI returns
+// `{"detail": "..."}` (or an array for validation errors) and we surface
+// it verbatim so 422/400/500 messages reach the operator.
+async function localApi<T>(
+  path: string,
+  init: { method: string; body?: unknown },
+): Promise<T> {
+  const res = await fetch(path, {
+    method: init.method,
+    headers: init.body ? { "Content-Type": "application/json" } : undefined,
+    body: init.body ? JSON.stringify(init.body) : undefined,
+  });
+  if (!res.ok) {
+    let message = `request failed: ${res.status}`;
+    try {
+      const data = (await res.json()) as { detail?: unknown; error?: unknown };
+      if (typeof data.detail === "string") {
+        message = data.detail;
+      } else if (Array.isArray(data.detail)) {
+        message = data.detail
+          .map((d: { loc?: unknown[]; msg?: string }) => {
+            const loc = Array.isArray(d.loc) ? d.loc.join(".") : "";
+            return loc ? `${loc}: ${d.msg ?? ""}` : (d.msg ?? "");
+          })
+          .filter(Boolean)
+          .join("; ");
+      } else if (typeof data.error === "string") {
+        message = data.error;
+      }
+    } catch {
+      // body wasn't JSON — keep generic message
+    }
+    throw new ApiError(res.status, message);
+  }
+  return res.json();
+}
+
 type MentionsParams = {
   topic_id: number;
   limit?: number;
@@ -55,6 +96,18 @@ export const apiClient = {
 
   updateTopic: (id: number, patch: TopicPatch) =>
     api<Topic>(`/api/topics/${id}`, { method: "PATCH", body: patch }),
+
+  createTopic: (phrase: string) =>
+    localApi<TopicCreateOut>("/api/admin/topics", {
+      method: "POST",
+      body: { phrase },
+    }),
+
+  updateTopicAst: (id: number, patch: TopicAstPatch) =>
+    localApi<TopicCreateOut>(`/api/admin/topics/${id}/ast`, {
+      method: "PATCH",
+      body: patch,
+    }),
 
   mentions: (params: MentionsParams) => {
     const qs = new URLSearchParams();

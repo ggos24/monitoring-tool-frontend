@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
@@ -96,15 +97,23 @@ export function TopicRow({ topic }: { topic: Topic }) {
           >
             {topic.is_active ? "Active" : "Inactive"}
           </button>
-          {!expanded && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
-            >
-              Edit
-            </button>
-          )}
+          {!expanded &&
+            (topic.topic_ast ? (
+              <Link
+                href={`/settings/topics/${topic.id}/ast`}
+                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              >
+                Edit AST
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              >
+                Edit
+              </button>
+            ))}
         </div>
       </div>
 
