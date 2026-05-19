@@ -40,10 +40,12 @@ const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
 export function MentionsList({
   topicId,
   domain,
+  country,
   onClearDomain,
 }: {
   topicId: number | null;
   domain: string | null;
+  country: string | null;
   onClearDomain: () => void;
 }) {
   const enabled = topicId !== null;
@@ -62,10 +64,19 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, topicId, domain, source, quality, sentiment]);
+  }, [debounced, topicId, domain, country, source, quality, sentiment]);
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: ["mentions", topicId, debounced, domain, source, quality, page],
+    queryKey: [
+      "mentions",
+      topicId,
+      debounced,
+      domain,
+      country,
+      source,
+      quality,
+      page,
+    ],
     queryFn: () =>
       apiClient.mentions({
         topic_id: topicId!,
@@ -73,6 +84,7 @@ export function MentionsList({
         offset: page * PAGE_SIZE,
         search: debounced || undefined,
         source_domain: domain || undefined,
+        country_iso2: country || undefined,
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
       }),

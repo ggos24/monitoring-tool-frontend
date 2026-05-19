@@ -1,21 +1,26 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
 import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
+import type { CountryConfidence } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function SourcesList({
   topicId,
   days,
+  country,
   selectedDomain,
   onToggleDomain,
 }: {
   topicId: number | null;
   days: number;
+  country: string | null;
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
@@ -23,8 +28,8 @@ export function SourcesList({
   const LIMIT = 25;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", topicId, days, LIMIT],
-    queryFn: () => apiClient.topSources(topicId!, days, LIMIT),
+    queryKey: ["sources", topicId, days, country, LIMIT],
+    queryFn: () => apiClient.topSources(topicId!, days, LIMIT, country),
     enabled,
   });
 
@@ -70,6 +75,8 @@ export function SourcesList({
                   count={s.count}
                   score={s.score}
                   isPropaganda={s.is_propaganda}
+                  countryIso2={s.country_iso2 ?? null}
+                  countryConfidence={s.country_confidence ?? null}
                   isActive={s.domain === selectedDomain}
                   onToggle={onToggleDomain}
                 />
@@ -90,6 +97,8 @@ function SourceRow({
   count,
   score,
   isPropaganda,
+  countryIso2,
+  countryConfidence,
   isActive,
   onToggle,
 }: {
@@ -97,6 +106,8 @@ function SourceRow({
   count: number;
   score: number;
   isPropaganda: boolean;
+  countryIso2: string | null;
+  countryConfidence: CountryConfidence | null;
   isActive: boolean;
   onToggle: (domain: string) => void;
 }) {
@@ -134,6 +145,7 @@ function SourceRow({
                 e.currentTarget.style.visibility = "hidden";
               }}
             />
+            <CountryFlag iso2={countryIso2} confidence={countryConfidence} />
             <span className="truncate">{domain}</span>
           </span>
           <span className="flex shrink-0 items-center gap-6">
@@ -169,5 +181,56 @@ function ColumnHeader() {
 function EmptyMessage({ children }: { children: React.ReactNode }) {
   return (
     <div className="font-mono text-[11px] text-zinc-500">{children}</div>
+  );
+}
+
+function CountryFlag({
+  iso2,
+  confidence,
+}: {
+  iso2: string | null;
+  confidence: CountryConfidence | null;
+}) {
+  if (!iso2) {
+    return (
+      <span
+        aria-hidden
+        className="w-4 shrink-0 text-center font-mono text-[11px] text-zinc-700"
+      >
+        —
+      </span>
+    );
+  }
+  const flag = iso2ToFlagEmoji(iso2);
+  const tip = `${countryName(iso2)} (${iso2}) · ${formatConfidence(confidence)}`;
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        delay={200}
+        closeDelay={100}
+        render={
+          <span
+            aria-label={tip}
+            className="w-4 shrink-0 text-center text-[14px] leading-none"
+          >
+            {flag}
+          </span>
+        }
+      />
+      <Tooltip.Portal>
+        <Tooltip.Positioner sideOffset={4} side="top">
+          <Tooltip.Popup
+            className={cn(
+              "z-50 border border-zinc-800 bg-zinc-950 px-2 py-1",
+              "font-mono text-[11px] text-zinc-300 outline-none",
+              "duration-100 data-[instant]:duration-0",
+              "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+            )}
+          >
+            {tip}
+          </Tooltip.Popup>
+        </Tooltip.Positioner>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }

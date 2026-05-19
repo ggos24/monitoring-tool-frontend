@@ -24,16 +24,18 @@ const TICK_STYLE = {
 export function TimelineChart({
   topicId,
   days,
+  country,
 }: {
   topicId: number | null;
   days: number;
+  country: string | null;
 }) {
   const enabled = topicId !== null;
   const granularity: "hour" | "day" = days <= 1 ? "hour" : "day";
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["timeline", topicId, days, granularity],
-    queryFn: () => apiClient.timeline(topicId!, days, granularity),
+    queryKey: ["timeline", topicId, days, granularity, country],
+    queryFn: () => apiClient.timeline(topicId!, days, granularity, country),
     enabled,
   });
 

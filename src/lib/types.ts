@@ -95,11 +95,29 @@ export type TimelinePoint = {
   count: number;
 };
 
+export type CountryConfidence = "high" | "medium" | "heuristic";
+
 export type SourceCount = {
   domain: string;
   count: number;
   score: number;
   is_propaganda: boolean;
+  country_iso2?: string | null;
+  country_confidence?: CountryConfidence | null;
+};
+
+export type CountryCount = {
+  iso2: string | null;
+  count: number;
+  confidence_breakdown?: Partial<Record<CountryConfidence | "unresolved", number>>;
+  top_domains?: string[];
+};
+
+export type CountryAttribution = {
+  domain: string;
+  country_iso2: string | null;
+  provider: string | null;
+  confidence: string | null;
 };
 
 export type DomainScoringSignal = {

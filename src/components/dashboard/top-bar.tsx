@@ -18,7 +18,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: "Overview", href: "/", routable: true },
   { label: "Mentions", href: "#" },
-  { label: "Sources", href: "#" },
+  { label: "Sources", href: "/sources", routable: true },
   { label: "Insights", href: "#", info: true },
   { label: "Settings", href: "/settings", routable: true },
 ];

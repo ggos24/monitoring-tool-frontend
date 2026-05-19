@@ -1,4 +1,6 @@
 import type {
+  CountryAttribution,
+  CountryCount,
   DomainScoringDetail,
   JobRun,
   MentionsListResponse,
@@ -89,6 +91,7 @@ type MentionsParams = {
   date_to?: string;
   source?: "gn" | "gdelt" | "firehose";
   score_band?: "trusted" | "suspect" | "propaganda";
+  country_iso2?: string;
 };
 
 export const apiClient = {
@@ -121,6 +124,7 @@ export const apiClient = {
     if (params.date_to) qs.set("date_to", params.date_to);
     if (params.source) qs.set("source", params.source);
     if (params.score_band) qs.set("score_band", params.score_band);
+    if (params.country_iso2) qs.set("country_iso2", params.country_iso2);
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 
@@ -128,14 +132,35 @@ export const apiClient = {
     topic_id: number,
     days = 7,
     granularity: "hour" | "day" = "day",
-  ) =>
-    api<TimelinePoint[]>(
-      `/api/stats/timeline?topic_id=${topic_id}&days=${days}&granularity=${granularity}`,
-    ),
+    country_iso2?: string | null,
+  ) => {
+    const qs = new URLSearchParams({
+      topic_id: String(topic_id),
+      days: String(days),
+      granularity,
+    });
+    if (country_iso2) qs.set("country_iso2", country_iso2);
+    return api<TimelinePoint[]>(`/api/stats/timeline?${qs}`);
+  },
 
-  topSources: (topic_id: number, days = 7, limit = 10) =>
-    api<SourceCount[]>(
-      `/api/stats/sources?topic_id=${topic_id}&days=${days}&limit=${limit}`,
+  topSources: (
+    topic_id: number,
+    days = 7,
+    limit = 10,
+    country_iso2?: string | null,
+  ) => {
+    const qs = new URLSearchParams({
+      topic_id: String(topic_id),
+      days: String(days),
+      limit: String(limit),
+    });
+    if (country_iso2) qs.set("country_iso2", country_iso2);
+    return api<SourceCount[]>(`/api/stats/sources?${qs}`);
+  },
+
+  countries: (topic_id: number, days = 7, limit = 25) =>
+    api<CountryCount[]>(
+      `/api/stats/countries?topic_id=${topic_id}&days=${days}&limit=${limit}`,
     ),
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),
@@ -146,5 +171,22 @@ export const apiClient = {
   domainScoring: (domain: string) =>
     api<DomainScoringDetail>(
       `/api/scoring/news_domain/${encodeURIComponent(domain)}`,
+    ),
+
+  domainCountry: (domain: string) =>
+    api<CountryAttribution>(
+      `/api/scoring/country/${encodeURIComponent(domain)}`,
+    ),
+
+  patchDomainCountry: (domain: string, country_iso2: string | null) =>
+    localApi<CountryAttribution>(
+      `/api/admin/country/${encodeURIComponent(domain)}`,
+      { method: "PATCH", body: { country_iso2 } },
+    ),
+
+  deleteDomainCountry: (domain: string) =>
+    localApi<{ ok: true } | CountryAttribution>(
+      `/api/admin/country/${encodeURIComponent(domain)}`,
+      { method: "DELETE" },
     ),
 };
