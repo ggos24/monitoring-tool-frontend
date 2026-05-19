@@ -67,7 +67,7 @@ The dashboard composes from these primitives (build them as reusable React compo
 ### 1. TopBar
 - Height 56px, sticky at top with backdrop blur on scroll.
 - Left: logo dot (8×8 emerald square) + "u24-pulse" wordmark in monospace.
-- Center: nav links (Overview, Mentions, Sources, Insights ⓘ, Settings). Active link has `bg-muted` background, others are text-faint with hover to text-secondary.
+- Center: nav links — Overview (`/`), Mentions (stub `#`), Sources (`/sources`), Insights ⓘ (stub `#`), Settings (`/settings`). Active link has `bg-muted` background, others are text-faint with hover to text-secondary. Active state determined by `usePathname()`.
 - Right: live status indicator: pulsing 6×6 emerald square + "Live · last sync 2m ago" in monospace text-faint.
 - Mobile (<780px): hide nav, keep logo + status.
 
@@ -81,6 +81,16 @@ The dashboard composes from these primitives (build them as reusable React compo
 - Container: bg-elevated, border-strong, 2px padding.
 - Active button: `#fafafa` background, black text. Inactive: transparent bg, text-faint.
 - Monospace, 11px.
+
+### 3b. CountryFilter
+- Searchable combobox in the same filter row as PeriodToggle. Built on `@base-ui/react/combobox`.
+- Trigger button (`h-8`): when nothing selected → globe icon + "All countries"; when selected → flag emoji + ISO2 (text-faint) + country name + chevron.
+- Popup: 288px wide, sharp corners, `z-[100]` on `Combobox.Positioner` (must exceed the `z-10` `backdrop-blur` overlays on AnomalyAlert / SentimentBreakdown — otherwise dropdown rows are blurred when they overlap those cards).
+- Search input at top filters by ISO2 or country name. List populated from `GET /api/stats/countries?topic_id=X&days=N` (top 100). Each row: flag + ISO2 + name + count.
+- "All countries" is rendered as a separate sticky-top button outside `Combobox.List` — clearing simply calls `onChange(null)` and closes the popup.
+- Picker is a **global** filter, like topicId/days. Threaded through SourcesList, MentionsList, TimelineChart, and KpiGrid queries via `country_iso2` query param. Resets when topic changes; resets `selectedDomain` when country changes.
+- Items use the **function-children pattern** for `Combobox.List` (`{(item) => <Combobox.Item>}`) — required for the library's internal `filter` prop to take effect. Static `.map()` ignores the filter.
+- For the standalone null/Unknown bucket: NOT a selectable option in the filter (keeps the dropdown one-purpose). Rows with `country_iso2 === null` in SourcesList render an em-dash (`—`) in the flag slot.
 
 ### 4. KpiCard
 - Single card in a 4-column grid. Each card:
@@ -119,7 +129,9 @@ The dashboard composes from these primitives (build them as reusable React compo
 ### 8. SourcesList
 - Sidebar-style card.
 - **Column header row** above the list — 9px mono uppercase letterspaced text-faint labels `Domain / Mentions / Score` separated from data by a 1px zinc-900 underline. Minimal — just enough to name the rightmost two columns once.
-- Each source row: domain name (mono, text-secondary) on the left + right cluster `count + DomainScoreBadge` with a generous 24px gap so the number doesn't visually stick to the colored square. Count uses **mono medium, text-primary, tabular-nums** so it reads as the row's data anchor (faint counts got lost on dark cards).
+- Each source row, left → right: favicon (16×16, lazy-loaded from `google.com/s2/favicons`), country flag (emoji, 14px), domain name (mono, text-secondary), then a right cluster `count + DomainScoreBadge` with a generous 24px gap so the number doesn't visually stick to the colored square. Count uses **mono medium, text-primary, tabular-nums** so it reads as the row's data anchor (faint counts got lost on dark cards).
+- Country flag is rendered as Unicode regional-indicator emoji (zero deps; see `src/lib/country.ts`). Hover tooltip (`@base-ui/react/tooltip`) shows `<country name> (ISO2) · <confidence>`. Confidence values: `high | medium | heuristic | null`. Null country renders an em-dash (`—`) in the same width to keep alignment.
+- No "Country" column header — the flag sits inside the Domain column next to the favicon, which also has no header.
 - DomainScoreBadge: 18×18 sharp square with the score digit 0–5 inside; palette runs red (0, propaganda) → orange (1) → zinc (2, unknown) → lime (3) → green (4) → emerald (5, top trusted). Native tooltip on hover.
 - Rows are **buttons** — clicking toggles a `source_domain` filter on the Mentions list. Active row: `bg-zinc-900`, brighter domain text. Hover (inactive): `bg-zinc-900/60`. No progress-bar fill — the count + score badge already carry the data, the bar was redundant noise.
 - Footer: "View all 38 sources ↗" — mono, text-faint, opens Sources tab on click. **Use sendPrompt to open natural-language search later.**
@@ -167,13 +179,32 @@ Vertical stack from top to bottom:
 
 1. TopBar (sticky)
 2. Padding container (max-width 1440px, padding 20px)
-3. Row: TopicSelector (left) + PeriodToggle (right)
+3. Row: TopicSelector (left) + [CountryFilter, PeriodToggle] (right)
 4. KpiCards grid (4 columns desktop, 2×2 mobile)
 5. AnomalyAlert (coming-soon)
 6. Two-column row: ChartCard `Mentions over time` (2/3 width) + SentimentBreakdown coming-soon (1/3 width)
 7. Two-column row: SourcesList (1/3 width) + MentionsList (2/3 width)
 8. ResearchAssistantTeaser (full width, coming-soon)
 9. Footer
+
+## Page composition (Sources = `/sources`)
+
+A configuration-style page reachable from the TopBar. Layout follows the Settings page conventions: TopBar + `<main>` with H1 `font-mono uppercase tracking-[0.1em]` + description + stacked `<section>` cards with border-zinc-800.
+
+1. TopBar (sticky)
+2. Page header: "Sources" + "Manage domain attribution and source integrations."
+3. **DomainCountryOverride** card:
+   - KickerLabel "Domain country override" + short description.
+   - Free-text input (mono 11px, h-8, magnifying-glass prefix) + "Look up" submit button. Enter on the input triggers the same lookup.
+   - Input normalization strips `http(s)://`, `www.`, path. Validated against a basic FQDN regex before fetching.
+   - On lookup → `GET /api/scoring/country/{domain}`. 404 is non-fatal — message: "No attribution data for X yet — you can still set one below."
+   - Result card shows: domain (mono 13px, text-primary) + `Current:` flag + ISO2 + name + ` · ` + provider + ` · ` + confidence.
+   - Below: country picker (separate `CountryPicker` — same `@base-ui/react/combobox` pattern as the global CountryFilter, but populated from the full 249-entry `ALL_ISO2` list, not `/api/stats/countries`), Save override (emerald), Force re-resolve (zinc, RotateCcw icon).
+   - Checkbox "Save as Unknown (force unresolved bucket)" disables the picker and sends `country_iso2: null` to PATCH.
+   - Inline hint after the actions: "Manual overrides are stored as `provider=manual_admin` and may be replaced by the next ingestion tick if GDELT also returns attribution for this domain. For a permanent fix, contact engineering to add the domain to `domain_country_overrides.csv`."
+   - All admin writes go through `/api/admin/country/[domain]` (Next route handler injecting `X-Admin-Key`). On success, invalidates `["sources"]`, `["countries"]`, `["sources-count"]` query caches so the Overview reflects the new attribution.
+4. **Data sources** card (coming-soon stub): KickerLabel + `SOON` badge + "Configure GDELT, Google News, RSS and Firehose ingestion. Coming soon."
+5. Footer.
 
 ## Responsive behavior
 
@@ -197,10 +228,16 @@ All data comes from FastAPI backend at `NEXT_PUBLIC_API_URL`. Use TanStack Query
 
 Endpoints used by Overview page:
 - `GET /api/topics` — for TopicSelector dropdown
-- `GET /api/stats/timeline?topic_id=X&days=N&granularity=hour|day` — for line chart (hourly for 24h, daily otherwise)
-- `GET /api/stats/sources?topic_id=X&days=N&limit=10` — for SourcesList
-- `GET /api/mentions?topic_id=X&limit=8&offset=0&search=&sentiment=` — for MentionsList
-- `GET /api/stats/overview?topic_id=X` — for TopBar live status and Footer counts (added in Stage 2.4; consolidates several KPI inputs in one shot).
+- `GET /api/stats/timeline?topic_id=X&days=N&granularity=hour|day&country_iso2=XX?` — line chart, accepts optional country filter
+- `GET /api/stats/sources?topic_id=X&days=N&limit=L&country_iso2=XX?` — SourcesList (limit ≤ 50 enforced by backend). Response rows include `country_iso2` + `country_confidence` inline.
+- `GET /api/stats/countries?topic_id=X&days=N&limit=L` — populates the CountryFilter dropdown. Response: `{iso2: string|null, count: number, confidence_breakdown?, top_domains?}[]`. `iso2 === null` is the unresolved bucket (filtered out client-side from the dropdown).
+- `GET /api/mentions?topic_id=X&...&country_iso2=XX?` — MentionsList, accepts country filter (unresolved bucket excluded).
+- `GET /api/stats/overview?topic_id=X` — TopBar live status, Footer counts, KPI Sources count when **no** country filter is active. **NOT country-aware** — when a country filter is selected, KpiGrid falls back to `/api/stats/sources?limit=50` and uses `.length` (shows "50+" at the cap).
+
+Admin endpoints (proxied through Next route handlers in `src/app/api/admin/*` that inject `X-Admin-Key`):
+- `GET /api/scoring/country/{domain}` — read current attribution. No auth required.
+- `PATCH /api/admin/country/{domain}` — set country (body `{country_iso2: string|null}`). `null` forces unresolved bucket.
+- `DELETE /api/admin/country/{domain}` — clear cache, resolver re-runs on next ingestion.
 
 ## What is NOT in MVP
 
