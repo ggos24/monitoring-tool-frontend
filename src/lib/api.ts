@@ -5,6 +5,9 @@ import type {
   JobRun,
   MentionsListResponse,
   Overview,
+  RssFeed,
+  RssFeedCreate,
+  RssFeedPatch,
   SourceCount,
   TimelinePoint,
   Topic,
@@ -26,9 +29,29 @@ if (!API_URL) {
   throw new Error("NEXT_PUBLIC_API_URL is not set");
 }
 
+async function extractDetail(res: Response, fallback: string): Promise<string> {
+  try {
+    const data = (await res.json()) as { detail?: unknown; error?: unknown };
+    if (typeof data.detail === "string") return data.detail;
+    if (Array.isArray(data.detail)) {
+      return data.detail
+        .map((d: { loc?: unknown[]; msg?: string }) => {
+          const loc = Array.isArray(d.loc) ? d.loc.slice(1).join(".") : "";
+          return loc ? `${loc}: ${d.msg ?? ""}` : (d.msg ?? "");
+        })
+        .filter(Boolean)
+        .join("; ");
+    }
+    if (typeof data.error === "string") return data.error;
+  } catch {
+    // not JSON
+  }
+  return fallback;
+}
+
 async function api<T>(
   path: string,
-  init?: { method?: string; body?: unknown },
+  init?: { method?: string; body?: unknown; expectNoContent?: boolean },
 ): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     method: init?.method ?? "GET",
@@ -36,7 +59,11 @@ async function api<T>(
     body: init?.body ? JSON.stringify(init.body) : undefined,
   });
   if (!res.ok) {
-    throw new ApiError(res.status, `API ${path} failed: ${res.status}`);
+    const message = await extractDetail(res, `API ${path} failed: ${res.status}`);
+    throw new ApiError(res.status, message);
+  }
+  if (init?.expectNoContent || res.status === 204) {
+    return undefined as T;
   }
   return res.json();
 }
@@ -189,4 +216,18 @@ export const apiClient = {
       `/api/admin/country/${encodeURIComponent(domain)}`,
       { method: "DELETE" },
     ),
+
+  rssFeeds: () => api<RssFeed[]>("/api/rss-feeds"),
+
+  createRssFeed: (body: RssFeedCreate) =>
+    api<RssFeed>("/api/rss-feeds", { method: "POST", body }),
+
+  updateRssFeed: (id: number, patch: RssFeedPatch) =>
+    api<RssFeed>(`/api/rss-feeds/${id}`, { method: "PATCH", body: patch }),
+
+  deleteRssFeed: (id: number) =>
+    api<void>(`/api/rss-feeds/${id}`, {
+      method: "DELETE",
+      expectNoContent: true,
+    }),
 };

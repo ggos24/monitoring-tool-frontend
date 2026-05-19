@@ -159,3 +159,30 @@ export type Overview = {
   next_sync_estimate: string | null;
   schedule_interval_seconds: number;
 };
+
+export type RssFeed = {
+  id: number;
+  url: string;
+  name: string;
+  publisher_domain: string;
+  publisher_domain_normalized: string;
+  is_active: boolean;
+  last_polled_at: string | null;
+  last_success_at: string | null;
+  consecutive_failures: number;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+  publisher_score: number;
+  publisher_is_propaganda: boolean;
+};
+
+export type RssFeedCreate = {
+  url: string;
+  name: string;
+};
+
+export type RssFeedPatch = {
+  name?: string;
+  is_active?: boolean;
+};
