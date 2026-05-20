@@ -137,21 +137,39 @@ The dashboard composes from these primitives (build them as reusable React compo
 - Footer: "View all 38 sources ↗" — mono, text-faint, opens Sources tab on click. **Use sendPrompt to open natural-language search later.**
 
 ### 9. MentionsList
-- Filter bar at top:
-  - Search input: bg-elevated, border-strong, magnifying glass icon, monospace 11px, placeholder "Search title or body..."
-  - Sentiment filter pill group: All / + / ~ / − (mono, same styling as PeriodToggle)
-- Mention rows (8 visible per page):
-  - Top metadata row: domain (mono, text-faint) · timestamp (mono, text-faint) · sentiment pill on the right
-  - Title (13px, text-primary)
-  - Preview line (11px, text-faint, truncated to 1 line with ellipsis)
-  - On hover: bg-hover background
-  - Click: opens external URL in new tab (window.open(url) — Next.js will use proper Link to mention detail page)
+- Filter bar at top — **two rows**:
+  - **Row 1:** Search input (bg-elevated, border-strong, magnifying-glass icon, mono 11px, placeholder "Search title or body...") + optional active-domain chip (when SourcesList row toggled) + `SOURCE` ToggleGroup (All / Google News / GDELT / Firehose / RSS). On the right of Row 1: `Reset` link, shown only when at least one filter is active.
+  - **Row 2:** `QUALITY` ToggleGroup (All / Trusted / Suspect / Propaganda) + `STANCE` ToggleGroup (All / Supportive / Critical / Neutral / Mixed).
+- `Source` and `Quality` state is **owned by the Overview page**, not MentionsList — both `SourcesList` and `MentionsList` receive them as props. Changing either filter narrows BOTH panels together (`/api/stats/sources` accepts the same `source` + `score_band` params for parity).
+- Search is debounced 300ms. Page resets to 0 whenever any filter changes.
+- Mention rows (8 visible per page), left → right / top → bottom:
+  - Top metadata row: domain (mono, text-faint) · timestamp (mono, text-faint) · *optional* `Enriched` kicker (mono 9px uppercase, shown when row has an LLM summary) on the left; StanceBadge + Re-analyze icon button on the right.
+  - Title (13px, text-primary). Title is a `<button>` — click opens `mention.url` in a new tab (`hover:underline`); disabled-looking when `url` is null.
+  - Preview line:
+    - When `mention.summary` is present → 12px sans-serif `text-zinc-300 leading-snug`, full 2-sentence summary (NOT truncated). This is the LLM verdict that survives body TTL.
+    - Else when `mention.body` is present → 11px mono `text-zinc-600` truncated to 1 line with ellipsis (legacy fallback).
+    - Else nothing.
+  - On hover: bg-hover background.
+- **StanceBadge** wraps `SentimentPill` and is data-driven from `mention.stance_label`:
+  - `supportive` → `positive` variant, label "Supportive"
+  - `critical` → `negative` variant, label "Critical"
+  - `neutral` → `neutral` variant, label "Neutral"
+  - `mixed` → `mixed` variant (amber), label "Mixed"
+  - `null` → `muted` variant, label "Unscored"
+  - Tooltip (top-end): `"<Label> stance toward topic · NN% confidence · framing: <label>"`.
+- **Re-analyze button** (icon-only, 24×24 sharp square, `border-zinc-800`, `Sparkles` icon, hover lifts to `text-zinc-50`).
+  - Calls `POST /api/admin/mentions/{id}/enrich` via the Next admin proxy (`X-Admin-Key` injected server-side; admin-write pattern from AGENTS.md).
+  - During pending: `Loader2` spinner, button disabled with `cursor-wait`.
+  - On success: full updated `MentionOut` hot-swaps the row in the TanStack list cache via `queryClient.setQueryData` — no global invalidate, no flicker.
+  - On failure: 10px red error line under the body (4s auto-dismiss). FastAPI's `detail` surfaces verbatim (e.g. "could not fetch body for mention (fetch_status=403)").
+  - Tooltip: "Analyze with LLM" if `stance_label` is null, else "Re-analyze with LLM".
 - Bottom: pagination — "Showing 1–8 of 142" (mono text-faint) + prev/next buttons (mono 11px, border-strong, prev disabled at first page).
 
 ### 10. SentimentPill (atom)
-- Used inside MentionRow.
+- Generic pill used by both `StanceBadge` (per-row) and elsewhere if needed.
 - Padding 2/6, border 0.5px, monospace 9px uppercase letter-spacing 0.1em.
-- Three variants — positive/negative/neutral — with the colors specified in `Color tokens` above.
+- Five variants — `positive` (emerald) / `negative` (red) / `neutral` (zinc) / `mixed` (amber) / `muted` (very dim zinc). Colors per `Color tokens` above; `mixed` uses `bg-amber-950 / text-amber-400 / border-amber-900`; `muted` uses `bg-zinc-950 / text-zinc-600 / border-zinc-900`.
+- The atom is intentionally vocabulary-agnostic — Stance-vs-Sentiment labelling is the caller's responsibility. Backend vocabulary is `{supportive, critical, neutral, mixed}` (stance toward target topic), NOT `{positive, negative}`.
 
 ### 11. ComingSoonBadge (atom)
 - Mono 9px, uppercase, letter-spacing 0.1em, text-muted color.
@@ -203,8 +221,22 @@ A configuration-style page reachable from the TopBar. Layout follows the Setting
    - Checkbox "Save as Unknown (force unresolved bucket)" disables the picker and sends `country_iso2: null` to PATCH.
    - Inline hint after the actions: "Manual overrides are stored as `provider=manual_admin` and may be replaced by the next ingestion tick if GDELT also returns attribution for this domain. For a permanent fix, contact engineering to add the domain to `domain_country_overrides.csv`."
    - All admin writes go through `/api/admin/country/[domain]` (Next route handler injecting `X-Admin-Key`). On success, invalidates `["sources"]`, `["countries"]`, `["sources-count"]` query caches so the Overview reflects the new attribution.
-4. **Data sources** card (coming-soon stub): KickerLabel + `SOON` badge + "Configure GDELT, Google News, RSS and Firehose ingestion. Coming soon."
-5. Footer.
+4. **RssFeedsEditor** card (`components/sources/rss-feeds-editor.tsx`):
+   - KickerLabel "RSS feeds" + short description + `+ New feed` button (top-right, white-on-black).
+   - List of feeds (`GET /api/rss-feeds`), ordered `is_active DESC, created_at DESC` — never re-sorted client-side. Per row:
+     - **Health dot + label** derived from `is_active` + `last_polled_at` + `last_success_at` + `consecutive_failures`:
+       - ⚫ `Inactive` (manual disable) · 🟢 `Healthy` · 🟡 `Degraded` (1–9 fails) · 🔴 `Stalled` (≥10 fails or last_success >7d ago) · ○ `Never polled`.
+       - Note: distinct icons for Inactive vs Stalled (the backend spec collapsed them — UI must NOT).
+       - Tooltip on degraded/stalled shows `last_error` verbatim.
+     - Display name (truncated) + `publisher_domain_normalized` + reused `DomainScoreBadge` (same trust palette as SourcesList).
+     - URL line: full URL in mono, truncated with copy-to-clipboard icon button.
+     - Meta line: relative `Polled` / `Success` timestamps.
+     - Actions: `Active/Inactive` toggle (calls PATCH `is_active`), `Edit` (inline name edit; URL is read-only — spec preserves ETag history on URL change by forcing delete+recreate), `Trash` icon (opens inline confirm with red left border).
+   - Empty state: dashed-border card with "Add first feed" button + 5 publisher suggestion chips (BBC World / Guardian World / AP Top News / DW English / Al Jazeera). Chips click → opens Add form with the suggestion pre-filled.
+   - Add form: inline expansion (no modals — design system has zero rounded corners and no shadows; modals stand out as foreign). Client-side URL validation on blur; 409 → "This feed URL already exists"; 422 → FastAPI `detail` extracted via the improved `api<T>` helper.
+   - Optimistic updates throughout: create prepends, update replaces in place, delete filters with rollback on error.
+5. **Other sources** card (small `SOON` badge): "GDELT, Google News and Firehose configuration UI is still coming soon." — RSS is removed from this list.
+6. Footer.
 
 ## Responsive behavior
 
@@ -214,11 +246,13 @@ A configuration-style page reachable from the TopBar. Layout follows the Setting
 
 ## Interactions
 
-- **Topic dropdown:** click trigger toggles, click outside closes, ESC closes. Selecting a topic updates dashboard data (refetches).
+- **Topic dropdown:** click trigger toggles, click outside closes, ESC closes. Selecting a topic updates dashboard data (refetches). Resets `source`, `quality`, `country`, `selectedDomain`.
 - **Period toggle:** clicking refetches data.
 - **Search:** debounced 300ms, then refetches `/api/mentions?search=...`.
-- **Sentiment filter:** instant — refetches with `sentiment` param.
-- **Mention click:** opens `mention.url` in new tab. (Later: opens detail panel.)
+- **Source / Quality filters:** state lives on the Overview page; selecting a chip refetches **both** MentionsList (`/api/mentions?source=...&score_band=...`) and SourcesList (`/api/stats/sources?source=...&score_band=...`) so the Top sources panel reflects the same slice as the mentions below.
+- **Stance filter:** instant — refetches `/api/mentions?stance_label=...`. Vocabulary `{supportive, critical, neutral, mixed}` matches the backend's `stance_label` literal exactly.
+- **Mention title click:** opens `mention.url` in new tab.
+- **Per-row Re-analyze (Sparkles icon):** synchronous Gemini call, 2–5s. Updated row hot-swaps into the list cache; failure shows inline error.
 - **"View all sources" link:** scrolls/navigates to Sources tab.
 - **AI examples:** non-interactive in MVP (visually disabled). Phase 3 will make them clickable to open chat.
 
@@ -229,25 +263,33 @@ All data comes from FastAPI backend at `NEXT_PUBLIC_API_URL`. Use TanStack Query
 Endpoints used by Overview page:
 - `GET /api/topics` — for TopicSelector dropdown
 - `GET /api/stats/timeline?topic_id=X&days=N&granularity=hour|day&country_iso2=XX?` — line chart, accepts optional country filter
-- `GET /api/stats/sources?topic_id=X&days=N&limit=L&country_iso2=XX?` — SourcesList (limit ≤ 50 enforced by backend). Response rows include `country_iso2` + `country_confidence` inline.
+- `GET /api/stats/sources?topic_id=X&days=N&limit=L&country_iso2=XX?&source=...?&score_band=...?` — SourcesList (limit ≤ 50 enforced by backend). `source` (`gdelt|gn|firehose|rss`) and `score_band` (`trusted|suspect|propaganda`) mirror `/api/mentions` so the Top sources panel can couple to the Mentions filter bar. Response rows include `country_iso2` + `country_confidence` inline.
 - `GET /api/stats/countries?topic_id=X&days=N&limit=L` — populates the CountryFilter dropdown. Response: `{iso2: string|null, count: number, confidence_breakdown?, top_domains?}[]`. `iso2 === null` is the unresolved bucket (filtered out client-side from the dropdown).
-- `GET /api/mentions?topic_id=X&...&country_iso2=XX?` — MentionsList, accepts country filter (unresolved bucket excluded).
+- `GET /api/mentions?topic_id=X&...&country_iso2=XX?&source=...?&score_band=...?&stance_label=...?&enriched=...?` — MentionsList. `stance_label ∈ {supportive, critical, neutral, mixed}`; `enriched` is a bool that scopes to LLM-enriched rows.
 - `GET /api/stats/overview?topic_id=X` — TopBar live status, Footer counts, KPI Sources count when **no** country filter is active. **NOT country-aware** — when a country filter is selected, KpiGrid falls back to `/api/stats/sources?limit=50` and uses `.length` (shows "50+" at the cap).
 
+Sources-page endpoints (browser-direct, no admin key — CORS gated):
+- `GET /api/rss-feeds` — list feeds (RssFeedsEditor).
+- `POST /api/rss-feeds` — body `{url, name}`. 409 on duplicate URL.
+- `PATCH /api/rss-feeds/{id}` — body `{name?, is_active?}`. URL not editable by design.
+- `DELETE /api/rss-feeds/{id}` — 204; existing mentions preserved.
+
 Admin endpoints (proxied through Next route handlers in `src/app/api/admin/*` that inject `X-Admin-Key`):
-- `GET /api/scoring/country/{domain}` — read current attribution. No auth required.
+- `GET /api/scoring/country/{domain}` — read current attribution. No auth required (read goes direct, not through proxy).
 - `PATCH /api/admin/country/{domain}` — set country (body `{country_iso2: string|null}`). `null` forces unresolved bucket.
 - `DELETE /api/admin/country/{domain}` — clear cache, resolver re-runs on next ingestion.
+- `POST /api/admin/mentions/{id}/enrich` — synchronous re-analyze (Gemini, 2–5s). Returns updated `MentionOut`. Used by the per-row Sparkles icon in MentionsList.
 
 ## What is NOT in MVP
 
-- Sentiment pills with REAL sentiment (always show neutral until Phase 2)
 - AnomalyAlert content (always show static placeholder behind blur)
 - AI Research Assistant (visual teaser only)
 - Multi-topic comparison
 - Authentication/login
-- Settings page
 - Mobile-optimized navigation (hamburger menu)
+- GDELT / Google News / Firehose admin config UI (Sources page only ships RSS feeds + domain country override for now)
+
+Stance pills are **NOT** in this list anymore — they're driven by the real enrichment pipeline (`stance_label` from `MentionOut`). Until a row is enriched, it shows a muted "Unscored" pill; clicking the per-row Sparkles icon synchronously enriches via Gemini.
 
 These are visual stubs that will become functional in later phases. Keep them in the design so the product feels "real" and aspirational.
 
