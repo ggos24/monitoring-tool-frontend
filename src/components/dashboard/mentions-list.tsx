@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 10;
 
 type SentimentFilter = "all" | "positive" | "neutral" | "negative";
-type SourceFilter = "all" | "gn" | "gdelt" | "firehose";
+type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
 type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
 
 const SENTIMENT_OPTIONS: { key: SentimentFilter; label: string }[] = [
@@ -28,6 +28,7 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: "gn", label: "Google News" },
   { key: "gdelt", label: "GDELT" },
   { key: "firehose", label: "Firehose" },
+  { key: "rss", label: "RSS" },
 ];
 
 const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
