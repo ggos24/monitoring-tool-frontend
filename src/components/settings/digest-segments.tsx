@@ -526,8 +526,12 @@ function ConditionRow({
         onChange={(e) => {
           const nextOp = e.target.value as SegmentOp;
           // If switching to/from "in" the value shape changes — coerce.
+          // Arrays only hold string | number (no boolean — `is_propaganda`
+          // can't use `in` per OPS_BY_FIELD, but TS can't infer that).
           if (nextOp === "in" && !Array.isArray(condition.value)) {
-            onChange({ op: nextOp, value: [scalarOrEmpty(condition.value)] });
+            const v = scalarOrEmpty(condition.value);
+            const item = typeof v === "boolean" ? String(v) : v;
+            onChange({ op: nextOp, value: [item] });
           } else if (nextOp !== "in" && Array.isArray(condition.value)) {
             onChange({
               op: nextOp,
@@ -600,7 +604,13 @@ function ValueInput({
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean);
-          const coerced = parts.map((p) => coerceScalar(field, p));
+          // is_propaganda can't use `in` (see OPS_BY_FIELD) so booleans
+          // never actually appear here, but coerceScalar's return type
+          // includes boolean — stringify to keep arrays string|number-only.
+          const coerced: (string | number)[] = parts.map((p) => {
+            const v = coerceScalar(field, p);
+            return typeof v === "boolean" ? String(v) : v;
+          });
           onChange({ value: coerced });
         }}
         placeholder={inListPlaceholder(field)}
