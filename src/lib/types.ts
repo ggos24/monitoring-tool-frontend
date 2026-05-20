@@ -194,3 +194,94 @@ export type RssFeedPatch = {
   name?: string;
   is_active?: boolean;
 };
+
+// Runtime config singleton — GET /api/settings/enrichment (public),
+// PATCH /api/settings/enrichment (admin). See docs/FE_ENRICHMENT_API.md §1.
+export type EnrichmentSettings = {
+  stance_enabled: boolean;
+  stance_dry_run: boolean;
+  min_source_score: number;
+  published_window_hours: number;
+  stance_model: string;
+  stance_submit_hour: number;
+  stance_submit_minute: number;
+  stance_retrieve_hour: number;
+  stance_retrieve_minute: number;
+  digest_enabled: boolean;
+  digest_dry_run: boolean;
+  summary_model: string;
+  digest_submit_hour: number;
+  digest_submit_minute: number;
+  digest_retrieve_hour: number;
+  digest_retrieve_minute: number;
+  updated_at: string;
+  updated_by: string;
+};
+
+// Backend rejects unknown fields (extra="forbid") — never send anything
+// outside this shape.
+export type EnrichmentSettingsPatch = Partial<
+  Omit<EnrichmentSettings, "updated_at" | "updated_by">
+>;
+
+// Whitelisted filter fields for a segment condition.
+export const SEGMENT_FIELDS = [
+  "topic_id",
+  "country",
+  "source_id",
+  "source_score",
+  "is_propaganda",
+  "language",
+  "stance_label",
+  "framing_label",
+] as const;
+export type SegmentField = (typeof SEGMENT_FIELDS)[number];
+
+export const SEGMENT_OPS = ["=", "!=", ">=", "<=", "in"] as const;
+export type SegmentOp = (typeof SEGMENT_OPS)[number];
+
+export type SegmentValue = string | number | boolean | (string | number)[];
+
+export type SegmentCondition = {
+  field: SegmentField;
+  op: SegmentOp;
+  value: SegmentValue;
+};
+
+export type DigestPeriodKind = "day";
+
+export type DigestDefinition = {
+  id: number;
+  name: string;
+  topic_id: number;
+  segment: SegmentCondition[];
+  period_kind: DigestPeriodKind;
+  active: boolean;
+  created_at: string;
+};
+
+export type DigestDefinitionCreate = {
+  name: string;
+  topic_id: number;
+  segment: SegmentCondition[];
+  period_kind?: DigestPeriodKind;
+  active?: boolean;
+};
+
+export type DigestDefinitionPatch = {
+  name?: string;
+  segment?: SegmentCondition[];
+  active?: boolean;
+};
+
+export const FRAMING_LABELS = [
+  "pro-ukraine",
+  "pro-russia",
+  "neutral-factual",
+  "anti-western",
+  "whataboutism",
+  "skeptical",
+  "humanitarian",
+  "other",
+] as const;
+export type FramingLabel = (typeof FRAMING_LABELS)[number];

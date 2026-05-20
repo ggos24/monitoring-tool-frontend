@@ -1,7 +1,12 @@
 import type {
   CountryAttribution,
   CountryCount,
+  DigestDefinition,
+  DigestDefinitionCreate,
+  DigestDefinitionPatch,
   DomainScoringDetail,
+  EnrichmentSettings,
+  EnrichmentSettingsPatch,
   JobRun,
   Mention,
   MentionsListResponse,
@@ -242,5 +247,40 @@ export const apiClient = {
     api<void>(`/api/rss-feeds/${id}`, {
       method: "DELETE",
       expectNoContent: true,
+    }),
+
+  enrichmentSettings: () =>
+    api<EnrichmentSettings>("/api/settings/enrichment"),
+
+  updateEnrichmentSettings: (patch: EnrichmentSettingsPatch) =>
+    localApi<EnrichmentSettings>("/api/admin/settings/enrichment", {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  digestDefinitions: (params?: { topic_id?: number; active_only?: boolean }) => {
+    const qs = new URLSearchParams();
+    if (params?.topic_id !== undefined) qs.set("topic_id", String(params.topic_id));
+    if (params?.active_only !== undefined)
+      qs.set("active_only", String(params.active_only));
+    const suffix = qs.toString() ? `?${qs}` : "";
+    return api<DigestDefinition[]>(`/api/digest-definitions${suffix}`);
+  },
+
+  createDigestDefinition: (body: DigestDefinitionCreate) =>
+    localApi<DigestDefinition>("/api/admin/digest-definitions", {
+      method: "POST",
+      body,
+    }),
+
+  updateDigestDefinition: (id: number, patch: DigestDefinitionPatch) =>
+    localApi<DigestDefinition>(`/api/admin/digest-definitions/${id}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  deleteDigestDefinition: (id: number) =>
+    localApi<{ deleted: number }>(`/api/admin/digest-definitions/${id}`, {
+      method: "DELETE",
     }),
 };
