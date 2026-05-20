@@ -67,6 +67,8 @@ export type TopicPatch = {
   is_active?: boolean;
 };
 
+export type StanceLabel = "supportive" | "critical" | "neutral" | "mixed";
+
 export type Mention = {
   id: number;
   topic_id: number;
@@ -78,9 +80,15 @@ export type Mention = {
   language: string | null;
   published_at: string;
   collected_at: string;
-  sentiment: number | null;
-  sentiment_score: number | null;
+  stance: number | null;
+  stance_label: StanceLabel | null;
+  framing_label: string | null;
+  stance_confidence: number | null;
+  summary: string | null;
   is_relevant: boolean;
+  relevance_method: string | null;
+  relevance_score: number | null;
+  relevance_reason: string | null;
 };
 
 export type MentionsListResponse = {

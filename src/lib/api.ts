@@ -3,12 +3,14 @@ import type {
   CountryCount,
   DomainScoringDetail,
   JobRun,
+  Mention,
   MentionsListResponse,
   Overview,
   RssFeed,
   RssFeedCreate,
   RssFeedPatch,
   SourceCount,
+  StanceLabel,
   TimelinePoint,
   Topic,
   TopicAstPatch,
@@ -112,7 +114,8 @@ type MentionsParams = {
   limit?: number;
   offset?: number;
   search?: string;
-  sentiment?: number;
+  stance_label?: StanceLabel;
+  enriched?: boolean;
   source_domain?: string;
   date_from?: string;
   date_to?: string;
@@ -145,7 +148,8 @@ export const apiClient = {
     if (params.limit !== undefined) qs.set("limit", String(params.limit));
     if (params.offset !== undefined) qs.set("offset", String(params.offset));
     if (params.search) qs.set("search", params.search);
-    if (params.sentiment !== undefined) qs.set("sentiment", String(params.sentiment));
+    if (params.stance_label) qs.set("stance_label", params.stance_label);
+    if (params.enriched !== undefined) qs.set("enriched", String(params.enriched));
     if (params.source_domain) qs.set("source_domain", params.source_domain);
     if (params.date_from) qs.set("date_from", params.date_from);
     if (params.date_to) qs.set("date_to", params.date_to);
@@ -222,6 +226,9 @@ export const apiClient = {
       `/api/admin/country/${encodeURIComponent(domain)}`,
       { method: "DELETE" },
     ),
+
+  enrichMention: (id: number) =>
+    localApi<Mention>(`/api/admin/mentions/${id}/enrich`, { method: "POST" }),
 
   rssFeeds: () => api<RssFeed[]>("/api/rss-feeds"),
 

@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Search, X } from "lucide-react";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Loader2, Search, Sparkles, X } from "lucide-react";
+import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
+import type { Mention, MentionsListResponse, StanceLabel } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,15 +19,16 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
-type SentimentFilter = "all" | "positive" | "neutral" | "negative";
+type StanceFilter = "all" | StanceLabel;
 export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
 export type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
 
-const SENTIMENT_OPTIONS: { key: SentimentFilter; label: string }[] = [
+const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "positive", label: "Positive" },
+  { key: "supportive", label: "Supportive" },
+  { key: "critical", label: "Critical" },
   { key: "neutral", label: "Neutral" },
-  { key: "negative", label: "Negative" },
+  { key: "mixed", label: "Mixed" },
 ];
 
 const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
@@ -61,7 +69,7 @@ export function MentionsList({
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [sentiment, setSentiment] = useState<SentimentFilter>("all");
+  const [stance, setStance] = useState<StanceFilter>("all");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -71,19 +79,22 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, topicId, domain, country, source, quality, sentiment]);
+  }, [debounced, topicId, domain, country, source, quality, stance]);
+
+  const queryKey = [
+    "mentions",
+    topicId,
+    debounced,
+    domain,
+    country,
+    source,
+    quality,
+    stance,
+    page,
+  ] as const;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
-    queryKey: [
-      "mentions",
-      topicId,
-      debounced,
-      domain,
-      country,
-      source,
-      quality,
-      page,
-    ],
+    queryKey,
     queryFn: () =>
       apiClient.mentions({
         topic_id: topicId!,
@@ -94,6 +105,7 @@ export function MentionsList({
         country_iso2: country || undefined,
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
+        stance_label: stance === "all" ? undefined : stance,
       }),
     enabled,
     placeholderData: keepPreviousData,
@@ -102,14 +114,14 @@ export function MentionsList({
   const hasActiveFilters =
     source !== "all" ||
     quality !== "all" ||
-    sentiment !== "all" ||
+    stance !== "all" ||
     domain !== null ||
     debounced !== "";
 
   const resetFilters = () => {
     onChangeSource("all");
     onChangeQuality("all");
-    setSentiment("all");
+    setStance("all");
     setSearch("");
     if (domain) onClearDomain();
   };
@@ -190,10 +202,10 @@ export function MentionsList({
           options={QUALITY_OPTIONS}
         />
         <ToggleGroup
-          label="Sentiment"
-          value={sentiment}
-          onChange={setSentiment}
-          options={SENTIMENT_OPTIONS}
+          label="Stance"
+          value={stance}
+          onChange={setStance}
+          options={STANCE_OPTIONS}
         />
       </div>
 
@@ -227,7 +239,7 @@ export function MentionsList({
             )}
           >
             {items.map((m) => (
-              <MentionRow key={m.id} mention={m} />
+              <MentionRow key={m.id} mention={m} listQueryKey={queryKey} />
             ))}
           </ul>
         )}
@@ -260,44 +272,225 @@ export function MentionsList({
 
 function MentionRow({
   mention,
+  listQueryKey,
 }: {
-  mention: {
-    id: number;
-    url: string | null;
-    title: string | null;
-    body: string | null;
-    source_domain: string | null;
-    published_at: string;
-  };
+  mention: Mention;
+  listQueryKey: readonly unknown[];
 }) {
-  const onClick = () => {
+  const queryClient = useQueryClient();
+  const [error, setError] = useState<string | null>(null);
+
+  const enrichMutation = useMutation({
+    mutationFn: () => apiClient.enrichMention(mention.id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<MentionsListResponse | undefined>(
+        listQueryKey,
+        (prev) =>
+          prev
+            ? {
+                ...prev,
+                items: prev.items.map((it) =>
+                  it.id === updated.id ? updated : it,
+                ),
+              }
+            : prev,
+      );
+      setError(null);
+    },
+    onError: (err) => {
+      setError(err instanceof Error ? err.message : "Analyze failed");
+    },
+  });
+
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(null), 4000);
+    return () => clearTimeout(t);
+  }, [error]);
+
+  const openArticle = () => {
     if (mention.url) window.open(mention.url, "_blank", "noopener,noreferrer");
   };
+
   const ts = formatTimestamp(mention.published_at);
+  const isEnriched = mention.stance_label !== null;
+  const previewText = mention.summary ?? mention.body ?? null;
+  const previewIsSummary = mention.summary !== null;
+
   return (
-    <li
-      onClick={onClick}
-      className={cn(
-        "-mx-2 cursor-pointer px-2 py-3 transition-colors hover:bg-zinc-900/50",
-      )}
-    >
+    <li className="-mx-2 px-2 py-3 transition-colors hover:bg-zinc-900/50">
       <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-zinc-600">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate">{mention.source_domain ?? "—"}</span>
           <span aria-hidden>·</span>
           <span className="shrink-0">{ts}</span>
+          {previewIsSummary && (
+            <>
+              <span aria-hidden>·</span>
+              <span
+                className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500"
+                title="Title and preview generated by the enrichment pipeline."
+              >
+                Enriched
+              </span>
+            </>
+          )}
         </div>
-        <SentimentPill variant="neutral">Neutral</SentimentPill>
+        <div className="flex shrink-0 items-center gap-2">
+          <StanceBadge mention={mention} />
+          <EnrichButton
+            isEnriched={isEnriched}
+            isPending={enrichMutation.isPending}
+            onClick={() => enrichMutation.mutate()}
+          />
+        </div>
       </div>
-      <div className="mt-1.5 text-[13px] text-zinc-50">
+
+      <button
+        type="button"
+        onClick={openArticle}
+        disabled={!mention.url}
+        className={cn(
+          "mt-1.5 block w-full text-left text-[13px] text-zinc-50",
+          mention.url
+            ? "cursor-pointer hover:underline underline-offset-2"
+            : "cursor-default",
+        )}
+      >
         {mention.title ?? "(untitled)"}
-      </div>
-      {mention.body && (
-        <div className="mt-0.5 truncate font-mono text-[11px] text-zinc-600">
-          {mention.body}
+      </button>
+
+      {previewText && (
+        <div
+          className={cn(
+            "mt-1 leading-snug",
+            previewIsSummary
+              ? "text-[12px] text-zinc-300"
+              : "truncate font-mono text-[11px] text-zinc-600",
+          )}
+        >
+          {previewText}
         </div>
       )}
+
+      {error && (
+        <div className="mt-1 font-mono text-[10px] text-red-400">{error}</div>
+      )}
     </li>
+  );
+}
+
+type PillVariant = "positive" | "negative" | "neutral" | "mixed" | "muted";
+
+const STANCE_PILL: Record<
+  StanceLabel,
+  { variant: PillVariant; label: string }
+> = {
+  supportive: { variant: "positive", label: "Supportive" },
+  critical: { variant: "negative", label: "Critical" },
+  neutral: { variant: "neutral", label: "Neutral" },
+  mixed: { variant: "mixed", label: "Mixed" },
+};
+
+function StanceBadge({ mention }: { mention: Mention }) {
+  if (!mention.stance_label) {
+    return <SentimentPill variant="muted">Unscored</SentimentPill>;
+  }
+  const { variant, label } = STANCE_PILL[mention.stance_label];
+  const confidence =
+    mention.stance_confidence !== null
+      ? `${Math.round(mention.stance_confidence * 100)}% confidence`
+      : "no confidence score";
+  const framing = mention.framing_label ?? null;
+  const tip =
+    `${label} stance toward topic · ${confidence}` +
+    (framing ? ` · framing: ${framing}` : "");
+
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        delay={150}
+        closeDelay={100}
+        render={
+          <span title={tip}>
+            <SentimentPill variant={variant}>{label}</SentimentPill>
+          </span>
+        }
+      />
+      <Tooltip.Portal>
+        <Tooltip.Positioner sideOffset={4} side="top" align="end">
+          <Tooltip.Popup
+            className={cn(
+              "z-50 max-w-xs border border-zinc-800 bg-zinc-950 px-2 py-1.5",
+              "font-mono text-[11px] leading-relaxed text-zinc-300 outline-none",
+              "duration-100 data-[instant]:duration-0",
+              "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+            )}
+          >
+            {tip}
+          </Tooltip.Popup>
+        </Tooltip.Positioner>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
+
+function EnrichButton({
+  isEnriched,
+  isPending,
+  onClick,
+}: {
+  isEnriched: boolean;
+  isPending: boolean;
+  onClick: () => void;
+}) {
+  const label = isPending
+    ? "Analyzing…"
+    : isEnriched
+      ? "Re-analyze with LLM"
+      : "Analyze with LLM";
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        delay={150}
+        closeDelay={100}
+        render={
+          <button
+            type="button"
+            onClick={onClick}
+            disabled={isPending}
+            aria-label={label}
+            title={label}
+            className={cn(
+              "inline-flex size-6 cursor-pointer items-center justify-center",
+              "border border-zinc-800 bg-zinc-950 text-zinc-500 transition-colors",
+              "hover:border-zinc-700 hover:text-zinc-50",
+              "disabled:cursor-wait disabled:opacity-60",
+            )}
+          >
+            {isPending ? (
+              <Loader2 className="size-3 animate-spin" />
+            ) : (
+              <Sparkles className="size-3" />
+            )}
+          </button>
+        }
+      />
+      <Tooltip.Portal>
+        <Tooltip.Positioner sideOffset={4} side="top" align="end">
+          <Tooltip.Popup
+            className={cn(
+              "z-50 border border-zinc-800 bg-zinc-950 px-2 py-1.5",
+              "font-mono text-[11px] leading-relaxed text-zinc-300 outline-none",
+              "duration-100 data-[instant]:duration-0",
+              "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
+            )}
+          >
+            {label}
+          </Tooltip.Popup>
+        </Tooltip.Positioner>
+      </Tooltip.Portal>
+    </Tooltip.Root>
   );
 }
 
