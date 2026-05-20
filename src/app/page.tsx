@@ -10,7 +10,11 @@ import { CountryFilter } from "@/components/dashboard/country-filter";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
 import { TimelineChart } from "@/components/dashboard/timeline-chart";
 import { SourcesList } from "@/components/dashboard/sources-list";
-import { MentionsList } from "@/components/dashboard/mentions-list";
+import {
+  MentionsList,
+  type QualityFilter,
+  type SourceFilter,
+} from "@/components/dashboard/mentions-list";
 import { AnomalyAlert } from "@/components/dashboard/anomaly-alert";
 import { SentimentBreakdown } from "@/components/dashboard/sentiment-breakdown";
 import { ResearchAssistant } from "@/components/dashboard/research-assistant";
@@ -20,11 +24,15 @@ export default function Home() {
   const [days, setDays] = useState<number>(7);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [source, setSource] = useState<SourceFilter>("all");
+  const [quality, setQuality] = useState<QualityFilter>("all");
 
   const handleSelectTopic = (id: number | null) => {
     setTopicId(id);
     setCountry(null);
     setSelectedDomain(null);
+    setSource("all");
+    setQuality("all");
   };
 
   const handleSelectCountry = (iso2: string | null) => {
@@ -83,6 +91,8 @@ export default function Home() {
                 topicId={topicId}
                 days={days}
                 country={country}
+                source={source}
+                quality={quality}
                 selectedDomain={selectedDomain}
                 onToggleDomain={toggleDomain}
               />
@@ -94,6 +104,10 @@ export default function Home() {
                 topicId={topicId}
                 domain={selectedDomain}
                 country={country}
+                source={source}
+                quality={quality}
+                onChangeSource={setSource}
+                onChangeQuality={setQuality}
                 onClearDomain={() => setSelectedDomain(null)}
               />
             )}

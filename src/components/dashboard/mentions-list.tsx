@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 10;
 
 type SentimentFilter = "all" | "positive" | "neutral" | "negative";
-type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
-type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
+export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
+export type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
 
 const SENTIMENT_OPTIONS: { key: SentimentFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -42,11 +42,19 @@ export function MentionsList({
   topicId,
   domain,
   country,
+  source,
+  quality,
+  onChangeSource,
+  onChangeQuality,
   onClearDomain,
 }: {
   topicId: number | null;
   domain: string | null;
   country: string | null;
+  source: SourceFilter;
+  quality: QualityFilter;
+  onChangeSource: (v: SourceFilter) => void;
+  onChangeQuality: (v: QualityFilter) => void;
   onClearDomain: () => void;
 }) {
   const enabled = topicId !== null;
@@ -54,8 +62,6 @@ export function MentionsList({
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [sentiment, setSentiment] = useState<SentimentFilter>("all");
-  const [source, setSource] = useState<SourceFilter>("all");
-  const [quality, setQuality] = useState<QualityFilter>("all");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -101,8 +107,8 @@ export function MentionsList({
     debounced !== "";
 
   const resetFilters = () => {
-    setSource("all");
-    setQuality("all");
+    onChangeSource("all");
+    onChangeQuality("all");
     setSentiment("all");
     setSearch("");
     if (domain) onClearDomain();
@@ -124,8 +130,8 @@ export function MentionsList({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
             <input
@@ -155,6 +161,12 @@ export function MentionsList({
               <X className="size-3 text-zinc-500 transition-colors group-hover:text-zinc-200" />
             </button>
           )}
+          <ToggleGroup
+            label="Source"
+            value={source}
+            onChange={onChangeSource}
+            options={SOURCE_OPTIONS}
+          />
         </div>
         {hasActiveFilters && (
           <button
@@ -170,17 +182,11 @@ export function MentionsList({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <ToggleGroup
-          label="Source"
-          value={source}
-          onChange={setSource}
-          options={SOURCE_OPTIONS}
-        />
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <ToggleGroup
           label="Quality"
           value={quality}
-          onChange={setQuality}
+          onChange={onChangeQuality}
           options={QUALITY_OPTIONS}
         />
         <ToggleGroup

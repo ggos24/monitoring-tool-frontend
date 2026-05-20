@@ -15,12 +15,16 @@ export function SourcesList({
   topicId,
   days,
   country,
+  source,
+  quality,
   selectedDomain,
   onToggleDomain,
 }: {
   topicId: number | null;
   days: number;
   country: string | null;
+  source: "all" | "gn" | "gdelt" | "firehose" | "rss";
+  quality: "all" | "trusted" | "suspect" | "propaganda";
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
@@ -28,8 +32,12 @@ export function SourcesList({
   const LIMIT = 25;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", topicId, days, country, LIMIT],
-    queryFn: () => apiClient.topSources(topicId!, days, LIMIT, country),
+    queryKey: ["sources", topicId, days, country, source, quality, LIMIT],
+    queryFn: () =>
+      apiClient.topSources(topicId!, days, LIMIT, country, {
+        source: source === "all" ? undefined : source,
+        score_band: quality === "all" ? undefined : quality,
+      }),
     enabled,
   });
 

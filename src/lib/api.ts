@@ -175,6 +175,10 @@ export const apiClient = {
     days = 7,
     limit = 10,
     country_iso2?: string | null,
+    extra?: {
+      source?: "gn" | "gdelt" | "firehose" | "rss";
+      score_band?: "trusted" | "suspect" | "propaganda";
+    },
   ) => {
     const qs = new URLSearchParams({
       topic_id: String(topic_id),
@@ -182,6 +186,8 @@ export const apiClient = {
       limit: String(limit),
     });
     if (country_iso2) qs.set("country_iso2", country_iso2);
+    if (extra?.source) qs.set("source", extra.source);
+    if (extra?.score_band) qs.set("score_band", extra.score_band);
     return api<SourceCount[]>(`/api/stats/sources?${qs}`);
   },
 
