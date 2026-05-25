@@ -10,6 +10,8 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-geist-sans);
+
+  /* Sidebar (kept for shadcn parity, not actively used) */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -18,11 +20,14 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+
+  /* Charts (consumed by Recharts via src/lib/theme.ts too) */
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -39,6 +44,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Custom surface + text tier tokens (u24-pulse design system) */
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--bg-overlay);
+  --color-strong: var(--border-strong);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  /* Semantic accents (mono emerald + warning + danger) */
+  --color-success: var(--accent-success);
+  --color-warning: var(--accent-warning);
+  --color-danger: var(--accent-danger);
+
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
@@ -48,73 +66,61 @@
   --radius-4xl: 0px;
 }
 
-:root {
-  --background: oklch(0 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.04 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.04 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.09 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.09 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.16 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.62 0.22 25);
-  --border: oklch(0.21 0 0);
-  --input: oklch(0.16 0 0);
-  --ring: oklch(0.65 0 0);
-  --chart-1: oklch(0.985 0 0);
-  --chart-2: oklch(0.75 0 0);
-  --chart-3: oklch(0.55 0 0);
-  --chart-4: oklch(0.40 0 0);
-  --chart-5: oklch(0.25 0 0);
-  --radius: 0px;
-  --sidebar: oklch(0.04 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.09 0 0);
-  --sidebar-ring: oklch(0.65 0 0);
-}
-
+:root,
 .dark {
-  --background: oklch(0 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.04 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.04 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.09 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.09 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.16 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.62 0.22 25);
-  --border: oklch(0.21 0 0);
-  --input: oklch(0.16 0 0);
-  --ring: oklch(0.65 0 0);
-  --chart-1: oklch(0.985 0 0);
-  --chart-2: oklch(0.75 0 0);
-  --chart-3: oklch(0.55 0 0);
-  --chart-4: oklch(0.40 0 0);
-  --chart-5: oklch(0.25 0 0);
-  --sidebar: oklch(0.04 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0 0 0);
-  --sidebar-accent: oklch(0.16 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.09 0 0);
-  --sidebar-ring: oklch(0.65 0 0);
+  /* Surface ladder — moderate contrast lift from #000 / #09090b */
+  --background: #0a0a0c;       /* page bg — slight off-black */
+  --card: #141417;             /* card surface — clearly lifted */
+  --bg-elevated: #1c1c20;      /* hover rows, dropdown trigger active */
+  --bg-overlay: #26262b;       /* dropdown panels, popovers */
+  --muted: #1c1c20;            /* aliased to elevated for shadcn compat */
+  --accent: #1c1c20;           /* aliased to elevated */
+  --secondary: #1c1c20;
+  --popover: #26262b;
+  --sidebar: #141417;
+  --sidebar-accent: #1c1c20;
+
+  /* Borders */
+  --border: #2e2e34;           /* default — card gaps + default inputs */
+  --border-strong: #3f3f46;    /* hover/focused inputs, active chips */
+  --input: #2e2e34;
+  --sidebar-border: #2e2e34;
+
+  /* Text tiers */
+  --foreground: #fafafa;       /* primary — body, KPIs */
+  --text-secondary: #d4d4d8;   /* zinc-300 — subheads, list titles */
+  --text-tertiary: #a1a1aa;    /* zinc-400 — metadata, tick labels */
+  --muted-foreground: #71717a; /* zinc-500 — kicker labels (dimmest visible) */
+  --card-foreground: #fafafa;
+  --popover-foreground: #fafafa;
+  --accent-foreground: #fafafa;
+  --secondary-foreground: #fafafa;
+  --sidebar-foreground: #fafafa;
+  --sidebar-accent-foreground: #fafafa;
+
+  --primary: #fafafa;
+  --primary-foreground: #0a0a0c;
+  --sidebar-primary: #fafafa;
+  --sidebar-primary-foreground: #0a0a0c;
+
+  /* Semantic accents — mono emerald system */
+  --accent-success: #34d399;   /* emerald-400 */
+  --accent-warning: #fbbf24;   /* amber-400 */
+  --accent-danger: #f87171;    /* red-400 */
+  --destructive: #f87171;
+
+  /* Focus ring — emerald at 40% (mono palette stays mono) */
+  --ring: rgba(52, 211, 153, 0.4);
+  --sidebar-ring: rgba(52, 211, 153, 0.4);
+
+  /* Chart tokens (mirrored in src/lib/theme.ts for Recharts) */
+  --chart-1: #34d399;
+  --chart-2: #d4d4d8;
+  --chart-3: #a1a1aa;
+  --chart-4: #71717a;
+  --chart-5: #52525b;
+
+  --radius: 0px;
 }
 
 @layer base {

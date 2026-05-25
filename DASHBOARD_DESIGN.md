@@ -11,36 +11,42 @@ This document is the **source of truth** for the Next.js frontend look-and-feel.
 
 ## Color tokens
 
-Dark theme is the default and only theme for MVP.
+Dark theme is the default and only theme for MVP. The palette is mono-emerald — no secondary hue is introduced for interactive emphasis; brightness and the single emerald accent do that work. Source of truth for values is `src/app/globals.css`; `src/lib/theme.ts` mirrors them for Recharts and any other JS consumer.
 
 ```
---bg-base:         #000000   (page background)
---bg-elevated:     #09090b   (cards, inputs background — barely visible against bg-base)
---bg-hover:        rgba(24,24,27,0.5)   (hover state on rows)
---bg-overlay:      rgba(0,0,0,0.4)      (coming-soon blur overlay)
---bg-muted:        #18181b   (subtle backgrounds, separator lines used as dividers)
+/* Surface ladder — moderate lift from the original near-black palette so
+   cards have visible edges and the page has hierarchy. */
+--bg-base:         #0a0a0c   (page background — slight off-black, less OLED-harsh)
+--bg-card:         #141417   (card surface — clearly lifted from page)
+--bg-elevated:     #1c1c20   (hover rows, dropdown trigger active)
+--bg-overlay:      #26262b   (dropdown panels, popovers, tooltips)
 
---border:          #18181b   (default border, almost invisible)
---border-strong:   #27272a   (input borders, button borders, on-hover)
---border-hover:    #3f3f46   (focus state)
+--border-default:  #2e2e34   (card grid gap divider, default input border)
+--border-strong:   #3f3f46   (hover/focused inputs, active chip borders)
 
---text-primary:    #fafafa   (main text, KPI numbers, mention titles)
---text-secondary:  #d4d4d8   (subtitles, less critical)
---text-tertiary:   #a1a1aa   (descriptions, secondary metadata)
---text-muted:      #71717a   (labels)
---text-faint:      #52525b   (timestamps, mono labels, hints)
---text-disabled:   #3f3f46   (placeholders, disabled states)
+/* Text tiers — every role shifts up one step on the zinc scale from the
+   original spec so kicker labels stop disappearing into the card. The
+   dimmest visible text in the system is now zinc-500. zinc-700 is retired. */
+--text-primary:    #fafafa   (body, KPI numbers, mention titles)
+--text-secondary:  #d4d4d8   (subheads, list item titles)
+--text-tertiary:   #a1a1aa   (metadata, captions, chart tick labels)
+--text-muted:      #71717a   (kicker labels — the dimmest visible text)
 
---accent-success:  #34d399   (positive trends, "live" indicator, line chart, positive sentiment)
---accent-warning:  #fbbf24   (volume spike, anomaly, warning)
+--accent-success:  #34d399   (positive sentiment, "live" indicator, primary chart line, active state)
+--accent-warning:  #fbbf24   (volume spike, anomaly icon)
 --accent-danger:   #f87171   (negative sentiment, errors)
---accent-neutral:  #a1a1aa   (neutral sentiment)
+
+--ring:            rgba(52, 211, 153, 0.4)  (focus ring — emerald at 40%)
 ```
 
-Sentiment pill colors (border + bg + text):
-- positive: bg `#022c22`, text `#34d399`, border `#064e3b`
-- negative: bg `#450a0a`, text `#f87171`, border `#7f1d1d`
-- neutral:  bg `#18181b`, text `#a1a1aa`, border `#27272a`
+Contrast targets: all body text and interactive labels meet WCAG AA (≥4.5:1) against the surface they sit on. Borders are not required to meet text-contrast minimums but must be visible — `--border-default` (#2e2e34) on `--bg-base` (#0a0a0c) gives ~3:1 so the 1px-gap card grid actually reads.
+
+Sentiment pill colors (border + bg + text). Each variant pairs with a leading glyph so meaning isn't color-only:
+- positive (▲): bg `#022c22` (emerald-950), text `#6ee7b7` (emerald-300), border `#065f46` (emerald-800)
+- negative (▼): bg `#450a0a` (red-950), text `#fca5a5` (red-300), border `#991b1b` (red-800)
+- neutral  (─): bg `--bg-elevated`, text `--text-secondary`, border `--border-strong`
+- mixed    (↕): bg `#451a03` (amber-950), text `#fcd34d` (amber-300), border `#92400e` (amber-800)
+- muted    (○): bg `--bg-elevated`, text `--text-tertiary`, border `--border-strong` — "Unscored" rows; previously invisible at 1:1 contrast against the card
 
 ## Typography
 
@@ -49,15 +55,15 @@ Sentiment pill colors (border + bg + text):
 - **No 600/700 weights.** Only 400 (regular) and 500 (medium for emphasis).
 - **Sentence case everywhere.** Never Title Case, never ALL CAPS. Exception: monospace labels in `UPPERCASE` with `letter-spacing: 0.1em` for kicker-style headers ("TOTAL MENTIONS", "MENTIONS OVER TIME").
 - KPI numbers: 26px, weight 500, `font-variant-numeric: tabular-nums`, `letter-spacing: -0.02em`.
-- Mention titles: 13px, weight 400, color text-primary.
-- Card kicker labels: 10px monospace, uppercase, letter-spacing 0.1em, color text-faint.
-- Card subtitles (under kicker): 13px, color text-tertiary.
+- Mention titles: 14px, weight 400, leading-snug, color text-primary.
+- Card kicker labels: 10px monospace, uppercase, letter-spacing 0.1em, color text-muted (#71717a — the dimmest tier we still consider legible).
+- Card subtitles (under kicker): 13px, color text-tertiary (#a1a1aa).
 
 ## Layout grid
 
 - Max content width: 1440px, centered.
 - Padding: 20px on desktop, 16px on mobile.
-- All grids use 1px gaps between cards (achieved via `display:grid; gap:1px; background:var(--border)`). The 1px "gap" is actually the divider color showing through.
+- All grids use 1px gaps between cards (achieved via `display:grid; gap:1px; background:var(--border)`). The 1px "gap" is the divider color showing through. With `--border-default` lifted to `#2e2e34`, the gap is finally visible against the new `--bg-base` (#0a0a0c).
 - Cards have NO border individually — the grid background simulates dividers.
 
 ## Components inventory
@@ -167,8 +173,9 @@ The dashboard composes from these primitives (build them as reusable React compo
 
 ### 10. SentimentPill (atom)
 - Generic pill used by both `StanceBadge` (per-row) and elsewhere if needed.
-- Padding 2/6, border 0.5px, monospace 9px uppercase letter-spacing 0.1em.
-- Five variants — `positive` (emerald) / `negative` (red) / `neutral` (zinc) / `mixed` (amber) / `muted` (very dim zinc). Colors per `Color tokens` above; `mixed` uses `bg-amber-950 / text-amber-400 / border-amber-900`; `muted` uses `bg-zinc-950 / text-zinc-600 / border-zinc-900`.
+- Padding 2/6, border 1px, monospace 9px uppercase letter-spacing 0.1em.
+- Each variant pairs a color with a leading glyph so meaning is not color-only (accessibility + screenshot legibility). See sentiment pill colors in `Color tokens` above.
+- The `muted` variant ("Unscored") sits on `--bg-elevated` with `--text-tertiary` — visible against the card it lives on. The previous implementation collapsed to ~1:1 contrast and disappeared.
 - The atom is intentionally vocabulary-agnostic — Stance-vs-Sentiment labelling is the caller's responsibility. Backend vocabulary is `{supportive, critical, neutral, mixed}` (stance toward target topic), NOT `{positive, negative}`.
 
 ### 11. ComingSoonBadge (atom)
@@ -300,8 +307,11 @@ The reference is the interactive HTML widget shown in the design conversation. I
 ## Anti-patterns (DO NOT)
 
 - DO NOT add gradients anywhere — sharp colors only.
-- DO NOT add rounded corners — even on inputs and buttons.
-- DO NOT use Tailwind preset shadows.
+- DO NOT add rounded corners — even on inputs and buttons. The shadcn primitives in `src/components/ui/` ship rounded by default; they have been stripped in this repo and any new primitive must follow suit.
+- DO NOT use Tailwind preset shadows. shadcn primitives ship `shadow-md/lg`; strip them and use a 1px `border-border` on `bg-overlay` instead.
+- DO NOT use `text-zinc-700` (or anything dimmer than `--text-muted` / `#71717a`) for visible text — it almost certainly fails WCAG AA. If you need a "faint" tier, use `--text-muted`.
+- DO NOT reach for raw Tailwind color classes (`bg-zinc-950`, `text-zinc-600`, `border-zinc-800`) in components. Use the tokenized utilities (`bg-card`, `text-muted-foreground`, `border-border`) so a single CSS-vars change can re-skin the app.
+- DO NOT introduce a secondary accent hue. The palette is mono-emerald; interactive emphasis comes from brightness or the single emerald accent.
 - DO NOT use light mode at all.
 - DO NOT use Tremor's default color palette — override to match our token list.
 - DO NOT add framer-motion or similar animation libraries — opacity transitions and color hovers only.

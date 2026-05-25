@@ -65,18 +65,18 @@ export function TopicRow({ topic }: { topic: Topic }) {
   }
 
   return (
-    <li className="border-b border-zinc-800 last:border-0">
+    <li className="border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden
             className={cn(
               "size-1.5 shrink-0",
-              topic.is_active ? "bg-emerald-400" : "bg-zinc-700",
+              topic.is_active ? "bg-emerald-400" : "bg-strong",
             )}
           />
-          <span className="text-sm text-zinc-50">{topic.name}</span>
-          <span className="truncate font-mono text-[11px] text-zinc-500">
+          <span className="text-sm text-foreground">{topic.name}</span>
+          <span className="truncate font-mono text-[11px] text-text-tertiary">
             query: {topic.query}
           </span>
         </div>
@@ -91,7 +91,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
               "border px-2 py-1 font-mono text-[11px] transition-colors",
               topic.is_active
                 ? "border-emerald-900 bg-emerald-950 text-emerald-400 hover:border-emerald-800"
-                : "border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300",
+                : "border-border bg-elevated text-text-tertiary hover:border-strong hover:text-text-secondary",
               mutation.isPending && "opacity-50",
             )}
           >
@@ -101,7 +101,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
             (topic.topic_ast ? (
               <Link
                 href={`/settings/topics/${topic.id}/ast`}
-                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
               >
                 Edit AST
               </Link>
@@ -109,7 +109,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
               <button
                 type="button"
                 onClick={() => setExpanded(true)}
-                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
               >
                 Edit
               </button>
@@ -118,7 +118,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
       </div>
 
       {expanded && (
-        <div className="mb-3 border-l-2 border-zinc-800 bg-zinc-950 px-4 py-4">
+        <div className="mb-3 border-l-2 border-border bg-card px-4 py-4">
           <div className="space-y-3">
             <Field
               label="Name"
@@ -135,7 +135,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
             <button
               type="button"
               onClick={handleCancel}
-              className="cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-card px-3 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
             >
               Cancel
             </button>
@@ -146,8 +146,8 @@ export function TopicRow({ topic }: { topic: Topic }) {
               className={cn(
                 "border px-3 py-1 font-mono text-[11px] transition-colors",
                 !dirty || mutation.isPending
-                  ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                  : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                  ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                  : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
               )}
             >
               {mutation.isPending ? "Saving…" : "Save"}
@@ -170,7 +170,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+      <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </span>
       <input
@@ -178,9 +178,9 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "mt-1 h-8 w-full border border-border bg-card px-2",
+          "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
         )}
       />
     </label>

@@ -17,7 +17,7 @@ export function PeriodToggle({
   onChange: (days: number) => void;
 }) {
   return (
-    <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
+    <div className="inline-flex items-center gap-0.5 border border-border bg-card p-0.5">
       {PERIODS.map((p) => {
         const isActive = p.days === value;
         return (
@@ -28,8 +28,8 @@ export function PeriodToggle({
             className={cn(
               "px-2.5 py-1 font-mono text-[11px] leading-none transition-colors",
               isActive
-                ? "bg-zinc-50 text-black"
-                : "bg-transparent text-zinc-600 hover:text-zinc-300",
+                ? "bg-foreground text-primary-foreground"
+                : "bg-transparent text-text-tertiary hover:text-foreground",
             )}
           >
             {p.label}

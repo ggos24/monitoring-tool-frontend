@@ -15,18 +15,18 @@ export function TopicsEditor() {
   });
 
   return (
-    <section className="bg-zinc-950 p-5">
+    <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <KickerLabel>Topics</KickerLabel>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-text-tertiary">
             Edit name, search query, or toggle active. Backend re-sync runs
             on the next collection cycle.
           </p>
         </div>
         <Link
           href="/settings/topics/new"
-          className="cursor-pointer border border-zinc-700 bg-zinc-50 px-3 py-1 font-mono text-[11px] text-black hover:bg-zinc-200"
+          className="cursor-pointer border border-strong bg-foreground px-3 py-1 font-mono text-[11px] text-primary-foreground hover:bg-text-secondary"
         >
           + New topic
         </Link>
@@ -36,22 +36,22 @@ export function TopicsEditor() {
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full bg-zinc-900" />
+              <Skeleton key={i} className="h-12 w-full bg-elevated" />
             ))}
           </div>
         ) : error ? (
-          <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
+          <div className="flex items-center gap-3 font-mono text-[11px] text-text-tertiary">
             <span>Failed to load topics</span>
             <button
               type="button"
               onClick={() => refetch()}
-              className="cursor-pointer border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
             >
               retry
             </button>
           </div>
         ) : !data || data.length === 0 ? (
-          <div className="font-mono text-[11px] text-zinc-500">
+          <div className="font-mono text-[11px] text-text-tertiary">
             No topics configured yet. Use &ldquo;+ New topic&rdquo; to create one.
           </div>
         ) : (

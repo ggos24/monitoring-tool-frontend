@@ -117,9 +117,9 @@ export function AstReviewForm({ initial }: Props) {
 
   return (
     <div className="space-y-6">
-      <header className="space-y-2 border-b border-zinc-800 pb-4">
+      <header className="space-y-2 border-b border-border pb-4">
         <div className="flex flex-wrap items-baseline gap-3">
-          <h2 className="font-mono text-base text-zinc-50">
+          <h2 className="font-mono text-base text-foreground">
             {ast.canonical_name}
           </h2>
           <TypeBadge
@@ -129,18 +129,18 @@ export function AstReviewForm({ initial }: Props) {
           <span
             className={cn(
               "ml-auto font-mono text-[11px]",
-              origin.is_active ? "text-emerald-400" : "text-zinc-500",
+              origin.is_active ? "text-emerald-400" : "text-text-tertiary",
             )}
           >
             {origin.is_active ? "● Active" : "○ Inactive"}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
             Wikidata
           </span>
           {ast.wikidata_qids.length === 0 ? (
-            <span className="font-mono text-[11px] text-zinc-600">(none)</span>
+            <span className="font-mono text-[11px] text-muted-foreground">(none)</span>
           ) : (
             ast.wikidata_qids.map((qid) =>
               QID_RE.test(qid) ? (
@@ -149,14 +149,14 @@ export function AstReviewForm({ initial }: Props) {
                   href={`https://www.wikidata.org/wiki/${qid}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-sky-300 hover:border-sky-800"
+                  className="border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-sky-300 hover:border-sky-800"
                 >
                   {qid}
                 </a>
               ) : (
                 <span
                   key={qid}
-                  className="border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-500"
+                  className="border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-text-tertiary"
                   title="Not a valid QID format"
                 >
                   {qid}
@@ -165,7 +165,7 @@ export function AstReviewForm({ initial }: Props) {
             )
           )}
         </div>
-        <p className="font-mono text-[10px] text-zinc-600">
+        <p className="font-mono text-[10px] text-muted-foreground">
           anchor_embedding_version: {origin.anchor_embedding_version}{" "}
           {origin.anchor_embedded ? "✓" : "(embed failed — operator should retry)"}
         </p>
@@ -236,7 +236,7 @@ export function AstReviewForm({ initial }: Props) {
 
       <section className="space-y-1.5">
         <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
             Semantic anchor
           </span>
           {anchorChanged && (
@@ -252,12 +252,12 @@ export function AstReviewForm({ initial }: Props) {
           minLength={10}
           maxLength={2000}
           className={cn(
-            "block w-full border border-zinc-800 bg-zinc-950 px-3 py-2",
-            "font-mono text-[12px] leading-relaxed text-zinc-100",
-            "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+            "block w-full border border-border bg-card px-3 py-2",
+            "font-mono text-[12px] leading-relaxed text-foreground",
+            "outline-none transition-colors hover:border-strong focus:border-strong",
           )}
         />
-        <p className="font-mono text-[10px] text-zinc-600">
+        <p className="font-mono text-[10px] text-muted-foreground">
           2–3 sentences describing what the topic is &ldquo;about&rdquo;.
           Embedded by Gemini and used as the cosine-similarity reference for
           borderline mentions. {ast.anchor_text.length}/2000 chars
@@ -269,7 +269,7 @@ export function AstReviewForm({ initial }: Props) {
 
       <ProvenancePanel provenance={origin.topic_ast.provenance} />
 
-      <footer className="sticky bottom-0 -mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 bg-zinc-950 px-5 py-3">
+      <footer className="sticky bottom-0 -mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-card px-5 py-3">
         <div className="font-mono text-[11px]">
           {status.kind === "saved" && (
             <span className="text-emerald-400">Saved ✓</span>
@@ -281,7 +281,7 @@ export function AstReviewForm({ initial }: Props) {
             <span className="text-amber-500">Unsaved changes</span>
           )}
           {status.kind === "idle" && !dirty && (
-            <span className="text-zinc-600">No changes</span>
+            <span className="text-muted-foreground">No changes</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -292,8 +292,8 @@ export function AstReviewForm({ initial }: Props) {
             className={cn(
               "border px-3 py-1 font-mono text-[11px] transition-colors",
               !dirty || saving || activating || ast.anchor_text.length < 10
-                ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
             )}
           >
             {saving
@@ -311,7 +311,7 @@ export function AstReviewForm({ initial }: Props) {
               origin.is_active
                 ? "cursor-not-allowed border-emerald-900 bg-emerald-950 text-emerald-400"
                 : activating || saving
-                  ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
+                  ? "cursor-not-allowed border-border bg-card text-text-tertiary"
                   : "cursor-pointer border-emerald-900 bg-emerald-950 text-emerald-400 hover:border-emerald-800",
             )}
           >

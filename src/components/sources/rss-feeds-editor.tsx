@@ -29,11 +29,11 @@ export function RssFeedsEditor() {
   });
 
   return (
-    <section className="bg-zinc-950 p-5">
+    <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <KickerLabel>RSS feeds</KickerLabel>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-text-tertiary">
             Curated publisher feeds polled on the 2h collection cycle. Items
             land in the same mentions stream as other sources.
           </p>
@@ -42,7 +42,7 @@ export function RssFeedsEditor() {
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="inline-flex cursor-pointer items-center gap-1 border border-zinc-700 bg-zinc-50 px-3 py-1 font-mono text-[11px] text-black hover:bg-zinc-200"
+            className="inline-flex cursor-pointer items-center gap-1 border border-strong bg-foreground px-3 py-1 font-mono text-[11px] text-primary-foreground hover:bg-text-secondary"
           >
             <Plus className="size-3" />
             New feed
@@ -64,11 +64,11 @@ export function RssFeedsEditor() {
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full bg-zinc-900" />
+              <Skeleton key={i} className="h-12 w-full bg-elevated" />
             ))}
           </div>
         ) : error ? (
-          <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
+          <div className="flex items-center gap-3 font-mono text-[11px] text-text-tertiary">
             <span>
               Failed to load feeds
               {error instanceof Error ? ` · ${error.message}` : ""}
@@ -76,7 +76,7 @@ export function RssFeedsEditor() {
             <button
               type="button"
               onClick={() => refetch()}
-              className="cursor-pointer border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
             >
               retry
             </button>
@@ -107,27 +107,27 @@ function EmptyState({
 }) {
   if (adding) {
     return (
-      <div className="font-mono text-[11px] text-zinc-500">
+      <div className="font-mono text-[11px] text-text-tertiary">
         Fill in the form above to add your first feed.
       </div>
     );
   }
   return (
-    <div className="border border-dashed border-zinc-800 p-5">
-      <div className="font-mono text-[11px] text-zinc-400">
+    <div className="border border-dashed border-border p-5">
+      <div className="font-mono text-[11px] text-text-tertiary">
         No RSS feeds configured. Add curated publisher feeds (BBC, Guardian,
         AP News, etc.) to start monitoring.
       </div>
       <button
         type="button"
         onClick={onStartAdd}
-        className="mt-3 inline-flex cursor-pointer items-center gap-1 border border-zinc-700 bg-zinc-50 px-3 py-1 font-mono text-[11px] text-black hover:bg-zinc-200"
+        className="mt-3 inline-flex cursor-pointer items-center gap-1 border border-strong bg-foreground px-3 py-1 font-mono text-[11px] text-primary-foreground hover:bg-text-secondary"
       >
         <Plus className="size-3" />
         Add first feed
       </button>
       <div className="mt-4">
-        <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-600">
+        <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
           Or pick a suggestion
         </div>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -136,7 +136,7 @@ function EmptyState({
               key={s.url}
               type="button"
               onClick={onStartAdd}
-              className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[10px] text-text-tertiary hover:border-strong hover:text-foreground"
             >
               {s.name}
             </button>
@@ -219,10 +219,10 @@ function AddFeedForm({
   }
 
   return (
-    <div className="border-l-2 border-zinc-800 bg-zinc-950 px-4 py-4">
+    <div className="border-l-2 border-border bg-card px-4 py-4">
       <div className="space-y-3">
         <label className="block">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+          <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
             Feed URL
           </span>
           <input
@@ -239,12 +239,12 @@ function AddFeedForm({
             spellCheck={false}
             autoComplete="off"
             className={cn(
-              "mt-1 h-8 w-full border bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
+              "mt-1 h-8 w-full border bg-card px-2",
+              "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
               "outline-none transition-colors",
               urlInvalidClient
                 ? "border-red-900 focus:border-red-800"
-                : "border-zinc-800 hover:border-zinc-700 focus:border-zinc-700",
+                : "border-border hover:border-strong focus:border-strong",
             )}
           />
           {urlInvalidClient && (
@@ -255,7 +255,7 @@ function AddFeedForm({
         </label>
 
         <label className="block">
-          <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+          <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
             Display name
           </span>
           <input
@@ -271,9 +271,9 @@ function AddFeedForm({
             placeholder="BBC World"
             maxLength={255}
             className={cn(
-              "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+              "mt-1 h-8 w-full border border-border bg-card px-2",
+              "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+              "outline-none transition-colors hover:border-strong focus:border-strong",
             )}
           />
         </label>
@@ -281,7 +281,7 @@ function AddFeedForm({
 
       {showSuggestions && (
         <div className="mt-4">
-          <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-600">
+          <div className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
             Suggestions
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -294,7 +294,7 @@ function AddFeedForm({
                   setName(s.name);
                   setErrorMsg(null);
                 }}
-                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[10px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[10px] text-text-tertiary hover:border-strong hover:text-foreground"
               >
                 {s.name}
               </button>
@@ -311,7 +311,7 @@ function AddFeedForm({
         <button
           type="button"
           onClick={onCancel}
-          className="cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+          className="cursor-pointer border border-border bg-card px-3 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
         >
           Cancel
         </button>
@@ -322,8 +322,8 @@ function AddFeedForm({
           className={cn(
             "border px-3 py-1 font-mono text-[11px] transition-colors",
             mutation.isPending
-              ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-              : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+              ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+              : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
           )}
         >
           {mutation.isPending ? "Adding…" : "Add feed"}
@@ -425,13 +425,13 @@ function FeedRow({ feed }: { feed: RssFeed }) {
   }
 
   return (
-    <li className="border-b border-zinc-800 last:border-0">
+    <li className="border-b border-border last:border-0">
       <div className="flex items-center justify-between gap-3 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <StatusBadge feed={feed} />
           <div className="flex min-w-0 flex-col gap-0.5">
             <div className="flex items-center gap-2">
-              <span className="truncate text-sm text-zinc-50">{feed.name}</span>
+              <span className="truncate text-sm text-foreground">{feed.name}</span>
               <PublisherTrust feed={feed} />
             </div>
             <UrlLine url={feed.url} />
@@ -449,7 +449,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
               "border px-2 py-1 font-mono text-[11px] transition-colors",
               feed.is_active
                 ? "border-emerald-900 bg-emerald-950 text-emerald-400 hover:border-emerald-800"
-                : "border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300",
+                : "border-border bg-elevated text-text-tertiary hover:border-strong hover:text-text-secondary",
               updateMutation.isPending && "opacity-50",
             )}
           >
@@ -460,7 +460,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
               <button
                 type="button"
                 onClick={() => setMode("edit")}
-                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
               >
                 Edit
               </button>
@@ -468,7 +468,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
                 type="button"
                 onClick={() => setMode("confirm-delete")}
                 aria-label={`Delete ${feed.name}`}
-                className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] text-zinc-400 hover:border-red-900 hover:text-red-400"
+                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-red-900 hover:text-red-400"
               >
                 <Trash2 className="size-3" />
               </button>
@@ -478,9 +478,9 @@ function FeedRow({ feed }: { feed: RssFeed }) {
       </div>
 
       {mode === "edit" && (
-        <div className="mb-3 border-l-2 border-zinc-800 bg-zinc-950 px-4 py-4">
+        <div className="mb-3 border-l-2 border-border bg-card px-4 py-4">
           <label className="block">
-            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-600">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
               Display name
             </span>
             <input
@@ -500,13 +500,13 @@ function FeedRow({ feed }: { feed: RssFeed }) {
               autoFocus
               maxLength={255}
               className={cn(
-                "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-                "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-                "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+                "mt-1 h-8 w-full border border-border bg-card px-2",
+                "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+                "outline-none transition-colors hover:border-strong focus:border-strong",
               )}
             />
           </label>
-          <p className="mt-2 font-mono text-[10px] text-zinc-600">
+          <p className="mt-2 font-mono text-[10px] text-muted-foreground">
             URL is not editable. To change the URL, delete this feed and add a
             new one.
           </p>
@@ -519,7 +519,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
             <button
               type="button"
               onClick={cancelEdit}
-              className="cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-card px-3 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
             >
               Cancel
             </button>
@@ -530,8 +530,8 @@ function FeedRow({ feed }: { feed: RssFeed }) {
               className={cn(
                 "border px-3 py-1 font-mono text-[11px] transition-colors",
                 updateMutation.isPending
-                  ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                  : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                  ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                  : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
               )}
             >
               {updateMutation.isPending ? "Saving…" : "Save"}
@@ -541,12 +541,12 @@ function FeedRow({ feed }: { feed: RssFeed }) {
       )}
 
       {mode === "confirm-delete" && (
-        <div className="mb-3 border-l-2 border-red-900 bg-zinc-950 px-4 py-4">
-          <div className="font-mono text-[11px] text-zinc-200">
+        <div className="mb-3 border-l-2 border-red-900 bg-card px-4 py-4">
+          <div className="font-mono text-[11px] text-foreground">
             Delete{" "}
-            <span className="text-zinc-50">&ldquo;{feed.name}&rdquo;</span>?
+            <span className="text-foreground">&ldquo;{feed.name}&rdquo;</span>?
           </div>
-          <p className="mt-1 font-mono text-[10px] text-zinc-500">
+          <p className="mt-1 font-mono text-[10px] text-text-tertiary">
             Existing mentions from this feed will be kept, but no new items
             will be collected.
           </p>
@@ -554,7 +554,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
             <button
               type="button"
               onClick={() => setMode("view")}
-              className="cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+              className="cursor-pointer border border-border bg-card px-3 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
             >
               Cancel
             </button>
@@ -565,7 +565,7 @@ function FeedRow({ feed }: { feed: RssFeed }) {
               className={cn(
                 "border px-3 py-1 font-mono text-[11px] transition-colors",
                 deleteMutation.isPending
-                  ? "cursor-not-allowed border-red-950 bg-zinc-950 text-zinc-700"
+                  ? "cursor-not-allowed border-red-950 bg-card text-text-tertiary"
                   : "cursor-pointer border-red-700 bg-red-950 text-red-200 hover:bg-red-900",
               )}
             >
@@ -606,11 +606,11 @@ function deriveHealth(feed: RssFeed): Health {
 }
 
 const HEALTH_DOT: Record<Health["kind"], string> = {
-  inactive: "bg-zinc-700",
+  inactive: "bg-strong",
   healthy: "bg-emerald-400",
   degraded: "bg-amber-400",
   stalled: "bg-red-500",
-  never: "border border-zinc-700 bg-transparent",
+  never: "border border-strong bg-transparent",
 };
 
 function StatusBadge({ feed }: { feed: RssFeed }) {
@@ -635,8 +635,8 @@ function StatusBadge({ feed }: { feed: RssFeed }) {
           health.kind === "healthy" && "text-emerald-400",
           health.kind === "degraded" && "text-amber-400",
           health.kind === "stalled" && "text-red-400",
-          health.kind === "inactive" && "text-zinc-500",
-          health.kind === "never" && "text-zinc-500",
+          health.kind === "inactive" && "text-text-tertiary",
+          health.kind === "never" && "text-text-tertiary",
         )}
       >
         {health.label}
@@ -656,13 +656,13 @@ function StatusBadge({ feed }: { feed: RssFeed }) {
         <Tooltip.Positioner sideOffset={4} side="top" align="start">
           <Tooltip.Popup
             className={cn(
-              "z-50 max-w-md border border-zinc-800 bg-zinc-950 px-3 py-2",
-              "font-mono text-[11px] leading-relaxed text-zinc-300 outline-none",
+              "z-50 max-w-md border border-border bg-card px-3 py-2",
+              "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
           >
-            <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500">
+            <div className="mb-1 font-mono text-[9px] uppercase tracking-[0.12em] text-text-tertiary">
               Last error
             </div>
             <div className="break-words whitespace-pre-wrap">
@@ -678,7 +678,7 @@ function StatusBadge({ feed }: { feed: RssFeed }) {
 function PublisherTrust({ feed }: { feed: RssFeed }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="font-mono text-[10px] text-zinc-500">
+      <span className="font-mono text-[10px] text-text-tertiary">
         {feed.publisher_domain_normalized}
       </span>
       <DomainScoreBadge
@@ -707,7 +707,7 @@ function UrlLine({ url }: { url: string }) {
     <div className="flex min-w-0 items-center gap-1.5">
       <span
         title={url}
-        className="truncate font-mono text-[11px] text-zinc-500"
+        className="truncate font-mono text-[11px] text-text-tertiary"
       >
         {url}
       </span>
@@ -715,7 +715,7 @@ function UrlLine({ url }: { url: string }) {
         type="button"
         onClick={copy}
         aria-label={copied ? "Copied" : "Copy URL"}
-        className="cursor-pointer text-zinc-600 transition-colors hover:text-zinc-300"
+        className="cursor-pointer text-muted-foreground transition-colors hover:text-text-secondary"
       >
         {copied ? (
           <Check className="size-3 text-emerald-400" />
@@ -729,7 +729,7 @@ function UrlLine({ url }: { url: string }) {
 
 function FeedMeta({ feed }: { feed: RssFeed }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[10px] text-zinc-600">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 font-mono text-[10px] text-muted-foreground">
       <span title={feed.last_polled_at ?? undefined}>
         Polled {relativeTime(feed.last_polled_at)}
       </span>

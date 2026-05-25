@@ -46,11 +46,11 @@ export function TopBar({ topicId }: { topicId: number | null }) {
   });
 
   return (
-    <header className="sticky top-0 z-30 h-14 border-b border-zinc-800 bg-black/80 backdrop-blur">
+    <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5">
         <div className="flex items-center gap-2">
-          <div className="size-2 bg-emerald-400" aria-hidden />
-          <span className="font-mono text-sm text-zinc-50">u24-pulse</span>
+          <div className="size-2 bg-success" aria-hidden />
+          <span className="font-mono text-sm text-foreground">u24-pulse</span>
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
@@ -60,13 +60,13 @@ export function TopBar({ topicId }: { topicId: number | null }) {
               "px-3 py-1.5 font-mono text-xs transition-colors",
               item.routable ? "cursor-pointer" : "cursor-default",
               isActive
-                ? "bg-zinc-900 text-zinc-50"
-                : "text-zinc-600 hover:text-zinc-300",
+                ? "bg-elevated text-foreground"
+                : "text-text-tertiary hover:text-foreground",
             );
             const inner = (
               <>
                 {item.label}
-                {item.info && <span className="ml-1 text-zinc-700">ⓘ</span>}
+                {item.info && <span className="ml-1 text-muted-foreground">ⓘ</span>}
               </>
             );
             return item.routable ? (
@@ -81,9 +81,9 @@ export function TopBar({ topicId }: { topicId: number | null }) {
           })}
         </nav>
 
-        <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-600">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-text-tertiary">
           <span
-            className="inline-block size-1.5 animate-pulse bg-emerald-400"
+            className="inline-block size-1.5 animate-pulse bg-success"
             aria-hidden
           />
           <span className="hidden sm:inline">{status}</span>

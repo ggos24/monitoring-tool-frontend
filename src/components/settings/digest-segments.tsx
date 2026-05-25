@@ -112,11 +112,11 @@ export function DigestSegments() {
   }
 
   return (
-    <section className="bg-zinc-950 p-5">
+    <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <KickerLabel>Digest segments</KickerLabel>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-text-tertiary">
             Saved filters that aggregate enriched mentions into nightly
             narrative summaries. One row per report.
           </p>
@@ -131,8 +131,8 @@ export function DigestSegments() {
           className={cn(
             "flex items-center gap-1 border px-3 py-1 font-mono text-[11px] transition-colors",
             topics.length === 0
-              ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-              : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+              ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+              : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
           )}
         >
           <Plus className="size-3" /> New segment
@@ -161,22 +161,22 @@ export function DigestSegments() {
         {definitionsQuery.isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 2 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 w-full bg-zinc-900" />
+              <Skeleton key={i} className="h-14 w-full bg-elevated" />
             ))}
           </div>
         ) : definitionsQuery.error ? (
-          <div className="font-mono text-[11px] text-zinc-400">
+          <div className="font-mono text-[11px] text-text-tertiary">
             Failed to load segments.{" "}
             <button
               type="button"
               onClick={() => definitionsQuery.refetch()}
-              className="cursor-pointer text-zinc-200 underline-offset-2 hover:underline"
+              className="cursor-pointer text-foreground underline-offset-2 hover:underline"
             >
               retry
             </button>
           </div>
         ) : definitions.length === 0 ? (
-          <div className="font-mono text-[11px] text-zinc-500">
+          <div className="font-mono text-[11px] text-text-tertiary">
             No segments configured yet. Use &ldquo;+ New segment&rdquo; to
             create one.
           </div>
@@ -185,7 +185,7 @@ export function DigestSegments() {
             {definitions.map((def) => (
               <li
                 key={def.id}
-                className="flex items-start justify-between gap-3 border-b border-zinc-800 py-3 last:border-0"
+                className="flex items-start justify-between gap-3 border-b border-border py-3 last:border-0"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -193,18 +193,18 @@ export function DigestSegments() {
                       aria-hidden
                       className={cn(
                         "size-1.5 shrink-0",
-                        def.active ? "bg-emerald-400" : "bg-zinc-700",
+                        def.active ? "bg-emerald-400" : "bg-strong",
                       )}
                     />
-                    <span className="text-sm text-zinc-50">{def.name}</span>
-                    <span className="font-mono text-[10px] text-zinc-600">
+                    <span className="text-sm text-foreground">{def.name}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">
                       #{def.id} · {topicName(def.topic_id, topics)} ·{" "}
                       {def.period_kind}
                     </span>
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5 pl-3">
                     {def.segment.length === 0 ? (
-                      <span className="font-mono text-[10px] text-zinc-600">
+                      <span className="font-mono text-[10px] text-muted-foreground">
                         (no conditions)
                       </span>
                     ) : (
@@ -228,7 +228,7 @@ export function DigestSegments() {
                       "border px-2 py-1 font-mono text-[11px] transition-colors",
                       def.active
                         ? "border-emerald-900 bg-emerald-950 text-emerald-400 hover:border-emerald-800"
-                        : "border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300",
+                        : "border-border bg-elevated text-text-tertiary hover:border-strong hover:text-text-secondary",
                     )}
                   >
                     {def.active ? "Active" : "Inactive"}
@@ -238,7 +238,7 @@ export function DigestSegments() {
                     onClick={() => handleDelete(def)}
                     disabled={deleteMutation.isPending}
                     title="Delete segment"
-                    className="cursor-pointer border border-zinc-800 bg-zinc-950 p-1.5 text-zinc-500 hover:border-red-900 hover:text-red-400"
+                    className="cursor-pointer border border-border bg-card p-1.5 text-text-tertiary hover:border-red-900 hover:text-red-400"
                   >
                     <Trash2 className="size-3.5" aria-hidden />
                   </button>
@@ -259,7 +259,7 @@ function topicName(id: number, topics: Topic[]): string {
 function ConditionChip({ condition }: { condition: SegmentCondition }) {
   const valueRepr = formatValue(condition.field, condition.value);
   return (
-    <span className="border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-300">
+    <span className="border border-border bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-secondary">
       {condition.field} {condition.op} {valueRepr}
     </span>
   );
@@ -371,14 +371,14 @@ function SegmentCreateForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="mt-4 border border-zinc-800 bg-zinc-950 p-4"
+      className="mt-4 border border-border bg-card p-4"
     >
       <div className="flex items-baseline justify-between">
-        <KickerLabel className="text-zinc-500">New segment</KickerLabel>
+        <KickerLabel className="text-text-tertiary">New segment</KickerLabel>
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer p-1 text-zinc-600 hover:text-zinc-300"
+          className="cursor-pointer p-1 text-muted-foreground hover:text-text-secondary"
           aria-label="Close"
         >
           <X className="size-3.5" />
@@ -387,7 +387,7 @@ function SegmentCreateForm({
 
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
         <label className="block">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
             Name
           </span>
           <input
@@ -397,28 +397,28 @@ function SegmentCreateForm({
             maxLength={200}
             placeholder='e.g. "Polish coverage"'
             className={cn(
-              "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+              "mt-1 h-8 w-full border border-border bg-card px-2",
+              "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+              "outline-none transition-colors hover:border-strong focus:border-strong",
             )}
           />
         </label>
 
         <label className="block">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
             Topic
           </span>
           <select
             value={topicId}
             onChange={(e) => setTopicId(Number(e.target.value))}
             className={cn(
-              "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-50",
-              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+              "mt-1 h-8 w-full border border-border bg-card px-2",
+              "font-mono text-[11px] text-foreground",
+              "outline-none transition-colors hover:border-strong focus:border-strong",
             )}
           >
             {topics.map((t) => (
-              <option key={t.id} value={t.id} className="bg-zinc-950">
+              <option key={t.id} value={t.id} className="bg-card">
                 {t.name} (#{t.id})
               </option>
             ))}
@@ -428,13 +428,13 @@ function SegmentCreateForm({
 
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
             Conditions · joined with AND
           </span>
           <button
             type="button"
             onClick={addCondition}
-            className="cursor-pointer border border-zinc-800 bg-zinc-950 px-2 py-0.5 font-mono text-[10px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+            className="cursor-pointer border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-text-tertiary hover:border-strong hover:text-foreground"
           >
             + Add condition
           </button>
@@ -453,7 +453,7 @@ function SegmentCreateForm({
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <label className="flex items-center gap-2 font-mono text-[11px] text-zinc-300">
+        <label className="flex items-center gap-2 font-mono text-[11px] text-text-secondary">
           <input
             type="checkbox"
             checked={active}
@@ -466,7 +466,7 @@ function SegmentCreateForm({
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer border border-zinc-800 bg-zinc-950 px-3 py-1 font-mono text-[11px] text-zinc-400 hover:border-zinc-700 hover:text-zinc-50"
+            className="cursor-pointer border border-border bg-card px-3 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
           >
             Cancel
           </button>
@@ -476,8 +476,8 @@ function SegmentCreateForm({
             className={cn(
               "border px-3 py-1 font-mono text-[11px] transition-colors",
               createMutation.isPending
-                ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
             )}
           >
             {createMutation.isPending ? "Saving…" : "Create"}
@@ -508,14 +508,14 @@ function ConditionRow({
           onChange({ field: e.target.value as SegmentField })
         }
         className={cn(
-          "h-8 border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] text-zinc-50",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "h-8 border border-border bg-card px-2",
+          "font-mono text-[11px] text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
         )}
         title={FIELD_HELP[condition.field]}
       >
         {SEGMENT_FIELDS.map((f) => (
-          <option key={f} value={f} className="bg-zinc-950">
+          <option key={f} value={f} className="bg-card">
             {FIELD_LABEL[f]}
           </option>
         ))}
@@ -542,19 +542,19 @@ function ConditionRow({
           }
         }}
         className={cn(
-          "h-8 border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] text-zinc-50",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "h-8 border border-border bg-card px-2",
+          "font-mono text-[11px] text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
         )}
       >
         {ops.map((op) => (
-          <option key={op} value={op} className="bg-zinc-950">
+          <option key={op} value={op} className="bg-card">
             {op}
           </option>
         ))}
         {/* Allow keeping an existing op even if not in the per-field whitelist (defensive). */}
         {!ops.includes(condition.op) && (
-          <option value={condition.op} className="bg-zinc-950">
+          <option value={condition.op} className="bg-card">
             {condition.op}
           </option>
         )}
@@ -570,8 +570,8 @@ function ConditionRow({
         className={cn(
           "border p-1.5 transition-colors",
           canRemove
-            ? "cursor-pointer border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-red-900 hover:text-red-400"
-            : "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-800",
+            ? "cursor-pointer border-border bg-card text-text-tertiary hover:border-red-900 hover:text-red-400"
+            : "cursor-not-allowed border-border bg-card text-text-tertiary",
         )}
       >
         <X className="size-3.5" aria-hidden />
@@ -627,7 +627,7 @@ function ValueInput({
         className={inputClass()}
       >
         {ALL_ISO2.map((iso) => (
-          <option key={iso} value={iso} className="bg-zinc-950">
+          <option key={iso} value={iso} className="bg-card">
             {iso2ToFlagEmoji(iso)} {iso} · {countryName(iso)}
           </option>
         ))}
@@ -643,7 +643,7 @@ function ValueInput({
         className={inputClass()}
       >
         {[0, 1, 2, 3, 4, 5].map((n) => (
-          <option key={n} value={n} className="bg-zinc-950">
+          <option key={n} value={n} className="bg-card">
             {n}
           </option>
         ))}
@@ -658,10 +658,10 @@ function ValueInput({
         onChange={(e) => onChange({ value: e.target.value === "true" })}
         className={inputClass()}
       >
-        <option value="true" className="bg-zinc-950">
+        <option value="true" className="bg-card">
           true
         </option>
-        <option value="false" className="bg-zinc-950">
+        <option value="false" className="bg-card">
           false
         </option>
       </select>
@@ -676,7 +676,7 @@ function ValueInput({
         className={inputClass()}
       >
         {STANCE_LABELS.map((s) => (
-          <option key={s} value={s} className="bg-zinc-950">
+          <option key={s} value={s} className="bg-card">
             {s}
           </option>
         ))}
@@ -694,7 +694,7 @@ function ValueInput({
         className={inputClass()}
       >
         {FRAMING_LABELS.map((f) => (
-          <option key={f} value={f} className="bg-zinc-950">
+          <option key={f} value={f} className="bg-card">
             {f}
           </option>
         ))}
@@ -797,8 +797,8 @@ function inListPlaceholder(field: SegmentField): string {
 
 function inputClass(): string {
   return cn(
-    "h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-    "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-    "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+    "h-8 w-full border border-border bg-card px-2",
+    "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+    "outline-none transition-colors hover:border-strong focus:border-strong",
   );
 }

@@ -32,17 +32,17 @@ export default function EditTopicAstPage({ params }: PageProps) {
       <main className="mx-auto w-full max-w-[1080px] flex-1 space-y-6 px-5 py-6">
         <header className="flex items-baseline justify-between gap-3">
           <div>
-            <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-zinc-50">
+            <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-foreground">
               Edit topic AST
             </h1>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-text-tertiary">
               Edit the structured profile. Top-level fields are replaced on
               save. Anchor edits trigger re-embedding.
             </p>
           </div>
           <Link
             href="/settings"
-            className="font-mono text-[11px] text-zinc-500 hover:text-zinc-200"
+            className="font-mono text-[11px] text-text-tertiary hover:text-foreground"
           >
             ← back to settings
           </Link>
@@ -51,7 +51,7 @@ export default function EditTopicAstPage({ params }: PageProps) {
         {Number.isNaN(topicId) ? (
           <NotFound message={`Invalid topic id: ${id}`} />
         ) : isLoading ? (
-          <Skeleton className="h-96 w-full bg-zinc-900" />
+          <Skeleton className="h-96 w-full bg-elevated" />
         ) : error ? (
           <div className="border border-red-900 bg-red-950/30 p-4">
             <p className="font-mono text-[12px] text-red-100">
@@ -81,12 +81,12 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
   }
   if (!topic.topic_ast) {
     return (
-      <div className="border border-zinc-800 bg-zinc-950 p-5">
+      <div className="border border-border bg-card p-5">
         <KickerLabel>No AST</KickerLabel>
-        <p className="mt-2 font-mono text-[12px] text-zinc-300">
+        <p className="mt-2 font-mono text-[12px] text-text-secondary">
           This topic was created before semantic matching shipped and has no AST.
         </p>
-        <p className="mt-1 font-mono text-[11px] text-zinc-500">
+        <p className="mt-1 font-mono text-[11px] text-text-tertiary">
           Use the inline edit row in{" "}
           <Link href="/settings" className="text-sky-300 hover:underline">
             Settings → Topics
@@ -113,9 +113,9 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
   };
 
   return (
-    <section className="bg-zinc-950 p-5">
+    <section className="bg-card p-5">
       <KickerLabel>Review &amp; edit</KickerLabel>
-      <p className="mt-1 mb-5 text-xs text-zinc-500">
+      <p className="mt-1 mb-5 text-xs text-text-tertiary">
         Editing {topic.name} (id {topic.id}).
       </p>
       <AstReviewForm initial={initial} />
@@ -125,8 +125,8 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
 
 function NotFound({ message }: { message: string }) {
   return (
-    <div className="border border-zinc-800 bg-zinc-950 p-5">
-      <p className="font-mono text-[12px] text-zinc-300">{message}</p>
+    <div className="border border-border bg-card p-5">
+      <p className="font-mono text-[12px] text-text-secondary">{message}</p>
       <Link
         href="/settings"
         className="mt-3 inline-block font-mono text-[11px] text-sky-300 hover:underline"

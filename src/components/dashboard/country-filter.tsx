@@ -84,10 +84,10 @@ export function CountryFilter({
           <button
             type="button"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 border border-zinc-800 bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-300 transition-colors",
-              "hover:border-zinc-700 hover:text-zinc-50",
-              "data-[popup-open]:border-zinc-700 data-[popup-open]:text-zinc-50",
+              "inline-flex h-8 items-center gap-1.5 border border-border bg-card px-2",
+              "font-mono text-[11px] text-text-secondary transition-colors",
+              "hover:border-strong hover:text-foreground",
+              "data-[popup-open]:border-strong data-[popup-open]:text-foreground",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >
@@ -96,16 +96,16 @@ export function CountryFilter({
                 <span aria-hidden className="text-[14px] leading-none">
                   {selectedFlag}
                 </span>
-                <span className="text-zinc-500">{value}</span>
+                <span className="text-text-tertiary">{value}</span>
                 <span className="max-w-32 truncate">{selectedName}</span>
               </>
             ) : (
               <>
-                <Globe className="size-3.5 text-zinc-500" />
+                <Globe className="size-3.5 text-text-tertiary" />
                 <span>All countries</span>
               </>
             )}
-            <ChevronDown className="size-3 text-zinc-600" />
+            <ChevronDown className="size-3 text-muted-foreground" />
           </button>
         }
       />
@@ -113,17 +113,17 @@ export function CountryFilter({
         <Combobox.Positioner sideOffset={4} align="end" side="bottom" className="z-[100]">
           <Combobox.Popup
             className={cn(
-              "w-72 overflow-hidden border border-zinc-800 bg-zinc-950 outline-none",
+              "w-72 overflow-hidden border border-border bg-card outline-none",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 duration-100",
             )}
           >
-            <Combobox.InputGroup className="relative border-b border-zinc-800 p-1.5">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-zinc-600" />
+            <Combobox.InputGroup className="relative border-b border-border p-1.5">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Combobox.Input
                 placeholder="Search ISO or name…"
                 className={cn(
-                  "h-7 w-full border-0 bg-zinc-950 pr-2 pl-7",
-                  "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700 outline-none",
+                  "h-7 w-full border-0 bg-card pr-2 pl-7",
+                  "font-mono text-[11px] text-foreground placeholder:text-text-tertiary outline-none",
                 )}
               />
             </Combobox.InputGroup>
@@ -135,25 +135,25 @@ export function CountryFilter({
                 setOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-2 border-b border-zinc-900 px-2 py-1.5 text-left",
-                "font-mono text-[11px] transition-colors hover:bg-zinc-900",
-                value === null ? "text-zinc-50" : "text-zinc-300",
+                "flex w-full items-center gap-2 border-b border-border px-2 py-1.5 text-left",
+                "font-mono text-[11px] transition-colors hover:bg-elevated",
+                value === null ? "text-foreground" : "text-text-secondary",
               )}
             >
-              <Globe className="size-3.5 text-zinc-500" />
+              <Globe className="size-3.5 text-text-tertiary" />
               <span className="flex-1">All countries</span>
             </button>
 
             {isLoading ? (
-              <div className="px-2 py-2 font-mono text-[11px] text-zinc-500">
+              <div className="px-2 py-2 font-mono text-[11px] text-text-tertiary">
                 Loading…
               </div>
             ) : error ? (
-              <div className="px-2 py-2 font-mono text-[11px] text-zinc-400">
+              <div className="px-2 py-2 font-mono text-[11px] text-text-tertiary">
                 Failed to load countries
               </div>
             ) : items.length === 0 ? (
-              <div className="px-2 py-2 font-mono text-[11px] text-zinc-500">
+              <div className="px-2 py-2 font-mono text-[11px] text-text-tertiary">
                 No country data for this topic.
               </div>
             ) : (
@@ -165,23 +165,23 @@ export function CountryFilter({
                       value={item}
                       className={cn(
                         "flex cursor-pointer items-center gap-2 px-2 py-1.5",
-                        "font-mono text-[11px] text-zinc-300",
-                        "data-[highlighted]:bg-zinc-900 data-[highlighted]:text-zinc-50",
-                        "data-[selected]:text-zinc-50",
+                        "font-mono text-[11px] text-text-secondary",
+                        "data-[highlighted]:bg-elevated data-[highlighted]:text-foreground",
+                        "data-[selected]:text-foreground",
                       )}
                     >
                       <span aria-hidden className="text-[14px] leading-none">
                         {item.flag}
                       </span>
-                      <span className="w-6 text-zinc-500">{item.iso2}</span>
+                      <span className="w-6 text-text-tertiary">{item.iso2}</span>
                       <span className="flex-1 truncate">{item.name}</span>
-                      <span className="tabular-nums text-zinc-500">
+                      <span className="tabular-nums text-text-tertiary">
                         {item.count}
                       </span>
                     </Combobox.Item>
                   )}
                 </Combobox.List>
-                <Combobox.Empty className="px-2 py-2 font-mono text-[11px] text-zinc-500">
+                <Combobox.Empty className="px-2 py-2 font-mono text-[11px] text-text-tertiary">
                   No match.
                 </Combobox.Empty>
               </>

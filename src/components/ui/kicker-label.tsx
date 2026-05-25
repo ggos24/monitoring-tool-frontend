@@ -10,7 +10,7 @@ export function KickerLabel({
   return (
     <div
       className={cn(
-        "font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-zinc-600",
+        "font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-muted-foreground",
         className,
       )}
     >

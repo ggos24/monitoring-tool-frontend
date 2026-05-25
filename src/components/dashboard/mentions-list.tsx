@@ -134,10 +134,10 @@ export function MentionsList({
   const canNext = (page + 1) * PAGE_SIZE < total;
 
   return (
-    <div className="bg-zinc-950 p-5">
+    <div className="bg-card p-5">
       <div className="flex items-center justify-between">
         <KickerLabel>Mentions</KickerLabel>
-        <div className="font-mono text-[11px] text-zinc-600 tabular-nums">
+        <div className="font-mono text-[11px] text-text-tertiary tabular-nums">
           {total > 0 && `${total.toLocaleString()} total`}
         </div>
       </div>
@@ -145,16 +145,16 @@ export function MentionsList({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
+            <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search title or body..."
               className={cn(
-                "h-8 w-full border border-zinc-800 bg-zinc-950 pr-2 pl-7 sm:w-72",
-                "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-                "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+                "h-8 w-full border border-border bg-card pr-2 pl-7 sm:w-72",
+                "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+                "outline-none transition-colors hover:border-strong focus:border-strong",
               )}
             />
           </div>
@@ -164,13 +164,13 @@ export function MentionsList({
               onClick={onClearDomain}
               title="Clear domain filter"
               className={cn(
-                "group inline-flex h-8 items-center gap-1.5 border border-zinc-700 bg-zinc-900 pr-1 pl-2",
-                "font-mono text-[11px] text-zinc-100 transition-colors hover:border-zinc-600 hover:bg-zinc-800",
+                "group inline-flex h-8 items-center gap-1.5 border border-strong bg-elevated pr-1 pl-2",
+                "font-mono text-[11px] text-foreground transition-colors hover:border-strong hover:bg-overlay",
               )}
             >
-              <span className="text-zinc-500">domain:</span>
+              <span className="text-text-tertiary">domain:</span>
               <span>{domain}</span>
-              <X className="size-3 text-zinc-500 transition-colors group-hover:text-zinc-200" />
+              <X className="size-3 text-text-tertiary transition-colors group-hover:text-foreground" />
             </button>
           )}
           <ToggleGroup
@@ -186,7 +186,7 @@ export function MentionsList({
             onClick={resetFilters}
             className={cn(
               "font-mono text-[11px] uppercase tracking-[0.1em]",
-              "text-zinc-500 transition-colors hover:text-zinc-50",
+              "text-text-secondary transition-colors hover:text-foreground",
             )}
           >
             Reset
@@ -213,12 +213,12 @@ export function MentionsList({
         {!enabled ? (
           <EmptyMessage>Select a topic to load mentions.</EmptyMessage>
         ) : error ? (
-          <div className="flex items-center gap-3 font-mono text-[11px] text-zinc-400">
+          <div className="flex items-center gap-3 font-mono text-[11px] text-text-secondary">
             <span>Failed to load mentions</span>
             <button
               type="button"
               onClick={() => refetch()}
-              className="border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+              className="border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
             >
               retry
             </button>
@@ -226,7 +226,7 @@ export function MentionsList({
         ) : isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full bg-zinc-900" />
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -234,7 +234,7 @@ export function MentionsList({
         ) : (
           <ul
             className={cn(
-              "divide-y divide-zinc-800",
+              "divide-y divide-border",
               isFetching && "opacity-60 transition-opacity",
             )}
           >
@@ -246,8 +246,8 @@ export function MentionsList({
       </div>
 
       {enabled && total > 0 && (
-        <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-3">
-          <div className="font-mono text-[11px] text-zinc-600 tabular-nums">
+        <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+          <div className="font-mono text-[11px] text-text-tertiary tabular-nums">
             Showing {start}–{end} of {total.toLocaleString()}
           </div>
           <div className="flex items-center gap-2">
@@ -318,8 +318,8 @@ function MentionRow({
   const previewIsSummary = mention.summary !== null;
 
   return (
-    <li className="-mx-2 px-2 py-3 transition-colors hover:bg-zinc-900/50">
-      <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-zinc-600">
+    <li className="-mx-2 px-2 py-3 transition-colors hover:bg-elevated/60">
+      <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-text-tertiary">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate">{mention.source_domain ?? "—"}</span>
           <span aria-hidden>·</span>
@@ -328,7 +328,7 @@ function MentionRow({
             <>
               <span aria-hidden>·</span>
               <span
-                className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-zinc-500"
+                className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-success"
                 title="Title and preview generated by the enrichment pipeline."
               >
                 Enriched
@@ -351,7 +351,7 @@ function MentionRow({
         onClick={openArticle}
         disabled={!mention.url}
         className={cn(
-          "mt-1.5 block w-full text-left text-[13px] text-zinc-50",
+          "mt-1.5 block w-full text-left text-[14px] leading-snug text-foreground",
           mention.url
             ? "cursor-pointer hover:underline underline-offset-2"
             : "cursor-default",
@@ -365,8 +365,8 @@ function MentionRow({
           className={cn(
             "mt-1 leading-snug",
             previewIsSummary
-              ? "text-[12px] text-zinc-300"
-              : "truncate font-mono text-[11px] text-zinc-600",
+              ? "text-[12px] text-text-secondary"
+              : "truncate font-mono text-[11px] text-text-tertiary",
           )}
         >
           {previewText}
@@ -374,7 +374,7 @@ function MentionRow({
       )}
 
       {error && (
-        <div className="mt-1 font-mono text-[10px] text-red-400">{error}</div>
+        <div className="mt-1 font-mono text-[10px] text-danger">{error}</div>
       )}
     </li>
   );
@@ -421,8 +421,8 @@ function StanceBadge({ mention }: { mention: Mention }) {
         <Tooltip.Positioner sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
-              "z-50 max-w-xs border border-zinc-800 bg-zinc-950 px-2 py-1.5",
-              "font-mono text-[11px] leading-relaxed text-zinc-300 outline-none",
+              "z-50 max-w-xs border border-border bg-overlay px-2 py-1.5",
+              "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
@@ -463,8 +463,8 @@ function EnrichButton({
             title={label}
             className={cn(
               "inline-flex size-6 cursor-pointer items-center justify-center",
-              "border border-zinc-800 bg-zinc-950 text-zinc-500 transition-colors",
-              "hover:border-zinc-700 hover:text-zinc-50",
+              "border border-border bg-card text-text-tertiary transition-colors",
+              "hover:border-strong hover:text-foreground",
               "disabled:cursor-wait disabled:opacity-60",
             )}
           >
@@ -480,8 +480,8 @@ function EnrichButton({
         <Tooltip.Positioner sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
-              "z-50 border border-zinc-800 bg-zinc-950 px-2 py-1.5",
-              "font-mono text-[11px] leading-relaxed text-zinc-300 outline-none",
+              "z-50 border border-border bg-overlay px-2 py-1.5",
+              "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
@@ -507,10 +507,10 @@ function ToggleGroup<T extends string>({
 }) {
   return (
     <div className="inline-flex items-center gap-2">
-      <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-zinc-400">
+      <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-text-tertiary">
         {label}
       </span>
-      <div className="inline-flex items-center gap-0.5 border border-zinc-800 bg-zinc-950 p-0.5">
+      <div className="inline-flex items-center gap-0.5 border border-border bg-card p-0.5">
         {options.map((opt) => {
           const isActive = opt.key === value;
           return (
@@ -521,8 +521,8 @@ function ToggleGroup<T extends string>({
               className={cn(
                 "px-2 py-0.5 font-mono text-[11px] leading-none transition-colors",
                 isActive
-                  ? "bg-zinc-50 text-black"
-                  : "bg-transparent text-zinc-600 hover:text-zinc-300",
+                  ? "bg-foreground text-primary-foreground"
+                  : "bg-transparent text-text-tertiary hover:text-foreground",
               )}
             >
               {opt.label}
@@ -549,10 +549,10 @@ function PageButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "border border-zinc-800 bg-zinc-950 px-2 py-1 font-mono text-[11px] transition-colors",
+        "border border-border bg-card px-2 py-1 font-mono text-[11px] transition-colors",
         disabled
-          ? "cursor-not-allowed text-zinc-700"
-          : "text-zinc-400 hover:border-zinc-700 hover:text-zinc-50",
+          ? "cursor-not-allowed text-text-tertiary opacity-50"
+          : "text-text-secondary hover:border-strong hover:text-foreground",
       )}
     >
       {children}
@@ -562,7 +562,7 @@ function PageButton({
 
 function EmptyMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="font-mono text-[11px] text-zinc-500">{children}</div>
+    <div className="font-mono text-[11px] text-text-tertiary">{children}</div>
   );
 }
 

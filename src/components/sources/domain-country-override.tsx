@@ -150,9 +150,9 @@ export function DomainCountryOverride() {
   const isWorking = saveMutation.isPending || reresolveMutation.isPending;
 
   return (
-    <section className="border border-zinc-800 bg-zinc-950 p-5">
+    <section className="border border-border bg-card p-5">
       <KickerLabel>Domain country override</KickerLabel>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-text-tertiary">
         Look up a domain and override its country attribution. Useful when
         automatic resolution (GDELT, Wikidata, ccTLD) is wrong.
       </p>
@@ -165,7 +165,7 @@ export function DomainCountryOverride() {
         }}
       >
         <div className="relative w-full max-w-sm">
-          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-zinc-600" />
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={input}
@@ -174,18 +174,18 @@ export function DomainCountryOverride() {
             spellCheck={false}
             autoComplete="off"
             className={cn(
-              "h-8 w-full border border-zinc-800 bg-zinc-950 pr-2 pl-7",
-              "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700",
-              "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+              "h-8 w-full border border-border bg-card pr-2 pl-7",
+              "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
+              "outline-none transition-colors hover:border-strong focus:border-strong",
             )}
           />
         </div>
         <button
           type="submit"
           className={cn(
-            "h-8 border border-zinc-700 bg-zinc-900 px-3",
-            "font-mono text-[11px] text-zinc-100 transition-colors",
-            "hover:border-zinc-600 hover:bg-zinc-800",
+            "h-8 border border-strong bg-elevated px-3",
+            "font-mono text-[11px] text-foreground transition-colors",
+            "hover:border-strong hover:bg-strong",
           )}
         >
           Look up
@@ -193,7 +193,7 @@ export function DomainCountryOverride() {
       </form>
 
       {domain && lookupQuery.isLoading && (
-        <div className="mt-4 font-mono text-[11px] text-zinc-500">
+        <div className="mt-4 font-mono text-[11px] text-text-tertiary">
           Loading {domain}…
         </div>
       )}
@@ -210,7 +210,7 @@ export function DomainCountryOverride() {
       )}
 
       {result && (
-        <div className="mt-4 border-t border-zinc-900 pt-4">
+        <div className="mt-4 border-t border-border pt-4">
           <CurrentAttribution data={result} />
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
@@ -241,9 +241,9 @@ export function DomainCountryOverride() {
               onClick={onReresolve}
               disabled={isWorking}
               className={cn(
-                "inline-flex h-8 items-center justify-center gap-1.5 border border-zinc-700 bg-zinc-900 px-3",
-                "font-mono text-[11px] text-zinc-300 transition-colors",
-                "hover:border-zinc-600 hover:bg-zinc-800 hover:text-zinc-50",
+                "inline-flex h-8 items-center justify-center gap-1.5 border border-strong bg-elevated px-3",
+                "font-mono text-[11px] text-text-secondary transition-colors",
+                "hover:border-strong hover:bg-strong hover:text-foreground",
                 "disabled:cursor-not-allowed disabled:opacity-50",
               )}
             >
@@ -252,7 +252,7 @@ export function DomainCountryOverride() {
             </button>
           </div>
 
-          <label className="mt-3 flex items-center gap-2 font-mono text-[11px] text-zinc-400">
+          <label className="mt-3 flex items-center gap-2 font-mono text-[11px] text-text-tertiary">
             <input
               type="checkbox"
               checked={unresolvedChecked}
@@ -262,7 +262,7 @@ export function DomainCountryOverride() {
               }}
               className="size-3 accent-emerald-600"
             />
-            Save as <span className="text-zinc-300">Unknown</span> (force
+            Save as <span className="text-text-secondary">Unknown</span> (force
             unresolved bucket)
           </label>
 
@@ -279,7 +279,7 @@ export function DomainCountryOverride() {
             </div>
           )}
 
-          <p className="mt-4 border-t border-zinc-900 pt-3 font-mono text-[10px] leading-relaxed text-zinc-600">
+          <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted-foreground">
             Manual overrides are stored as <code>provider=manual_admin</code>{" "}
             and may be replaced by the next ingestion tick if GDELT also
             returns attribution for this domain. For a permanent fix, contact
@@ -299,23 +299,23 @@ function CurrentAttribution({ data }: { data: CountryAttribution }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <div className="font-mono text-[13px] text-zinc-50">{data.domain}</div>
-      <div className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-400">
-        <span className="text-zinc-600">Current:</span>
+      <div className="font-mono text-[13px] text-foreground">{data.domain}</div>
+      <div className="flex items-center gap-1.5 font-mono text-[11px] text-text-tertiary">
+        <span className="text-muted-foreground">Current:</span>
         {iso ? (
           <>
             <span aria-hidden className="text-[14px] leading-none">
               {flag}
             </span>
-            <span className="text-zinc-100">{iso.toUpperCase()}</span>
-            <span className="text-zinc-500">·</span>
+            <span className="text-foreground">{iso.toUpperCase()}</span>
+            <span className="text-text-tertiary">·</span>
             <span>{name}</span>
           </>
         ) : (
-          <span className="text-zinc-500">— Unknown</span>
+          <span className="text-text-tertiary">— Unknown</span>
         )}
-        <span className="text-zinc-700">·</span>
-        <span className="text-zinc-500">
+        <span className="text-text-tertiary">·</span>
+        <span className="text-text-tertiary">
           {data.provider ?? "no provider"}
           {data.confidence ? ` · ${data.confidence}` : ""}
         </span>
@@ -364,10 +364,10 @@ function CountryPicker({
           <button
             type="button"
             className={cn(
-              "inline-flex h-8 w-full items-center gap-1.5 border border-zinc-800 bg-zinc-950 px-2",
-              "font-mono text-[11px] text-zinc-300 transition-colors",
-              "hover:border-zinc-700 hover:text-zinc-50",
-              "data-[popup-open]:border-zinc-700 data-[popup-open]:text-zinc-50",
+              "inline-flex h-8 w-full items-center gap-1.5 border border-border bg-card px-2",
+              "font-mono text-[11px] text-text-secondary transition-colors",
+              "hover:border-strong hover:text-foreground",
+              "data-[popup-open]:border-strong data-[popup-open]:text-foreground",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >
@@ -376,15 +376,15 @@ function CountryPicker({
                 <span aria-hidden className="text-[14px] leading-none">
                   {value.flag}
                 </span>
-                <span className="text-zinc-500">{value.iso2}</span>
+                <span className="text-text-tertiary">{value.iso2}</span>
                 <span className="flex-1 truncate text-left">{value.name}</span>
               </>
             ) : (
-              <span className="flex-1 text-left text-zinc-500">
+              <span className="flex-1 text-left text-text-tertiary">
                 Select country…
               </span>
             )}
-            <ChevronDown className="size-3 text-zinc-600" />
+            <ChevronDown className="size-3 text-muted-foreground" />
           </button>
         }
       />
@@ -397,17 +397,17 @@ function CountryPicker({
         >
           <Combobox.Popup
             className={cn(
-              "w-72 overflow-hidden border border-zinc-800 bg-zinc-950 outline-none",
+              "w-72 overflow-hidden border border-border bg-card outline-none",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 duration-100",
             )}
           >
-            <Combobox.InputGroup className="relative border-b border-zinc-800 p-1.5">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-zinc-600" />
+            <Combobox.InputGroup className="relative border-b border-border p-1.5">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Combobox.Input
                 placeholder="Search ISO or name…"
                 className={cn(
-                  "h-7 w-full border-0 bg-zinc-950 pr-2 pl-7",
-                  "font-mono text-[11px] text-zinc-50 placeholder:text-zinc-700 outline-none",
+                  "h-7 w-full border-0 bg-card pr-2 pl-7",
+                  "font-mono text-[11px] text-foreground placeholder:text-text-tertiary outline-none",
                 )}
               />
             </Combobox.InputGroup>
@@ -419,20 +419,20 @@ function CountryPicker({
                   value={item}
                   className={cn(
                     "flex cursor-pointer items-center gap-2 px-2 py-1.5",
-                    "font-mono text-[11px] text-zinc-300",
-                    "data-[highlighted]:bg-zinc-900 data-[highlighted]:text-zinc-50",
-                    "data-[selected]:text-zinc-50",
+                    "font-mono text-[11px] text-text-secondary",
+                    "data-[highlighted]:bg-elevated data-[highlighted]:text-foreground",
+                    "data-[selected]:text-foreground",
                   )}
                 >
                   <span aria-hidden className="text-[14px] leading-none">
                     {item.flag}
                   </span>
-                  <span className="w-6 text-zinc-500">{item.iso2}</span>
+                  <span className="w-6 text-text-tertiary">{item.iso2}</span>
                   <span className="flex-1 truncate">{item.name}</span>
                 </Combobox.Item>
               )}
             </Combobox.List>
-            <Combobox.Empty className="px-2 py-2 font-mono text-[11px] text-zinc-500">
+            <Combobox.Empty className="px-2 py-2 font-mono text-[11px] text-text-tertiary">
               No match.
             </Combobox.Empty>
           </Combobox.Popup>

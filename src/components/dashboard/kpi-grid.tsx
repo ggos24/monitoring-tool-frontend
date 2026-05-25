@@ -70,7 +70,7 @@ export function KpiGrid({
     (country === null ? overviewQuery.isLoading : filteredSourcesQuery.isLoading);
 
   return (
-    <div className="grid grid-cols-2 gap-px bg-zinc-800 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-px bg-strong md:grid-cols-4">
       <KpiCard
         kicker="Total mentions"
         value={totalMentions.toLocaleString()}

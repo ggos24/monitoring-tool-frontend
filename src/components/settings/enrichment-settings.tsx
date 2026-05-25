@@ -88,23 +88,23 @@ export function EnrichmentSettings() {
   }
 
   return (
-    <section className="bg-zinc-950 p-5">
+    <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
           <KickerLabel>Enrichment pipeline</KickerLabel>
-          <p className="mt-1 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-text-tertiary">
             Runtime config for nightly stance classification and per-segment
             digests.
           </p>
         </div>
         {origin && (
-          <span className="font-mono text-[10px] text-zinc-600">
+          <span className="font-mono text-[10px] text-muted-foreground">
             updated {formatUpdated(origin.updated_at)} · {origin.updated_by}
           </span>
         )}
       </div>
 
-      <div className="mt-3 flex items-start gap-2 border border-zinc-900 bg-zinc-900/30 px-3 py-2 text-xs leading-relaxed text-zinc-400">
+      <div className="mt-3 flex items-start gap-2 border border-border bg-elevated/30 px-3 py-2 text-xs leading-relaxed text-text-tertiary">
         <Info className="mt-0.5 size-3.5 shrink-0 text-sky-400" aria-hidden />
         <span>
           All changes take effect on the next cron tick — no redeploy needed.
@@ -113,16 +113,16 @@ export function EnrichmentSettings() {
 
       {isLoading ? (
         <div className="mt-4 space-y-2">
-          <Skeleton className="h-20 w-full bg-zinc-900" />
-          <Skeleton className="h-20 w-full bg-zinc-900" />
+          <Skeleton className="h-20 w-full bg-elevated" />
+          <Skeleton className="h-20 w-full bg-elevated" />
         </div>
       ) : error || !draft ? (
-        <div className="mt-4 flex items-center gap-3 font-mono text-[11px] text-zinc-400">
+        <div className="mt-4 flex items-center gap-3 font-mono text-[11px] text-text-tertiary">
           <span>Failed to load enrichment settings.</span>
           <button
             type="button"
             onClick={() => refetch()}
-            className="cursor-pointer border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+            className="cursor-pointer border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
           >
             retry
           </button>
@@ -253,7 +253,7 @@ export function EnrichmentSettings() {
             />
           </SubSection>
 
-          <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-800 pt-3">
+          <footer className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
             <div className="font-mono text-[11px]">
               {status.kind === "saved" && (
                 <span className="text-emerald-400">Saved ✓</span>
@@ -270,7 +270,7 @@ export function EnrichmentSettings() {
                 </span>
               )}
               {status.kind === "idle" && !dirty && (
-                <span className="text-zinc-600">No changes</span>
+                <span className="text-muted-foreground">No changes</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -281,8 +281,8 @@ export function EnrichmentSettings() {
                 className={cn(
                   "border px-3 py-1 font-mono text-[11px] transition-colors",
                   !dirty || saveMutation.isPending
-                    ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                    : "cursor-pointer border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700 hover:text-zinc-50",
+                    ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                    : "cursor-pointer border-border bg-card text-text-tertiary hover:border-strong hover:text-foreground",
                 )}
               >
                 Reset
@@ -294,8 +294,8 @@ export function EnrichmentSettings() {
                 className={cn(
                   "border px-3 py-1 font-mono text-[11px] transition-colors",
                   !dirty || saveMutation.isPending
-                    ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                    : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                    ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                    : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
                 )}
               >
                 {saveMutation.isPending ? "Saving…" : "Save changes"}
@@ -340,8 +340,8 @@ function SubSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-5 border-t border-zinc-800 pt-4">
-      <KickerLabel className="text-zinc-500">{title}</KickerLabel>
+    <div className="mt-5 border-t border-border pt-4">
+      <KickerLabel className="text-text-tertiary">{title}</KickerLabel>
       <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
         {children}
       </div>
@@ -361,11 +361,11 @@ function ToggleField({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 border border-zinc-900 bg-zinc-950 px-3 py-2">
+    <div className="flex items-start justify-between gap-3 border border-border bg-card px-3 py-2">
       <div className="min-w-0">
-        <div className="text-[12px] text-zinc-100">{label}</div>
+        <div className="text-[12px] text-foreground">{label}</div>
         {help && (
-          <div className="mt-0.5 font-mono text-[10px] leading-snug text-zinc-600">
+          <div className="mt-0.5 font-mono text-[10px] leading-snug text-muted-foreground">
             {help}
           </div>
         )}
@@ -378,7 +378,7 @@ function ToggleField({
           "mt-0.5 shrink-0 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors",
           checked
             ? "border-emerald-900 bg-emerald-950 text-emerald-400 hover:border-emerald-800"
-            : "border-zinc-800 bg-zinc-900 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300",
+            : "border-border bg-elevated text-text-tertiary hover:border-strong hover:text-text-secondary",
         )}
       >
         {checked ? "On" : "Off"}
@@ -401,27 +401,27 @@ function SelectField({
   onChange: (v: string) => void;
 }) {
   return (
-    <label className="block border border-zinc-900 bg-zinc-950 px-3 py-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+    <label className="block border border-border bg-card px-3 py-2">
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
         {label}
       </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] text-zinc-50",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "mt-1 h-8 w-full border border-border bg-card px-2",
+          "font-mono text-[11px] text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
         )}
       >
         {options.map((o) => (
-          <option key={o.value} value={o.value} className="bg-zinc-950">
+          <option key={o.value} value={o.value} className="bg-card">
             {o.label}
           </option>
         ))}
       </select>
       {help && (
-        <span className="mt-1 block font-mono text-[10px] leading-snug text-zinc-600">
+        <span className="mt-1 block font-mono text-[10px] leading-snug text-muted-foreground">
           {help}
         </span>
       )}
@@ -445,8 +445,8 @@ function NumberField({
   onChange: (v: number) => void;
 }) {
   return (
-    <label className="block border border-zinc-900 bg-zinc-950 px-3 py-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+    <label className="block border border-border bg-card px-3 py-2">
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
         {label}
       </span>
       <input
@@ -459,13 +459,13 @@ function NumberField({
           if (Number.isFinite(n)) onChange(n);
         }}
         className={cn(
-          "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] tabular-nums text-zinc-50",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "mt-1 h-8 w-full border border-border bg-card px-2",
+          "font-mono text-[11px] tabular-nums text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
         )}
       />
       {help && (
-        <span className="mt-1 block font-mono text-[10px] leading-snug text-zinc-600">
+        <span className="mt-1 block font-mono text-[10px] leading-snug text-muted-foreground">
           {help}
         </span>
       )}
@@ -489,8 +489,8 @@ function TimeField({
   // Native <input type="time"> emits "HH:MM" — bidirectional friendly.
   const value = `${pad2(hour)}:${pad2(minute)}`;
   return (
-    <label className="block border border-zinc-900 bg-zinc-950 px-3 py-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+    <label className="block border border-border bg-card px-3 py-2">
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
         {label}
       </span>
       <input
@@ -511,14 +511,14 @@ function TimeField({
           }
         }}
         className={cn(
-          "mt-1 h-8 w-full border border-zinc-800 bg-zinc-950 px-2",
-          "font-mono text-[11px] tabular-nums text-zinc-50",
-          "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+          "mt-1 h-8 w-full border border-border bg-card px-2",
+          "font-mono text-[11px] tabular-nums text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
           "[color-scheme:dark]",
         )}
       />
       {help && (
-        <span className="mt-1 block font-mono text-[10px] leading-snug text-zinc-600">
+        <span className="mt-1 block font-mono text-[10px] leading-snug text-muted-foreground">
           {help}
         </span>
       )}

@@ -23,14 +23,14 @@ export function KpiCard({
   isLoading?: boolean;
 }) {
   return (
-    <div className="bg-zinc-950 p-5">
+    <div className="bg-card p-5">
       <KickerLabel>{kicker}</KickerLabel>
       <div className="mt-3 flex items-baseline gap-2">
         {isLoading ? (
-          <Skeleton className="h-8 w-24 bg-zinc-900" />
+          <Skeleton className="h-8 w-24" />
         ) : (
           <span
-            className="text-[26px] font-medium leading-none text-zinc-50 tabular-nums"
+            className="text-[26px] font-medium leading-none text-foreground tabular-nums"
             style={{ letterSpacing: "-0.02em" }}
           >
             {value}
@@ -38,7 +38,7 @@ export function KpiCard({
         )}
         {trend && !isLoading && <TrendBadge trend={trend} />}
       </div>
-      <div className="mt-2 font-mono text-[11px] text-zinc-700">{subtitle}</div>
+      <div className="mt-2 font-mono text-[11px] text-text-tertiary">{subtitle}</div>
     </div>
   );
 }
@@ -46,7 +46,7 @@ export function KpiCard({
 function TrendBadge({ trend }: { trend: Trend }) {
   if (trend.direction === "stable") {
     return (
-      <span className="font-mono text-[11px] text-zinc-600">stable</span>
+      <span className="font-mono text-[11px] text-text-tertiary">stable</span>
     );
   }
   const isUp = trend.direction === "up";
@@ -54,7 +54,7 @@ function TrendBadge({ trend }: { trend: Trend }) {
     <span
       className={cn(
         "font-mono text-[11px] tabular-nums",
-        isUp ? "text-emerald-400" : "text-red-400",
+        isUp ? "text-success" : "text-danger",
       )}
     >
       {isUp ? "▲" : "▼"} {trend.percentage.toFixed(1)}%

@@ -28,23 +28,23 @@ export function SchedulerInfo() {
   const error = topicsQuery.error || overviewQuery.error;
 
   return (
-    <div className="bg-zinc-950 p-5">
+    <div className="bg-card p-5">
       <KickerLabel>Collection schedule</KickerLabel>
 
       <div className="mt-3">
         {isLoading ? (
-          <Skeleton className="h-7 w-32 bg-zinc-900" />
+          <Skeleton className="h-7 w-32 bg-elevated" />
         ) : error ? (
-          <div className="font-mono text-[11px] text-zinc-500">
+          <div className="font-mono text-[11px] text-text-tertiary">
             Failed to load schedule.
           </div>
         ) : seconds === undefined ? (
-          <div className="font-mono text-[11px] text-zinc-500">
+          <div className="font-mono text-[11px] text-text-tertiary">
             Awaiting first topic…
           </div>
         ) : (
           <span
-            className="text-[20px] font-medium text-zinc-50 tabular-nums"
+            className="text-[20px] font-medium text-foreground tabular-nums"
             style={{ letterSpacing: "-0.02em" }}
           >
             Every {formatInterval(seconds)}
@@ -52,7 +52,7 @@ export function SchedulerInfo() {
         )}
       </div>
 
-      <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-zinc-500">
+      <div className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-text-tertiary">
         <AlertTriangle
           className="mt-0.5 size-3.5 shrink-0 text-amber-400"
           aria-hidden

@@ -36,17 +36,17 @@ export function TopicSelector({
   }, [data, value, onChange]);
 
   if (isLoading) {
-    return <Skeleton className="h-9 w-64 bg-zinc-900" />;
+    return <Skeleton className="h-9 w-64 bg-elevated" />;
   }
 
   if (error || !data) {
     return (
-      <div className="flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-400">
+      <div className="flex items-center gap-2 border border-border bg-card px-3 py-2 font-mono text-[11px] text-text-tertiary">
         <span>Failed to load topics</span>
         <button
           type="button"
           onClick={() => refetch()}
-          className="border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+          className="border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
         >
           retry
         </button>
@@ -60,27 +60,27 @@ export function TopicSelector({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex items-center gap-2 border border-zinc-800 bg-zinc-950 px-3 py-2",
-          "font-mono text-xs text-zinc-50 outline-none",
-          "hover:border-zinc-700 aria-expanded:border-zinc-700",
+          "inline-flex items-center gap-2 border border-border bg-card px-3 py-2",
+          "font-mono text-xs text-foreground outline-none",
+          "hover:border-strong aria-expanded:border-strong",
         )}
       >
-        <span className="text-zinc-600">topic:</span>
+        <span className="text-muted-foreground">topic:</span>
         {selected ? (
           <>
             <span className="font-medium">{selected.name}</span>
-            <span className="text-zinc-600">({selected.mentions_count})</span>
+            <span className="text-muted-foreground">({selected.mentions_count})</span>
           </>
         ) : (
-          <span className="text-zinc-500">Select topic</span>
+          <span className="text-text-tertiary">Select topic</span>
         )}
-        <ChevronDown className="size-3 text-zinc-600" />
+        <ChevronDown className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="start"
         sideOffset={4}
-        className="min-w-(--anchor-width) border border-zinc-800 bg-zinc-950 p-0 text-zinc-50 ring-0 shadow-none"
+        className="min-w-(--anchor-width) border border-border bg-card p-0 text-foreground ring-0 shadow-none"
       >
         {data.map((topic) => (
           <DropdownMenuItem
@@ -88,27 +88,27 @@ export function TopicSelector({
             onClick={() => onChange(topic.id)}
             className={cn(
               "flex cursor-default items-center gap-3 px-3 py-2 font-mono text-xs",
-              "focus:bg-zinc-900 focus:text-zinc-50",
-              topic.id === value && "bg-zinc-900",
+              "focus:bg-elevated focus:text-foreground",
+              topic.id === value && "bg-elevated",
             )}
           >
             <span
               aria-hidden
               className={cn(
                 "size-1.5",
-                topic.is_active ? "bg-emerald-400" : "bg-zinc-700",
+                topic.is_active ? "bg-emerald-400" : "bg-strong",
               )}
             />
             <span className="flex-1">{topic.name}</span>
-            <span className="text-zinc-600 tabular-nums">
+            <span className="text-muted-foreground tabular-nums">
               {topic.mentions_count}
             </span>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator className="my-0 bg-zinc-900" />
+        <DropdownMenuSeparator className="my-0 bg-elevated" />
         <DropdownMenuItem
           onClick={() => router.push("/settings/topics/new")}
-          className="flex cursor-pointer items-center gap-2 px-3 py-2 font-mono text-xs text-zinc-300 focus:bg-zinc-900 focus:text-zinc-50"
+          className="flex cursor-pointer items-center gap-2 px-3 py-2 font-mono text-xs text-text-secondary focus:bg-elevated focus:text-foreground"
         >
           + Add new topic
         </DropdownMenuItem>

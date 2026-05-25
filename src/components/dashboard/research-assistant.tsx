@@ -10,21 +10,21 @@ const EXAMPLES = [
 
 export function ResearchAssistant() {
   return (
-    <div className="relative border border-zinc-800 bg-zinc-950 px-6 py-5">
+    <div className="relative border border-border bg-card px-6 py-5">
       <div className="absolute top-3 right-3">
         <ComingSoonBadge>Soon</ComingSoonBadge>
       </div>
 
       <div className="flex items-start gap-4">
-        <div className="flex size-9 shrink-0 items-center justify-center border border-zinc-800 bg-zinc-900">
-          <Sparkles className="size-3.5 text-zinc-400" aria-hidden />
+        <div className="flex size-9 shrink-0 items-center justify-center border border-border bg-elevated">
+          <Sparkles className="size-3.5 text-text-tertiary" aria-hidden />
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="mb-2 text-sm font-medium text-zinc-50">
+          <h3 className="mb-2 text-sm font-medium text-foreground">
             AI Research Assistant
           </h3>
-          <p className="mb-4 text-xs leading-relaxed text-zinc-500">
+          <p className="mb-4 text-xs leading-relaxed text-text-tertiary">
             Ask questions in natural language, get synthesized reports, detect
             narrative shifts, compare with competitors, surface insights you'd
             miss in raw data.
@@ -34,9 +34,9 @@ export function ResearchAssistant() {
             {EXAMPLES.map((q) => (
               <li
                 key={q}
-                className="flex items-center border border-zinc-800 bg-black px-3 py-2 font-mono text-xs text-zinc-500"
+                className="flex items-center border border-border bg-background px-3 py-2 font-mono text-xs text-text-tertiary"
               >
-                <span aria-hidden className="mr-2 text-zinc-700">
+                <span aria-hidden className="mr-2 text-text-tertiary">
                   $
                 </span>
                 <span className="truncate">{q}</span>

@@ -44,10 +44,10 @@ export default function NewTopicPage() {
       <main className="mx-auto w-full max-w-[1080px] flex-1 space-y-6 px-5 py-6">
         <header className="flex items-baseline justify-between gap-3">
           <div>
-            <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-zinc-50">
+            <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-foreground">
               New topic
             </h1>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-text-tertiary">
               Type a phrase. Gemini drafts a structured profile (synonyms,
               exclusions, semantic anchor); DataForSEO validates search
               volumes. Review and edit before activating.
@@ -55,14 +55,14 @@ export default function NewTopicPage() {
           </div>
           <Link
             href="/settings"
-            className="font-mono text-[11px] text-zinc-500 hover:text-zinc-200"
+            className="font-mono text-[11px] text-text-tertiary hover:text-foreground"
           >
             ← back to settings
           </Link>
         </header>
 
         {!draft && (
-          <section className="bg-zinc-950 p-5">
+          <section className="bg-card p-5">
             <KickerLabel>Track what?</KickerLabel>
             <form
               onSubmit={handleSubmit}
@@ -76,9 +76,9 @@ export default function NewTopicPage() {
                 placeholder="e.g. openai, zelensky, NATO summit"
                 maxLength={255}
                 className={cn(
-                  "h-9 min-w-[260px] flex-1 border border-zinc-800 bg-zinc-950 px-2",
-                  "font-mono text-sm text-zinc-50 placeholder:text-zinc-700",
-                  "outline-none transition-colors hover:border-zinc-700 focus:border-zinc-700",
+                  "h-9 min-w-[260px] flex-1 border border-border bg-card px-2",
+                  "font-mono text-sm text-foreground placeholder:text-text-tertiary",
+                  "outline-none transition-colors hover:border-strong focus:border-strong",
                   inputDisabled && "cursor-not-allowed opacity-60",
                 )}
               />
@@ -88,15 +88,15 @@ export default function NewTopicPage() {
                 className={cn(
                   "h-9 border px-4 font-mono text-[11px] transition-colors",
                   inputDisabled || phrase.trim().length === 0
-                    ? "cursor-not-allowed border-zinc-800 bg-zinc-950 text-zinc-700"
-                    : "cursor-pointer border-zinc-700 bg-zinc-50 text-black hover:bg-zinc-200",
+                    ? "cursor-not-allowed border-border bg-card text-text-tertiary"
+                    : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
                 )}
               >
                 {mutation.isPending ? "Creating…" : "Create topic"}
               </button>
             </form>
-            <p className="mt-2 font-mono text-[10px] text-zinc-600">
-              Topics created here start as <span className="text-zinc-400">Inactive</span>.
+            <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+              Topics created here start as <span className="text-text-tertiary">Inactive</span>.
               Review the draft, edit chips/exclusions, then click Activate.
             </p>
           </section>
@@ -115,9 +115,9 @@ export default function NewTopicPage() {
         )}
 
         {draft && (
-          <section className="bg-zinc-950 p-5">
+          <section className="bg-card p-5">
             <KickerLabel>Review &amp; edit</KickerLabel>
-            <p className="mt-1 mb-5 text-xs text-zinc-500">
+            <p className="mt-1 mb-5 text-xs text-text-tertiary">
               Topic created (id {draft.id}, inactive). Add or remove chips,
               tune the anchor, then save or activate.
             </p>
@@ -172,8 +172,8 @@ function ErrorBanner({
       </p>
       <p className="mt-1 font-mono text-[12px] text-red-100">{detail}</p>
       {phrase && (
-        <p className="mt-2 font-mono text-[10px] text-zinc-500">
-          Phrase: <span className="text-zinc-300">{phrase}</span>
+        <p className="mt-2 font-mono text-[10px] text-text-tertiary">
+          Phrase: <span className="text-text-secondary">{phrase}</span>
         </p>
       )}
       <button

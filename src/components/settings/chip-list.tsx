@@ -59,7 +59,7 @@ export function ChipList({
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
           {label}
         </span>
         {atCap && (
@@ -69,18 +69,18 @@ export function ChipList({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-1.5 border border-zinc-800 bg-zinc-950 p-2 transition-colors focus-within:border-zinc-700">
+      <div className="flex flex-wrap gap-1.5 border border-border bg-card p-2 transition-colors focus-within:border-strong">
         {items.map((item, idx) => (
           <span
             key={`${item}-${idx}`}
-            className="inline-flex items-center gap-1 border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[11px] text-zinc-200"
+            className="inline-flex items-center gap-1 border border-border bg-elevated px-1.5 py-0.5 font-mono text-[11px] text-foreground"
           >
             {item}
             <button
               type="button"
               onClick={() => remove(idx)}
               aria-label={`Remove ${item}`}
-              className="cursor-pointer text-zinc-500 hover:text-zinc-200"
+              className="cursor-pointer text-text-tertiary hover:text-foreground"
             >
               <X className="size-3" />
             </button>
@@ -97,14 +97,14 @@ export function ChipList({
           disabled={atCap}
           className={cn(
             "min-w-[120px] flex-1 bg-transparent px-1 py-0.5 font-mono text-[11px]",
-            "text-zinc-100 placeholder:text-zinc-600 outline-none",
+            "text-foreground placeholder:text-muted-foreground outline-none",
             atCap && "cursor-not-allowed",
           )}
         />
       </div>
 
       {helpText && (
-        <p className="font-mono text-[10px] text-zinc-600">{helpText}</p>
+        <p className="font-mono text-[10px] text-muted-foreground">{helpText}</p>
       )}
     </div>
   );

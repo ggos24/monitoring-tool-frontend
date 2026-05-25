@@ -36,21 +36,21 @@ export function DraftingProgress({ phrase }: { phrase: string }) {
       : null;
 
   return (
-    <div className="border border-zinc-800 bg-zinc-950 p-5">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+    <div className="border border-border bg-card p-5">
+      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
         Building topic for &ldquo;{phrase}&rdquo;
       </p>
-      <p className="mt-3 font-mono text-sm text-zinc-100">
+      <p className="mt-3 font-mono text-sm text-foreground">
         <span className="mr-2 inline-block size-2 animate-pulse bg-emerald-400" />
         {STAGES[stageIdx]}
       </p>
-      <p className="mt-2 font-mono text-[11px] text-zinc-500">
+      <p className="mt-2 font-mono text-[11px] text-text-tertiary">
         Expected ~10 seconds. Cost ~$0.10.
       </p>
       {overdue && (
         <p className="mt-3 font-mono text-[11px] text-amber-500">{overdue}</p>
       )}
-      <p className="mt-3 font-mono text-[10px] text-zinc-600">
+      <p className="mt-3 font-mono text-[10px] text-muted-foreground">
         Elapsed: {elapsed}s
       </p>
     </div>

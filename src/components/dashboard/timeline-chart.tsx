@@ -14,11 +14,12 @@ import {
 import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { theme } from "@/lib/theme";
 
 const TICK_STYLE = {
   fontFamily: "var(--font-geist-mono)",
   fontSize: 10,
-  fill: "#52525b",
+  fill: theme.textTertiary,
 };
 
 export function TimelineChart({
@@ -45,15 +46,15 @@ export function TimelineChart({
       : `Daily mention count, last ${days} days`;
 
   return (
-    <div className="bg-zinc-950 p-5">
+    <div className="bg-card p-5">
       <KickerLabel>Mentions over time</KickerLabel>
-      <div className="mt-1 mb-4 text-xs text-zinc-400">{subtitle}</div>
+      <div className="mt-1 mb-4 text-xs text-text-secondary">{subtitle}</div>
 
       <div className="h-64">
         {!enabled ? (
           <EmptyState message="Select a topic to load timeline" />
         ) : isLoading ? (
-          <Skeleton className="h-full w-full bg-zinc-900" />
+          <Skeleton className="h-full w-full" />
         ) : error ? (
           <ErrorState onRetry={() => refetch()} />
         ) : !data || data.length === 0 ? (
@@ -67,7 +68,7 @@ export function TimelineChart({
               <CartesianGrid
                 horizontal
                 vertical={false}
-                stroke="#18181b"
+                stroke={theme.borderDefault}
                 strokeDasharray="0"
               />
               <XAxis
@@ -88,17 +89,21 @@ export function TimelineChart({
               />
               <Tooltip
                 content={<TimelineTooltip granularity={granularity} />}
-                cursor={{ stroke: "#27272a", strokeDasharray: "3 3" }}
+                cursor={{ stroke: theme.borderStrong, strokeDasharray: "3 3" }}
               />
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#34d399"
+                stroke={theme.accentSuccess}
                 strokeWidth={1.5}
-                fill="#34d399"
-                fillOpacity={0.08}
-                dot={{ r: granularity === "hour" ? 2 : 3, fill: "#34d399", stroke: "none" }}
-                activeDot={{ r: 5, fill: "#34d399", stroke: "none" }}
+                fill={theme.accentSuccess}
+                fillOpacity={0.18}
+                dot={{
+                  r: granularity === "hour" ? 2 : 3,
+                  fill: theme.accentSuccess,
+                  stroke: "none",
+                }}
+                activeDot={{ r: 5, fill: theme.accentSuccess, stroke: "none" }}
                 isAnimationActive={false}
               />
             </AreaChart>
@@ -144,9 +149,9 @@ function TimelineTooltip({
 }) {
   if (!active || !payload || payload.length === 0) return null;
   return (
-    <div className="border border-zinc-800 bg-zinc-950 px-2.5 py-1.5 font-mono text-[11px] leading-tight">
-      <div className="text-zinc-500">{formatTooltipLabel(label ?? "", granularity)}</div>
-      <div className="mt-0.5 text-zinc-50">
+    <div className="border border-border bg-overlay px-2.5 py-1.5 font-mono text-[11px] leading-tight">
+      <div className="text-text-tertiary">{formatTooltipLabel(label ?? "", granularity)}</div>
+      <div className="mt-0.5 text-foreground">
         {payload[0].value} mention{payload[0].value === 1 ? "" : "s"}
       </div>
     </div>
@@ -155,7 +160,7 @@ function TimelineTooltip({
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex h-full items-center justify-center font-mono text-[11px] text-zinc-500">
+    <div className="flex h-full items-center justify-center font-mono text-[11px] text-text-tertiary">
       {message}
     </div>
   );
@@ -163,12 +168,12 @@ function EmptyState({ message }: { message: string }) {
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
-    <div className="flex h-full items-center justify-center gap-3 font-mono text-[11px] text-zinc-400">
+    <div className="flex h-full items-center justify-center gap-3 font-mono text-[11px] text-text-tertiary">
       <span>Failed to load timeline</span>
       <button
         type="button"
         onClick={onRetry}
-        className="border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-300 hover:border-zinc-700 hover:text-zinc-50"
+        className="border border-border bg-elevated px-2 py-0.5 text-text-secondary hover:border-strong hover:text-foreground"
       >
         retry
       </button>
