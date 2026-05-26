@@ -18,6 +18,7 @@ import {
 import { AnomalyAlert } from "@/components/dashboard/anomaly-alert";
 import { SentimentBreakdown } from "@/components/dashboard/sentiment-breakdown";
 import { ResearchAssistant } from "@/components/dashboard/research-assistant";
+import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 
 export default function Home() {
   const [topicId, setTopicId] = useState<number | null>(null);
@@ -60,6 +61,13 @@ export default function Home() {
               />
             )}
             <PeriodToggle value={days} onChange={setDays} />
+            <GenerateReportLink
+              topicId={topicId}
+              days={days}
+              country={country}
+              source={source}
+              quality={quality}
+            />
           </div>
         </div>
 

@@ -4,6 +4,7 @@ import type {
   DigestDefinition,
   DigestDefinitionCreate,
   DigestDefinitionPatch,
+  DigestResultDetail,
   DomainScoringDetail,
   EnrichmentSettings,
   EnrichmentSettingsPatch,
@@ -11,9 +12,11 @@ import type {
   Mention,
   MentionsListResponse,
   Overview,
+  Report,
   RssFeed,
   RssFeedCreate,
   RssFeedPatch,
+  SegmentReportRequest,
   SourceCount,
   StanceLabel,
   TimelinePoint,
@@ -283,4 +286,24 @@ export const apiClient = {
     localApi<{ deleted: number }>(`/api/admin/digest-definitions/${id}`, {
       method: "DELETE",
     }),
+
+  // PR2 — map-reduce reports + scheduled digest results.
+
+  generateSegmentReport: (body: SegmentReportRequest) =>
+    api<Report>("/api/reports/segment", { method: "POST", body }),
+
+  getReport: (id: number) => api<Report>(`/api/reports/${id}`),
+
+  listReports: (topic_id: number, limit = 20) =>
+    api<Report[]>(`/api/reports?topic_id=${topic_id}&limit=${limit}`),
+
+  digestResults: (digest_definition_id: number, limit = 30) =>
+    api<DigestResultDetail[]>(
+      `/api/digest-definitions/${digest_definition_id}/results?limit=${limit}`,
+    ),
+
+  latestDigestResult: (digest_definition_id: number) =>
+    api<DigestResultDetail>(
+      `/api/digest-definitions/${digest_definition_id}/results/latest`,
+    ),
 };

@@ -214,6 +214,12 @@ export type EnrichmentSettings = {
   digest_submit_minute: number;
   digest_retrieve_hour: number;
   digest_retrieve_minute: number;
+  // PR2 extension — map-reduce report scaffolding.
+  claim_card_enabled: boolean;
+  claim_card_min_source_score: number;
+  digest_min_new_mentions: number;
+  report_cluster_size_target: number;
+  reduce_model: string;
   updated_at: string;
   updated_by: string;
 };
@@ -272,6 +278,98 @@ export type DigestDefinitionPatch = {
   name?: string;
   segment?: SegmentCondition[];
   active?: boolean;
+};
+
+// PR2 — map-reduce report shapes ----------------------------------------
+
+// `narrative` etc. are null while status is pending/running; populated
+// on success. `error` non-null when status='failed' OR when status=
+// 'success' but the reduce step degraded (partial result).
+export type ReportStatus = "pending" | "running" | "success" | "failed";
+
+export type ReportClusterSummary = {
+  cluster_id: number;
+  label: string;
+  n_mentions: number;
+  n_publishers: number;
+  dominant_stance: StanceLabel | null;
+  stance_distribution: Record<StanceLabel, number>;
+  top_quotes: string[];
+  top_domains: string[];
+  top_titles: string[];
+  members: number[];
+  narrative: string | null;
+  contested: string | null;
+};
+
+export type ReportTierBreakdownEntry = {
+  n: number;
+  dominant_stance: StanceLabel | null;
+  stance_distribution: Record<StanceLabel, number>;
+};
+
+// Same shape returned in both `report.aggregates` (ad-hoc) and the
+// PR2-extension columns on `digest_result` (scheduled).
+export type ReportAggregates = {
+  n_mentions: number;
+  publisher_weighted_stance: Record<StanceLabel, number>;
+  tier_breakdown: Record<string, ReportTierBreakdownEntry>;
+  recency_timeline: { date: string; n: number; dominant_stance: StanceLabel | null }[];
+  volume_z_score: number | null;
+  sentiment_distribution: Record<StanceLabel, number>;
+  key_themes?: string[];
+  representative_outlets?: string[];
+  dominant_framing?: string | null;
+  notable_divergence?: string | null;
+  confidence?: number | null;
+};
+
+export type Report = {
+  id: number;
+  topic_id: number;
+  params: Record<string, unknown>;
+  params_hash: string;
+  source_max_collected_at: string | null;
+  status: ReportStatus;
+  n_mentions: number | null;
+  narrative: string | null;
+  clusters: ReportClusterSummary[] | null;
+  aggregates: ReportAggregates | null;
+  model: string | null;
+  created_at: string;
+  finished_at: string | null;
+  requested_by: string | null;
+  error: string | null;
+  cached?: boolean;
+};
+
+export type SegmentReportRequest = {
+  topic_id: number;
+  filters: SegmentCondition[];
+  date_from?: string | null;
+  date_to?: string | null;
+};
+
+// Scheduled digest result (extended in PR2 with cluster/aggregate fields).
+export type DigestResultDetail = {
+  id: number;
+  digest_definition_id: number;
+  period_start: string;
+  n_mentions: number;
+  narrative: string;
+  key_themes: string[];
+  representative_outlets: string[];
+  sentiment_distribution: Record<StanceLabel, number>;
+  dominant_framing: string | null;
+  notable_divergence: string | null;
+  confidence: number | null;
+  model: string;
+  created_at: string;
+  clusters: ReportClusterSummary[] | null;
+  publisher_weighted_stance: Record<StanceLabel, number> | null;
+  tier_breakdown: Record<string, ReportTierBreakdownEntry> | null;
+  volume_z_score: number | null;
+  recency_timeline: { date: string; n: number; dominant_stance: StanceLabel | null }[] | null;
 };
 
 export const FRAMING_LABELS = [
