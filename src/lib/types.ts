@@ -69,6 +69,19 @@ export type TopicPatch = {
 
 export type StanceLabel = "supportive" | "critical" | "neutral" | "mixed";
 
+// Structured per-mention claim card produced alongside stance when
+// `enrichment_settings.claim_card_enabled` is on (or on any manual
+// Re-analyze click). NULL on mentions enriched before the flag flipped.
+// `schema_version` lets us evolve the shape without losing the link.
+export type ClaimCard = {
+  schema_version: number;
+  headline_claim: string;
+  key_claims: string[];
+  key_entities: string[];
+  stance_evidence: string;
+  framing_tags: string[];
+};
+
 export type Mention = {
   id: number;
   topic_id: number;
@@ -89,6 +102,7 @@ export type Mention = {
   relevance_method: string | null;
   relevance_score: number | null;
   relevance_reason: string | null;
+  claim_card: ClaimCard | null;
 };
 
 export type MentionsListResponse = {

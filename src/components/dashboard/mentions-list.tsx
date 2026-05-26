@@ -405,6 +405,7 @@ function StanceBadge({ mention }: { mention: Mention }) {
   const tip =
     `${label} stance toward topic · ${confidence}` +
     (framing ? ` · framing: ${framing}` : "");
+  const card = mention.claim_card;
 
   return (
     <Tooltip.Root>
@@ -412,6 +413,9 @@ function StanceBadge({ mention }: { mention: Mention }) {
         delay={150}
         closeDelay={100}
         render={
+          // `title` attr fallback for keyboard users + the few cases
+          // where the styled popup is occluded; intentionally lossy
+          // (no claim card content) — popup is the canonical surface.
           <span title={tip}>
             <SentimentPill variant={variant}>{label}</SentimentPill>
           </span>
@@ -421,17 +425,63 @@ function StanceBadge({ mention }: { mention: Mention }) {
         <Tooltip.Positioner sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
-              "z-50 max-w-xs border border-border bg-overlay px-2 py-1.5",
+              // Wider cap when card present so 3-5 bullets aren't squished;
+              // legacy tip-only path keeps the original max-w-xs width.
+              card ? "max-w-md" : "max-w-xs",
+              "z-50 border border-border bg-overlay px-2.5 py-2",
               "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
           >
-            {tip}
+            <div>{tip}</div>
+            {card && <ClaimCardBlock card={card} />}
           </Tooltip.Popup>
         </Tooltip.Positioner>
       </Tooltip.Portal>
     </Tooltip.Root>
+  );
+}
+
+function ClaimCardBlock({ card }: { card: NonNullable<Mention["claim_card"]> }) {
+  return (
+    <div className="mt-2 flex flex-col gap-1.5 border-t border-border pt-2">
+      {card.headline_claim && (
+        <div className="text-foreground">{card.headline_claim}</div>
+      )}
+      {card.key_claims.length > 0 && (
+        <ul className="ml-3 list-disc space-y-0.5 text-text-secondary">
+          {card.key_claims.slice(0, 5).map((c, i) => (
+            <li key={i}>{c}</li>
+          ))}
+        </ul>
+      )}
+      {card.stance_evidence && (
+        <div className="border-l-2 border-strong pl-2 italic text-text-secondary">
+          “{card.stance_evidence}”
+        </div>
+      )}
+      {(card.key_entities.length > 0 || card.framing_tags.length > 0) && (
+        <div className="flex flex-wrap gap-1 text-[10px] text-text-tertiary">
+          {card.key_entities.slice(0, 6).map((e) => (
+            <span
+              key={`e-${e}`}
+              className="border border-border bg-card px-1 py-0.5"
+            >
+              {e}
+            </span>
+          ))}
+          {card.framing_tags.slice(0, 4).map((t) => (
+            <span
+              key={`t-${t}`}
+              className="border border-border bg-card px-1 py-0.5 italic"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
