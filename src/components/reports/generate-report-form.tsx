@@ -7,12 +7,21 @@ import { Play } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import type { SegmentCondition } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-// MVP shape: user inherits filters from the URL (when arriving from
-// "Generate report from current filters" on the dashboard) and can
-// trim them here. Full freeform editor is deferred — same widgets as
-// digest-segments could be reused, but for MVP a chip-list with
-// "remove" is sufficient.
+// Preset ranges — match the dashboard PeriodToggle vocabulary so users
+// don't have to learn a second scale. `hours` null marks the custom
+// branch which reveals the datetime-local pickers below.
+const RANGES: { key: RangeKey; label: string; hours: number | null }[] = [
+  { key: "24h", label: "24h", hours: 24 },
+  { key: "7d", label: "7d", hours: 24 * 7 },
+  { key: "14d", label: "14d", hours: 24 * 14 },
+  { key: "30d", label: "30d", hours: 24 * 30 },
+  { key: "90d", label: "90d", hours: 24 * 90 },
+  { key: "custom", label: "Custom", hours: null },
+];
+
+type RangeKey = "24h" | "7d" | "14d" | "30d" | "90d" | "custom";
 
 export function GenerateReportForm({
   topicId,
@@ -28,18 +37,30 @@ export function GenerateReportForm({
   onCreated: (reportId: number) => void;
 }) {
   const [filters, setFilters] = useState(prefillFilters);
-  const [dateFrom, setDateFrom] = useState(prefillDateFrom ?? "");
-  const [dateTo, setDateTo] = useState(prefillDateTo ?? "");
+  // If the user landed here with explicit dates in the URL (from the
+  // dashboard's "Generate report from current filters" link), default
+  // to custom + seed the inputs. Otherwise default to a sensible 7d.
+  const initialRange: RangeKey =
+    prefillDateFrom || prefillDateTo ? "custom" : "7d";
+  const [range, setRange] = useState<RangeKey>(initialRange);
+  const [customFrom, setCustomFrom] = useState(prefillDateFrom ?? "");
+  const [customTo, setCustomTo] = useState(prefillDateTo ?? "");
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () =>
-      apiClient.generateSegmentReport({
+    mutationFn: () => {
+      const { dateFrom, dateTo } = resolveRange({
+        range,
+        customFrom,
+        customTo,
+      });
+      return apiClient.generateSegmentReport({
         topic_id: topicId,
         filters,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-      }),
+      });
+    },
     onSuccess: (report) => {
       queryClient.invalidateQueries({ queryKey: ["reports", topicId] });
       onCreated(report.id);
@@ -83,29 +104,61 @@ export function GenerateReportForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
-            From
-          </label>
-          <input
-            type="datetime-local"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
-          />
+      <div>
+        <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
+          Date range
+        </label>
+        <div className="inline-flex flex-wrap items-center gap-0.5 border border-border bg-card p-0.5">
+          {RANGES.map((r) => {
+            const isActive = r.key === range;
+            return (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => setRange(r.key)}
+                className={cn(
+                  "px-2.5 py-1 font-mono text-[11px] leading-none transition-colors",
+                  isActive
+                    ? "bg-foreground text-primary-foreground"
+                    : "bg-transparent text-text-tertiary hover:text-foreground",
+                )}
+              >
+                {r.label}
+              </button>
+            );
+          })}
         </div>
-        <div>
-          <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
-            To
-          </label>
-          <input
-            type="datetime-local"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
-          />
-        </div>
+        {range !== "custom" && (
+          <p className="mt-1.5 font-mono text-[10px] text-text-tertiary">
+            {describeRange(range)}
+          </p>
+        )}
+        {range === "custom" && (
+          <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
+                From
+              </label>
+              <input
+                type="datetime-local"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
+                To
+              </label>
+              <input
+                type="datetime-local"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="w-full border border-border bg-background px-2 py-1 font-mono text-xs"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <Button
@@ -126,4 +179,53 @@ export function GenerateReportForm({
       )}
     </div>
   );
+}
+
+// ---- helpers ----
+
+// Resolved range computed at submit time, not on every render, so the
+// `to` boundary stays exactly "now-at-click" rather than drifting with
+// React reconciliations.
+function resolveRange({
+  range,
+  customFrom,
+  customTo,
+}: {
+  range: RangeKey;
+  customFrom: string;
+  customTo: string;
+}): { dateFrom: string; dateTo: string } {
+  if (range === "custom") {
+    return { dateFrom: customFrom, dateTo: customTo };
+  }
+  const preset = RANGES.find((r) => r.key === range);
+  if (!preset || preset.hours === null) {
+    return { dateFrom: "", dateTo: "" };
+  }
+  const to = new Date();
+  const from = new Date(to.getTime() - preset.hours * 60 * 60 * 1000);
+  return {
+    dateFrom: toLocalISOSlice(from),
+    dateTo: toLocalISOSlice(to),
+  };
+}
+
+// "YYYY-MM-DDTHH:MM" — what FastAPI's `datetime | None` Pydantic field
+// accepts without a timezone suffix. Local-time interpretation matches
+// how the existing dashboard derives its rolling window, so reports
+// generated from dashboard filters use the same boundary semantics.
+function toLocalISOSlice(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  );
+}
+
+function describeRange(range: RangeKey): string {
+  const preset = RANGES.find((r) => r.key === range);
+  if (!preset || preset.hours === null) return "";
+  const to = new Date();
+  const from = new Date(to.getTime() - preset.hours * 60 * 60 * 1000);
+  return `${from.toLocaleDateString()} – ${to.toLocaleDateString()}`;
 }
