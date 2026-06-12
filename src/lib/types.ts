@@ -301,11 +301,21 @@ export type DigestDefinitionPatch = {
 // 'success' but the reduce step degraded (partial result).
 export type ReportStatus = "pending" | "running" | "success" | "failed";
 
+// Narrative-reports PR (2026-06-12): the serialized cluster IS the
+// narrative card. `name` is the MAP-LLM headline; share_of_voice /
+// momentum / countries are deterministic stats. All four are absent or
+// null on reports generated before the upgrade — render fallbacks.
+export type ClusterMomentum = "rising" | "flat" | "falling";
+
 export type ReportClusterSummary = {
   cluster_id: number;
+  name?: string | null;
   label: string;
   n_mentions: number;
   n_publishers: number;
+  share_of_voice?: number | null;
+  momentum?: ClusterMomentum | null;
+  countries?: Record<string, number> | null;
   dominant_stance: StanceLabel | null;
   stance_distribution: Record<StanceLabel, number>;
   top_quotes: string[];
@@ -322,8 +332,28 @@ export type ReportTierBreakdownEntry = {
   stance_distribution: Record<StanceLabel, number>;
 };
 
-// Same shape returned in both `report.aggregates` (ad-hoc) and the
-// PR2-extension columns on `digest_result` (scheduled).
+// PR1 (per-media & per-country sentiment rollups) entries.
+export type PerMediaStanceEntry = {
+  domain: string;
+  n: number;
+  dominant_stance: StanceLabel | null;
+  stance_distribution: Record<StanceLabel, number>;
+  tier: string;
+  country_iso2: string | null;
+};
+
+export type StanceByCountryEntry = {
+  country_iso2: string | null; // null = unresolved bucket
+  n: number;
+  n_publishers: number;
+  dominant_stance: StanceLabel | null;
+  stance_distribution: Record<StanceLabel, number>;
+  top_domains: string[];
+};
+
+// Same shape returned in both `report.aggregates` (ad-hoc) and
+// `digest_result.aggregates` (scheduled, migration a3f9c1e8d2b4).
+// PR1 fields optional — absent on reports generated before deploy.
 export type ReportAggregates = {
   n_mentions: number;
   publisher_weighted_stance: Record<StanceLabel, number>;
@@ -331,6 +361,10 @@ export type ReportAggregates = {
   recency_timeline: { date: string; n: number; dominant_stance: StanceLabel | null }[];
   volume_z_score: number | null;
   sentiment_distribution: Record<StanceLabel, number>;
+  per_media_stance?: PerMediaStanceEntry[];
+  stance_by_country?: StanceByCountryEntry[];
+  top_sources_per_stance?: Record<StanceLabel, { domain: string; n: number }[]>;
+  propaganda_share?: number;
   key_themes?: string[];
   representative_outlets?: string[];
   dominant_framing?: string | null;
@@ -384,6 +418,26 @@ export type DigestResultDetail = {
   tier_breakdown: Record<string, ReportTierBreakdownEntry> | null;
   volume_z_score: number | null;
   recency_timeline: { date: string; n: number; dominant_stance: StanceLabel | null }[] | null;
+  // PR1 — full compute_aggregates() blob, uniform with report.aggregates.
+  // NULL on rows written before migration a3f9c1e8d2b4.
+  aggregates: ReportAggregates | null;
+};
+
+// Operator-visible LLM prompt — GET /api/settings/prompts. Editable
+// report prompts can be overridden (PUT) and reset (DELETE) via the
+// admin proxy; the enrichment stance prompt is read-only by design.
+export type PromptTemplateOut = {
+  key: string;
+  title: string;
+  description: string;
+  call_site: string;
+  model_setting: string | null;
+  editable: boolean;
+  is_overridden: boolean;
+  text: string;
+  default_text: string;
+  updated_at: string | null;
+  updated_by: string | null;
 };
 
 export const FRAMING_LABELS = [

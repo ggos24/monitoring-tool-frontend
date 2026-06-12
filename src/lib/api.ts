@@ -12,6 +12,7 @@ import type {
   Mention,
   MentionsListResponse,
   Overview,
+  PromptTemplateOut,
   Report,
   RssFeed,
   RssFeedCreate,
@@ -305,5 +306,21 @@ export const apiClient = {
   latestDigestResult: (digest_definition_id: number) =>
     api<DigestResultDetail>(
       `/api/digest-definitions/${digest_definition_id}/results/latest`,
+    ),
+
+  // Narrative-reports PR — operator-editable report prompts.
+
+  prompts: () => api<PromptTemplateOut[]>("/api/settings/prompts"),
+
+  updatePrompt: (key: string, text: string) =>
+    localApi<PromptTemplateOut>(
+      `/api/admin/settings/prompts/${encodeURIComponent(key)}`,
+      { method: "PUT", body: { text } },
+    ),
+
+  resetPrompt: (key: string) =>
+    localApi<{ reset: string }>(
+      `/api/admin/settings/prompts/${encodeURIComponent(key)}`,
+      { method: "DELETE" },
     ),
 };

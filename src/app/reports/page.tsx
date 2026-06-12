@@ -2,16 +2,21 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
 import { TopicSelector } from "@/components/dashboard/topic-selector";
-import { ReportDetail } from "@/components/reports/report-detail";
+import { DigestResultView, ReportDetail } from "@/components/reports/report-detail";
 import { ReportList } from "@/components/reports/report-list";
 import { GenerateReportForm } from "@/components/reports/generate-report-form";
-import { apiClient } from "@/lib/api";
-import type { DigestDefinition, SegmentCondition } from "@/lib/types";
+import { ScheduledReports } from "@/components/reports/scheduled-reports";
+import type { DigestResultDetail, SegmentCondition } from "@/lib/types";
+
+// One Reports tab, two trigger modes of the same backend engine:
+// - "Generate now"        → POST /api/reports/segment   (ad-hoc, cached)
+// - "Save as scheduled"   → digest_definition rows      (nightly cron)
+// Scheduled runs (digest_result) render in the same detail pane via the
+// shared ReportBody — one component for both surfaces.
 
 // `useSearchParams` requires a Suspense boundary in Next 16 — wrap.
 export default function ReportsPage() {
@@ -29,9 +34,32 @@ function ReportsInner() {
   const topicId = parseTopicId(search.get("topic_id"));
   const reportId = parseInt(search.get("report_id") ?? "", 10) || null;
 
+  // Selected scheduled-run — kept in state (no single-result GET on the
+  // backend; the object comes from the run-history list's query cache).
+  const [selectedRun, setSelectedRun] = useState<DigestResultDetail | null>(
+    null,
+  );
+
   const setTopicId = (id: number | null) => {
     const params = new URLSearchParams();
     if (id !== null) params.set("topic_id", String(id));
+    setSelectedRun(null);
+    router.replace(`/reports?${params.toString()}`);
+  };
+
+  const selectReport = (newId: number) => {
+    const params = new URLSearchParams();
+    if (topicId !== null) params.set("topic_id", String(topicId));
+    params.set("report_id", String(newId));
+    setSelectedRun(null);
+    router.replace(`/reports?${params.toString()}`);
+  };
+
+  const selectRun = (run: DigestResultDetail) => {
+    // Clear ad-hoc selection from the URL so back/forward stays sane.
+    const params = new URLSearchParams();
+    if (topicId !== null) params.set("topic_id", String(topicId));
+    setSelectedRun(run);
     router.replace(`/reports?${params.toString()}`);
   };
 
@@ -62,12 +90,7 @@ function ReportsInner() {
                 prefillFilters={prefillFilters}
                 prefillDateFrom={prefillFrom}
                 prefillDateTo={prefillTo}
-                onCreated={(newId) => {
-                  const params = new URLSearchParams();
-                  params.set("topic_id", String(topicId));
-                  params.set("report_id", String(newId));
-                  router.replace(`/reports?${params.toString()}`);
-                }}
+                onCreated={selectReport}
               />
               <section>
                 <h2 className="mb-3 font-mono text-xs uppercase text-text-tertiary">
@@ -75,14 +98,20 @@ function ReportsInner() {
                 </h2>
                 <ReportList topicId={topicId} selectedId={reportId} />
               </section>
-              <ScheduledDigestsPanel topicId={topicId} />
+              <ScheduledReports
+                topicId={topicId}
+                selectedResultId={selectedRun?.id ?? null}
+                onSelectResult={selectRun}
+              />
             </aside>
             <section className="lg:col-span-8 xl:col-span-9">
-              {reportId !== null ? (
+              {selectedRun !== null ? (
+                <DigestResultView result={selectedRun} />
+              ) : reportId !== null ? (
                 <ReportDetail reportId={reportId} />
               ) : (
                 <div className="border border-dashed border-border p-12 text-center text-sm text-text-tertiary">
-                  Pick a report from the list or generate a new one.
+                  Pick a report, a scheduled run, or generate a new one.
                 </div>
               )}
             </section>
@@ -91,51 +120,6 @@ function ReportsInner() {
       </main>
       <Footer />
     </>
-  );
-}
-
-function ScheduledDigestsPanel({ topicId }: { topicId: number }) {
-  const { data } = useQuery({
-    queryKey: ["digest-definitions", topicId, "active"],
-    queryFn: () =>
-      apiClient.digestDefinitions({ topic_id: topicId, active_only: true }),
-    enabled: topicId > 0,
-  });
-
-  if (!data || data.length === 0) return null;
-  return (
-    <section>
-      <h2 className="mb-3 font-mono text-xs uppercase text-text-tertiary">
-        Scheduled digests
-      </h2>
-      <ul className="flex flex-col gap-1">
-        {data.map((def: DigestDefinition) => (
-          <li key={def.id}>
-            <LatestDigestLink definition={def} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function LatestDigestLink({ definition }: { definition: DigestDefinition }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["digest-latest", definition.id],
-    queryFn: () => apiClient.latestDigestResult(definition.id),
-    retry: false,
-  });
-  return (
-    <div className="border border-border bg-card p-2 font-mono text-xs">
-      <div className="text-foreground">{definition.name}</div>
-      <div className="text-text-tertiary">
-        {isLoading
-          ? "checking…"
-          : data
-            ? `latest ${data.period_start.slice(0, 10)} · ${data.n_mentions} mentions`
-            : "no digest yet"}
-      </div>
-    </div>
   );
 }
 
