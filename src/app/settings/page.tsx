@@ -5,6 +5,7 @@ import { TopBar } from "@/components/dashboard/top-bar";
 import { EnrichmentSettings } from "@/components/settings/enrichment-settings";
 import { PromptsEditor } from "@/components/settings/prompts-editor";
 import { SchedulerInfo } from "@/components/settings/scheduler-info";
+import { TopicGroupsEditor } from "@/components/settings/topic-groups-editor";
 import { TopicsEditor } from "@/components/settings/topics-editor";
 
 export default function SettingsPage() {
@@ -31,6 +32,7 @@ export default function SettingsPage() {
 
         <SchedulerInfo />
         <TopicsEditor />
+        <TopicGroupsEditor />
         <EnrichmentSettings />
         <PromptsEditor />
       </main>

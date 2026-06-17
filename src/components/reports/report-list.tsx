@@ -5,20 +5,23 @@ import Link from "next/link";
 
 import { apiClient } from "@/lib/api";
 import type { Report } from "@/lib/types";
+import type { ReportScopeSel } from "@/components/reports/scope-selector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export function ReportList({
-  topicId,
+  scope,
   selectedId,
 }: {
-  topicId: number;
+  scope: ReportScopeSel;
   selectedId: number | null;
 }) {
+  const scopeQuery =
+    scope.kind === "group" ? { group_id: scope.id } : { topic_id: scope.id };
   const { data, isLoading, error } = useQuery({
-    queryKey: ["reports", topicId],
-    queryFn: () => apiClient.listReports(topicId, 20),
-    enabled: topicId > 0,
+    queryKey: ["reports", scope.kind, scope.id],
+    queryFn: () => apiClient.listReports(scopeQuery, 20),
+    enabled: scope.id > 0,
     refetchInterval: 30_000,
   });
 
@@ -40,9 +43,14 @@ export function ReportList({
   if (!data || data.length === 0)
     return (
       <p className="text-xs text-text-tertiary">
-        No reports yet for this topic — generate one below.
+        No reports yet for this {scope.kind} — generate one below.
       </p>
     );
+
+  const scopeQ =
+    scope.kind === "group"
+      ? { group_id: scope.id }
+      : { topic_id: scope.id };
 
   return (
     <ul className="flex flex-col">
@@ -51,7 +59,7 @@ export function ReportList({
           <Link
             href={{
               pathname: "/reports",
-              query: { topic_id: topicId, report_id: r.id },
+              query: { ...scopeQ, report_id: r.id },
             }}
             className={cn(
               "block border border-border border-b-0 last:border-b bg-card p-3 hover:bg-muted transition-colors",

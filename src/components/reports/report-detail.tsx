@@ -131,6 +131,7 @@ export function ReportBody({
   aggregates: ReportAggregates | null;
   errorNote: string | null;
 }) {
+  const isGroup = aggregates?.scope?.is_group ?? false;
   return (
     <>
       {errorNote && (
@@ -138,6 +139,18 @@ export function ReportBody({
           Partial result: {errorNote}
         </div>
       )}
+
+      {aggregates?.data_basis && <DataBasisBar basis={aggregates.data_basis} />}
+
+      {isGroup && aggregates?.per_topic && aggregates.per_topic.length > 0 && (
+        <PerTopicPanel rows={aggregates.per_topic} />
+      )}
+
+      {isGroup &&
+        aggregates?.framing_distribution &&
+        Object.keys(aggregates.framing_distribution).length > 0 && (
+          <FramingPanel dist={aggregates.framing_distribution} />
+        )}
 
       {narrative ? (
         <section>
@@ -169,10 +182,15 @@ export function ReportBody({
 
       {aggregates && (
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <StanceWeightedPanel
-            label="Publisher-weighted stance"
-            values={aggregates.publisher_weighted_stance}
-          />
+          {/* Publisher-weighted stance is per-target — undefined across a
+              group's heterogeneous topics, so hidden for groups (framing
+              + per-topic panels carry the group-level signal instead). */}
+          {!isGroup && (
+            <StanceWeightedPanel
+              label="Publisher-weighted stance"
+              values={aggregates.publisher_weighted_stance}
+            />
+          )}
           <TierBreakdownPanel tiers={aggregates.tier_breakdown} />
         </section>
       )}
@@ -312,6 +330,129 @@ function MomentumBadge({
     );
   }
   return null; // flat / unknown → no badge, keep the card quiet
+}
+
+// ---------- topic-groups + honesty panels ----------
+
+function DataBasisBar({ basis }: { basis: NonNullable<ReportAggregates["data_basis"]> }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border border-border bg-card px-4 py-2 font-mono text-[10px] text-text-tertiary">
+      <span className="uppercase tracking-[0.1em] text-text-secondary">
+        Data basis
+      </span>
+      <span>
+        <span className="text-foreground">{basis.analyzed_in_report}</span> analyzed
+      </span>
+      <span>
+        of <span className="text-foreground">{basis.relevant_total}</span> collected (
+        {basis.coverage_pct}%)
+      </span>
+      {basis.excluded_propaganda > 0 && (
+        <span>· {basis.excluded_propaganda} propaganda excluded</span>
+      )}
+      {basis.excluded_low_tier > 0 && (
+        <span>· {basis.excluded_low_tier} low-tier excluded</span>
+      )}
+      {basis.country_unresolved_pct > 0 && (
+        <span>· {basis.country_unresolved_pct}% country-unknown</span>
+      )}
+    </div>
+  );
+}
+
+function PerTopicPanel({
+  rows,
+}: {
+  rows: NonNullable<ReportAggregates["per_topic"]>;
+}) {
+  return (
+    <section>
+      <h2 className="mb-3 font-mono text-xs uppercase text-text-tertiary">
+        Share of voice by topic
+      </h2>
+      <div className="flex flex-col gap-2">
+        {rows.map((r) => {
+          const pct = Math.round(r.share_of_voice * 100);
+          return (
+            <div
+              key={r.topic_id}
+              className="flex items-center gap-3 font-mono text-xs"
+            >
+              <span className="w-40 truncate text-text-secondary">
+                {r.topic_name ?? `topic ${r.topic_id}`}
+              </span>
+              <div className="flex-1 h-3 bg-muted">
+                <div
+                  className="h-3 bg-foreground/70"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className="w-24 text-right text-text-tertiary">
+                {pct}% · {r.n}
+              </span>
+              {r.dominant_stance && (
+                <span
+                  className={cn(
+                    "w-20 px-1.5 py-0.5 text-center text-[10px] capitalize",
+                    STANCE_COLORS[r.dominant_stance],
+                  )}
+                >
+                  {r.dominant_stance}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+const FRAMING_COLORS: Record<string, string> = {
+  "pro-ukraine": "bg-success/60",
+  "pro-russia": "bg-destructive/70",
+  "neutral-factual": "bg-muted-foreground/40",
+  "anti-western": "bg-destructive/50",
+  whataboutism: "bg-warning/60",
+  skeptical: "bg-warning/40",
+  humanitarian: "bg-success/40",
+  other: "bg-muted-foreground/25",
+};
+
+function FramingPanel({ dist }: { dist: Record<string, number> }) {
+  const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+  const total = entries.reduce((s, [, n]) => s + n, 0) || 1;
+  return (
+    <section>
+      <h2 className="mb-3 font-mono text-xs uppercase text-text-tertiary">
+        Framing distribution
+      </h2>
+      {/* Stacked bar — framing is the group-level headline axis. */}
+      <div className="flex h-4 w-full overflow-hidden">
+        {entries.map(([label, n]) => (
+          <div
+            key={label}
+            className={cn("h-4", FRAMING_COLORS[label] ?? "bg-muted-foreground/25")}
+            style={{ width: `${(n / total) * 100}%` }}
+            title={`${label}: ${n}`}
+          />
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] text-text-tertiary">
+        {entries.map(([label, n]) => (
+          <span key={label} className="flex items-center gap-1">
+            <span
+              className={cn(
+                "inline-block size-2",
+                FRAMING_COLORS[label] ?? "bg-muted-foreground/25",
+              )}
+            />
+            {label} {Math.round((n / total) * 100)}%
+          </span>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 // ---------- PR1 panels: country + media sentiment ----------

@@ -9,6 +9,7 @@ import type { SegmentCondition } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { SegmentFilterBuilder } from "@/components/reports/segment-filter-builder";
 import { ScheduledReportCreateForm } from "@/components/reports/scheduled-reports";
+import type { ReportScopeSel } from "@/components/reports/scope-selector";
 import { cn } from "@/lib/utils";
 
 // Preset ranges — match the dashboard PeriodToggle vocabulary so users
@@ -26,13 +27,13 @@ const RANGES: { key: RangeKey; label: string; hours: number | null }[] = [
 type RangeKey = "24h" | "7d" | "14d" | "30d" | "90d" | "custom";
 
 export function GenerateReportForm({
-  topicId,
+  scope,
   prefillFilters,
   prefillDateFrom,
   prefillDateTo,
   onCreated,
 }: {
-  topicId: number;
+  scope: ReportScopeSel;
   prefillFilters: SegmentCondition[];
   prefillDateFrom: string | null;
   prefillDateTo: string | null;
@@ -51,6 +52,7 @@ export function GenerateReportForm({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleSaved, setScheduleSaved] = useState(false);
   const queryClient = useQueryClient();
+  const isGroup = scope.kind === "group";
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -60,14 +62,14 @@ export function GenerateReportForm({
         customTo,
       });
       return apiClient.generateSegmentReport({
-        topic_id: topicId,
+        ...(isGroup ? { group_id: scope.id } : { topic_id: scope.id }),
         filters,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       });
     },
     onSuccess: (report) => {
-      queryClient.invalidateQueries({ queryKey: ["reports", topicId] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
       onCreated(report.id);
     },
   });
@@ -147,20 +149,28 @@ export function GenerateReportForm({
           <Play className="mr-1 size-3" />
           {mutation.isPending ? "Generating…" : "Generate now"}
         </Button>
-        <button
-          type="button"
-          onClick={() => {
-            setShowSchedule((v) => !v);
-            setScheduleSaved(false);
-            setScheduleError(null);
-          }}
-          className="flex cursor-pointer items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-[11px] text-text-secondary hover:border-strong hover:text-foreground"
-          title="Save these filters as a nightly scheduled report"
-        >
-          <CalendarClock className="size-3" />
-          Save as scheduled
-        </button>
+        {!isGroup && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowSchedule((v) => !v);
+              setScheduleSaved(false);
+              setScheduleError(null);
+            }}
+            className="flex cursor-pointer items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-[11px] text-text-secondary hover:border-strong hover:text-foreground"
+            title="Save these filters as a nightly scheduled report"
+          >
+            <CalendarClock className="size-3" />
+            Save as scheduled
+          </button>
+        )}
       </div>
+      {isGroup && (
+        <p className="font-mono text-[10px] text-text-tertiary">
+          Group report — unions all member topics and dedupes shared
+          articles. Scheduled digests are per-topic for now.
+        </p>
+      )}
 
       {scheduleSaved && (
         <p className="font-mono text-[11px] text-emerald-400">
@@ -171,9 +181,9 @@ export function GenerateReportForm({
         <p className="font-mono text-xs text-destructive">{scheduleError}</p>
       )}
 
-      {showSchedule && (
+      {showSchedule && !isGroup && (
         <ScheduledReportCreateForm
-          topicId={topicId}
+          topicId={scope.id}
           initialFilters={filters}
           onClose={() => setShowSchedule(false)}
           onSaved={() => {

@@ -15,6 +15,9 @@ import type {
   PromptTemplateOut,
   Report,
   RssFeed,
+  TopicGroup,
+  TopicGroupCreate,
+  TopicGroupPatch,
   RssFeedCreate,
   RssFeedPatch,
   SegmentReportRequest,
@@ -295,8 +298,15 @@ export const apiClient = {
 
   getReport: (id: number) => api<Report>(`/api/reports/${id}`),
 
-  listReports: (topic_id: number, limit = 20) =>
-    api<Report[]>(`/api/reports?topic_id=${topic_id}&limit=${limit}`),
+  listReports: (
+    scope: { topic_id: number } | { group_id: number },
+    limit = 20,
+  ) => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if ("topic_id" in scope) qs.set("topic_id", String(scope.topic_id));
+    else qs.set("group_id", String(scope.group_id));
+    return api<Report[]>(`/api/reports?${qs}`);
+  },
 
   digestResults: (digest_definition_id: number, limit = 30) =>
     api<DigestResultDetail[]>(
@@ -323,4 +333,22 @@ export const apiClient = {
       `/api/admin/settings/prompts/${encodeURIComponent(key)}`,
       { method: "DELETE" },
     ),
+
+  // Topic groups — reporting scopes over several topics.
+
+  topicGroups: () => api<TopicGroup[]>("/api/topic-groups"),
+
+  createTopicGroup: (body: TopicGroupCreate) =>
+    localApi<TopicGroup>("/api/admin/topic-groups", { method: "POST", body }),
+
+  updateTopicGroup: (id: number, patch: TopicGroupPatch) =>
+    localApi<TopicGroup>(`/api/admin/topic-groups/${id}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  deleteTopicGroup: (id: number) =>
+    localApi<{ deleted: number }>(`/api/admin/topic-groups/${id}`, {
+      method: "DELETE",
+    }),
 };

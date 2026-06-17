@@ -351,9 +351,42 @@ export type StanceByCountryEntry = {
   top_domains: string[];
 };
 
+// Coverage-disclosure block (audit honesty pack) — present on reports
+// since the 2026-06-12 deploy.
+export type ReportDataBasis = {
+  relevant_total: number;
+  eligible_total: number;
+  enriched_total: number;
+  analyzed_in_report: number;
+  enrichment_gate_min_score: number;
+  excluded_propaganda: number;
+  excluded_low_tier: number;
+  coverage_pct: number;
+  country_unresolved_pct: number;
+  note: string;
+};
+
+// topic-groups: per-member-topic share of voice (group reports only).
+export type PerTopicEntry = {
+  topic_id: number;
+  topic_name?: string | null;
+  n: number;
+  share_of_voice: number;
+  dominant_stance: StanceLabel | null;
+  stance_distribution: Record<StanceLabel, number>;
+};
+
+// topic-groups: the report scope. `is_group` true → render group view
+// (framing axis + per-topic) instead of single-topic stance.
+export type ReportScope = {
+  is_group: boolean;
+  topic_ids: number[];
+  label: string;
+};
+
 // Same shape returned in both `report.aggregates` (ad-hoc) and
-// `digest_result.aggregates` (scheduled, migration a3f9c1e8d2b4).
-// PR1 fields optional — absent on reports generated before deploy.
+// `digest_result.aggregates` (scheduled). Later fields optional —
+// absent on reports generated before their respective deploys.
 export type ReportAggregates = {
   n_mentions: number;
   publisher_weighted_stance: Record<StanceLabel, number>;
@@ -365,6 +398,10 @@ export type ReportAggregates = {
   stance_by_country?: StanceByCountryEntry[];
   top_sources_per_stance?: Record<StanceLabel, { domain: string; n: number }[]>;
   propaganda_share?: number;
+  data_basis?: ReportDataBasis;
+  per_topic?: PerTopicEntry[];
+  framing_distribution?: Record<string, number>;
+  scope?: ReportScope;
   key_themes?: string[];
   representative_outlets?: string[];
   dominant_framing?: string | null;
@@ -374,7 +411,9 @@ export type ReportAggregates = {
 
 export type Report = {
   id: number;
-  topic_id: number;
+  topic_id: number | null;
+  group_id?: number | null;
+  topic_ids?: number[] | null;
   params: Record<string, unknown>;
   params_hash: string;
   source_max_collected_at: string | null;
@@ -391,11 +430,33 @@ export type Report = {
   cached?: boolean;
 };
 
+// Provide exactly one of topic_id | topic_ids | group_id.
 export type SegmentReportRequest = {
-  topic_id: number;
+  topic_id?: number;
+  topic_ids?: number[];
+  group_id?: number;
   filters: SegmentCondition[];
   date_from?: string | null;
   date_to?: string | null;
+};
+
+// topic-groups: a reusable reporting scope over several topics.
+export type TopicGroup = {
+  id: number;
+  name: string;
+  topic_ids: number[];
+  created_at: string;
+  topic_names: Record<number, string>;
+};
+
+export type TopicGroupCreate = {
+  name: string;
+  topic_ids: number[];
+};
+
+export type TopicGroupPatch = {
+  name?: string;
+  topic_ids?: number[];
 };
 
 // Scheduled digest result (extended in PR2 with cluster/aggregate fields).
