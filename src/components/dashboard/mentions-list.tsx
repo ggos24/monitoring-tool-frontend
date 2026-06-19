@@ -11,7 +11,12 @@ import { Loader2, Search, Sparkles, X } from "lucide-react";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
-import type { Mention, MentionsListResponse, StanceLabel } from "@/lib/types";
+import type {
+  Mention,
+  MentionsListResponse,
+  ScopeParam,
+  StanceLabel,
+} from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,7 +52,7 @@ const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
 ];
 
 export function MentionsList({
-  topicId,
+  scope,
   domain,
   country,
   source,
@@ -56,7 +61,7 @@ export function MentionsList({
   onChangeQuality,
   onClearDomain,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   domain: string | null;
   country: string | null;
   source: SourceFilter;
@@ -65,7 +70,7 @@ export function MentionsList({
   onChangeQuality: (v: QualityFilter) => void;
   onClearDomain: () => void;
 }) {
-  const enabled = topicId !== null;
+  const enabled = scope !== null;
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -79,11 +84,11 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, topicId, domain, country, source, quality, stance]);
+  }, [debounced, scope, domain, country, source, quality, stance]);
 
   const queryKey = [
     "mentions",
-    topicId,
+    scope,
     debounced,
     domain,
     country,
@@ -97,7 +102,7 @@ export function MentionsList({
     queryKey,
     queryFn: () =>
       apiClient.mentions({
-        topic_id: topicId!,
+        scope: scope!,
         limit: PAGE_SIZE,
         offset: page * PAGE_SIZE,
         search: debounced || undefined,

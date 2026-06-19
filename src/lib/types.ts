@@ -440,6 +440,10 @@ export type SegmentReportRequest = {
   date_to?: string | null;
 };
 
+// Dashboard/report scope param — a single topic or a group. A bare
+// number is shorthand for {topic_id} (back-compat with existing callers).
+export type ScopeParam = number | { topic_id: number } | { group_id: number };
+
 // Pre-flight scope estimate (POST /api/reports/preview) — what a report
 // over the current scope+filters+range would analyze, before running it.
 export type ReportPreview = {

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
+import type { ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -23,13 +24,13 @@ const NAV: NavItem[] = [
   { label: "Settings", href: "/settings", routable: true },
 ];
 
-export function TopBar({ topicId }: { topicId: number | null }) {
+export function TopBar({ scope }: { scope: ScopeParam | null }) {
   const pathname = usePathname();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["overview", topicId],
-    queryFn: () => apiClient.overview(topicId!),
-    enabled: topicId !== null,
+    queryKey: ["overview", scope],
+    queryFn: () => apiClient.overview(scope!),
+    enabled: scope !== null,
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -37,7 +38,7 @@ export function TopBar({ topicId }: { topicId: number | null }) {
   const now = useTickingNow(1000);
 
   const status = renderStatus({
-    enabled: topicId !== null,
+    enabled: scope !== null,
     isLoading,
     hasError: !!error,
     lastSyncAt: data?.last_sync_at ?? null,

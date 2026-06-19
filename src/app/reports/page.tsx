@@ -72,7 +72,15 @@ function ReportsInner() {
 
   return (
     <>
-      <TopBar topicId={scope?.kind === "topic" ? scope.id : null} />
+      <TopBar
+        scope={
+          scope === null
+            ? null
+            : scope.kind === "group"
+              ? { group_id: scope.id }
+              : { topic_id: scope.id }
+        }
+      />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <ScopeSelector value={scope} onChange={setScope} />

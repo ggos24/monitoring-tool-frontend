@@ -6,6 +6,7 @@ import { Combobox } from "@base-ui/react/combobox";
 import { ChevronDown, Globe, Search } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
+import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { cn } from "@/lib/utils";
 
@@ -17,22 +18,22 @@ type CountryItem = {
 };
 
 export function CountryFilter({
-  topicId,
+  scope,
   days,
   value,
   onChange,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   days: number;
   value: string | null;
   onChange: (iso2: string | null) => void;
 }) {
-  const enabled = topicId !== null;
+  const enabled = scope !== null;
   const [open, setOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["countries", topicId, days],
-    queryFn: () => apiClient.countries(topicId!, days, 100),
+    queryKey: ["countries", scope, days],
+    queryFn: () => apiClient.countries(scope!, days, 100),
     enabled,
     staleTime: 60_000,
   });

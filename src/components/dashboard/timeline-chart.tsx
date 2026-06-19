@@ -12,6 +12,7 @@ import {
 } from "recharts";
 
 import { apiClient } from "@/lib/api";
+import type { ScopeParam } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { theme } from "@/lib/theme";
@@ -23,20 +24,20 @@ const TICK_STYLE = {
 };
 
 export function TimelineChart({
-  topicId,
+  scope,
   days,
   country,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   days: number;
   country: string | null;
 }) {
-  const enabled = topicId !== null;
+  const enabled = scope !== null;
   const granularity: "hour" | "day" = days <= 1 ? "hour" : "day";
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["timeline", topicId, days, granularity, country],
-    queryFn: () => apiClient.timeline(topicId!, days, granularity, country),
+    queryKey: ["timeline", scope, days, granularity, country],
+    queryFn: () => apiClient.timeline(scope!, days, granularity, country),
     enabled,
   });
 

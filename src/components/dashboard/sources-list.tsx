@@ -8,11 +8,11 @@ import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
-import type { CountryConfidence } from "@/lib/types";
+import type { CountryConfidence, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function SourcesList({
-  topicId,
+  scope,
   days,
   country,
   source,
@@ -20,7 +20,7 @@ export function SourcesList({
   selectedDomain,
   onToggleDomain,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   days: number;
   country: string | null;
   source: "all" | "gn" | "gdelt" | "firehose" | "rss";
@@ -28,13 +28,13 @@ export function SourcesList({
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
-  const enabled = topicId !== null;
+  const enabled = scope !== null;
   const LIMIT = 25;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", topicId, days, country, source, quality, LIMIT],
+    queryKey: ["sources", scope, days, country, source, quality, LIMIT],
     queryFn: () =>
-      apiClient.topSources(topicId!, days, LIMIT, country, {
+      apiClient.topSources(scope!, days, LIMIT, country, {
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
       }),

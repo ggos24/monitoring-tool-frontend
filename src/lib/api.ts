@@ -16,6 +16,7 @@ import type {
   Report,
   ReportPreview,
   RssFeed,
+  ScopeParam,
   TopicGroup,
   TopicGroupCreate,
   TopicGroupPatch,
@@ -122,8 +123,17 @@ async function localApi<T>(
   return res.json();
 }
 
+// Scope → query params. A bare number means {topic_id} (back-compat).
+function scopeQuery(scope: ScopeParam): URLSearchParams {
+  const qs = new URLSearchParams();
+  if (typeof scope === "number") qs.set("topic_id", String(scope));
+  else if ("group_id" in scope) qs.set("group_id", String(scope.group_id));
+  else qs.set("topic_id", String(scope.topic_id));
+  return qs;
+}
+
 type MentionsParams = {
-  topic_id: number;
+  scope: ScopeParam;
   limit?: number;
   offset?: number;
   search?: string;
@@ -156,8 +166,7 @@ export const apiClient = {
     }),
 
   mentions: (params: MentionsParams) => {
-    const qs = new URLSearchParams();
-    qs.set("topic_id", String(params.topic_id));
+    const qs = scopeQuery(params.scope);
     if (params.limit !== undefined) qs.set("limit", String(params.limit));
     if (params.offset !== undefined) qs.set("offset", String(params.offset));
     if (params.search) qs.set("search", params.search);
@@ -173,22 +182,20 @@ export const apiClient = {
   },
 
   timeline: (
-    topic_id: number,
+    scope: ScopeParam,
     days = 7,
     granularity: "hour" | "day" = "day",
     country_iso2?: string | null,
   ) => {
-    const qs = new URLSearchParams({
-      topic_id: String(topic_id),
-      days: String(days),
-      granularity,
-    });
+    const qs = scopeQuery(scope);
+    qs.set("days", String(days));
+    qs.set("granularity", granularity);
     if (country_iso2) qs.set("country_iso2", country_iso2);
     return api<TimelinePoint[]>(`/api/stats/timeline?${qs}`);
   },
 
   topSources: (
-    topic_id: number,
+    scope: ScopeParam,
     days = 7,
     limit = 10,
     country_iso2?: string | null,
@@ -197,26 +204,28 @@ export const apiClient = {
       score_band?: "trusted" | "suspect" | "propaganda";
     },
   ) => {
-    const qs = new URLSearchParams({
-      topic_id: String(topic_id),
-      days: String(days),
-      limit: String(limit),
-    });
+    const qs = scopeQuery(scope);
+    qs.set("days", String(days));
+    qs.set("limit", String(limit));
     if (country_iso2) qs.set("country_iso2", country_iso2);
     if (extra?.source) qs.set("source", extra.source);
     if (extra?.score_band) qs.set("score_band", extra.score_band);
     return api<SourceCount[]>(`/api/stats/sources?${qs}`);
   },
 
-  countries: (topic_id: number, days = 7, limit = 25) =>
-    api<CountryCount[]>(
-      `/api/stats/countries?topic_id=${topic_id}&days=${days}&limit=${limit}`,
-    ),
+  countries: (scope: ScopeParam, days = 7, limit = 25) => {
+    const qs = scopeQuery(scope);
+    qs.set("days", String(days));
+    qs.set("limit", String(limit));
+    return api<CountryCount[]>(`/api/stats/countries?${qs}`);
+  },
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),
 
-  overview: (topic_id: number) =>
-    api<Overview>(`/api/stats/overview?topic_id=${topic_id}`),
+  overview: (scope: ScopeParam) => {
+    const qs = scopeQuery(scope);
+    return api<Overview>(`/api/stats/overview?${qs}`);
+  },
 
   domainScoring: (domain: string) =>
     api<DomainScoringDetail>(

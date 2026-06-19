@@ -7,7 +7,7 @@ import { KickerLabel } from "@/components/ui/kicker-label";
 export default function SourcesPage() {
   return (
     <>
-      <TopBar topicId={null} />
+      <TopBar scope={null} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-5 py-6">
         <header>
           <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-foreground">

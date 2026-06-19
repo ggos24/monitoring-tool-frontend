@@ -4,34 +4,36 @@ import Link from "next/link";
 import { FileText } from "lucide-react";
 
 import type { QualityFilter, SourceFilter } from "@/components/dashboard/mentions-list";
+import type { ScopeParam } from "@/lib/types";
 
-// Forwards the dashboard's current filter state to the Reports page
-// via URL query params. The /reports page parses these and seeds the
-// GenerateReportForm so the user lands with the same scope they had
-// in mentions view.
+// Forwards the dashboard's current scope + filter state to the Reports
+// page via URL query params (topic_id OR group_id). The /reports page
+// parses these and seeds the GenerateReportForm.
 //
 // Date range is derived from `days` against now() — same convention
 // the rest of the dashboard uses for its rolling window.
 export function GenerateReportLink({
-  topicId,
+  scope,
   days,
   country,
   source,
   quality,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   days: number;
   country: string | null;
   source: SourceFilter;
   quality: QualityFilter;
 }) {
-  if (topicId === null) return null;
+  if (scope === null) return null;
 
   const dateTo = new Date();
   const dateFrom = new Date(dateTo.getTime() - days * 24 * 60 * 60 * 1000);
 
   const params = new URLSearchParams();
-  params.set("topic_id", String(topicId));
+  if (typeof scope === "number") params.set("topic_id", String(scope));
+  else if ("group_id" in scope) params.set("group_id", String(scope.group_id));
+  else params.set("topic_id", String(scope.topic_id));
   params.set("date_from", dateFrom.toISOString().slice(0, 16));
   params.set("date_to", dateTo.toISOString().slice(0, 16));
   if (country) params.set("country_iso2", country);

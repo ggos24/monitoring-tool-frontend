@@ -3,24 +3,25 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
+import type { ScopeParam } from "@/lib/types";
 import { KpiCard } from "./kpi-card";
 
 export function KpiGrid({
-  topicId,
+  scope,
   days,
   country,
 }: {
-  topicId: number | null;
+  scope: ScopeParam | null;
   days: number;
   country: string | null;
 }) {
-  const enabled = topicId !== null;
+  const enabled = scope !== null;
 
   const mentionsQuery = useQuery({
-    queryKey: ["mentions", topicId, "kpi", days, country],
+    queryKey: ["mentions", scope, "kpi", days, country],
     queryFn: () =>
       apiClient.mentions({
-        topic_id: topicId!,
+        scope: scope!,
         limit: 1,
         country_iso2: country ?? undefined,
       }),
@@ -38,8 +39,8 @@ export function KpiGrid({
   // Follow-up: ask backend to accept country_iso2 on /api/stats/overview
   // for an exact count.
   const overviewQuery = useQuery({
-    queryKey: ["overview", topicId],
-    queryFn: () => apiClient.overview(topicId!),
+    queryKey: ["overview", scope],
+    queryFn: () => apiClient.overview(scope!),
     enabled: enabled && country === null,
     staleTime: 30_000,
     refetchInterval: 60_000,
@@ -47,8 +48,8 @@ export function KpiGrid({
 
   const SOURCES_CAP = 50;
   const filteredSourcesQuery = useQuery({
-    queryKey: ["sources-count", topicId, days, country],
-    queryFn: () => apiClient.topSources(topicId!, days, SOURCES_CAP, country),
+    queryKey: ["sources-count", scope, days, country],
+    queryFn: () => apiClient.topSources(scope!, days, SOURCES_CAP, country),
     enabled: enabled && country !== null,
     staleTime: 30_000,
   });

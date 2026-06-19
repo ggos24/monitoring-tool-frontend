@@ -28,7 +28,7 @@ export default function EditTopicAstPage({ params }: PageProps) {
 
   return (
     <>
-      <TopBar topicId={null} />
+      <TopBar scope={null} />
       <main className="mx-auto w-full max-w-[1080px] flex-1 space-y-6 px-5 py-6">
         <header className="flex items-baseline justify-between gap-3">
           <div>

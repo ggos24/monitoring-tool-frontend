@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
+import { apiClient } from "@/lib/api";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
-import { TopicSelector } from "@/components/dashboard/topic-selector";
+import {
+  ScopeSelector,
+  type ReportScopeSel,
+} from "@/components/reports/scope-selector";
+import type { ScopeParam } from "@/lib/types";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { CountryFilter } from "@/components/dashboard/country-filter";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
@@ -21,15 +27,32 @@ import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 
 export default function Home() {
-  const [topicId, setTopicId] = useState<number | null>(null);
+  const [scopeSel, setScopeSel] = useState<ReportScopeSel | null>(null);
   const [days, setDays] = useState<number>(7);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
   const [quality, setQuality] = useState<QualityFilter>("all");
 
-  const handleSelectTopic = (id: number | null) => {
-    setTopicId(id);
+  // The API scope param: single topic or a group union.
+  const scope: ScopeParam | null = scopeSel
+    ? scopeSel.kind === "group"
+      ? { group_id: scopeSel.id }
+      : { topic_id: scopeSel.id }
+    : null;
+
+  // Auto-select the first topic on load (preserves the old dashboard
+  // behaviour now that the selector no longer self-selects). User can
+  // then switch to any topic or group.
+  const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
+  useEffect(() => {
+    if (scopeSel === null && topicsQuery.data && topicsQuery.data.length > 0) {
+      setScopeSel({ kind: "topic", id: topicsQuery.data[0].id });
+    }
+  }, [topicsQuery.data, scopeSel]);
+
+  const handleSelectScope = (next: ReportScopeSel) => {
+    setScopeSel(next);
     setCountry(null);
     setSelectedDomain(null);
     setSource("all");
@@ -47,14 +70,14 @@ export default function Home() {
 
   return (
     <>
-      <TopBar topicId={topicId} />
+      <TopBar scope={scope} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <TopicSelector value={topicId} onChange={handleSelectTopic} />
+          <ScopeSelector value={scopeSel} onChange={handleSelectScope} />
           <div className="flex flex-wrap items-center gap-2">
-            {topicId !== null && (
+            {scope !== null && (
               <CountryFilter
-                topicId={topicId}
+                scope={scope}
                 days={days}
                 value={country}
                 onChange={handleSelectCountry}
@@ -62,7 +85,7 @@ export default function Home() {
             )}
             <PeriodToggle value={days} onChange={setDays} />
             <GenerateReportLink
-              topicId={topicId}
+              scope={scope}
               days={days}
               country={country}
               source={source}
@@ -72,8 +95,8 @@ export default function Home() {
         </div>
 
         <div className="mb-6">
-          {topicId !== null && (
-            <KpiGrid topicId={topicId} days={days} country={country} />
+          {scope !== null && (
+            <KpiGrid scope={scope} days={days} country={country} />
           )}
         </div>
 
@@ -83,8 +106,8 @@ export default function Home() {
 
         <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
           <div className="bg-card lg:col-span-2">
-            {topicId !== null && (
-              <TimelineChart topicId={topicId} days={days} country={country} />
+            {scope !== null && (
+              <TimelineChart scope={scope} days={days} country={country} />
             )}
           </div>
           <div className="bg-card">
@@ -94,9 +117,9 @@ export default function Home() {
 
         <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
           <div className="bg-card lg:col-span-2">
-            {topicId !== null && (
+            {scope !== null && (
               <SourcesList
-                topicId={topicId}
+                scope={scope}
                 days={days}
                 country={country}
                 source={source}
@@ -107,9 +130,9 @@ export default function Home() {
             )}
           </div>
           <div className="bg-card lg:col-span-5">
-            {topicId !== null && (
+            {scope !== null && (
               <MentionsList
-                topicId={topicId}
+                scope={scope}
                 domain={selectedDomain}
                 country={country}
                 source={source}
