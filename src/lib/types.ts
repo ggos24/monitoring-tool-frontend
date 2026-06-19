@@ -440,6 +440,15 @@ export type SegmentReportRequest = {
   date_to?: string | null;
 };
 
+// Pre-flight scope estimate (POST /api/reports/preview) — what a report
+// over the current scope+filters+range would analyze, before running it.
+export type ReportPreview = {
+  n_mentions: number; // enriched + deduped → analyzed
+  n_domains: number; // distinct outlets
+  n_relevant: number; // all relevant in scope (context)
+  will_run_sync: boolean;
+};
+
 // topic-groups: a reusable reporting scope over several topics.
 export type TopicGroup = {
   id: number;

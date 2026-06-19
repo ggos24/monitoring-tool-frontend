@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Play } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarClock, Play, X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import type { SegmentCondition } from "@/lib/types";
+import { ALL_ISO2, countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { Button } from "@/components/ui/button";
 import { SegmentFilterBuilder } from "@/components/reports/segment-filter-builder";
 import { ScheduledReportCreateForm } from "@/components/reports/scheduled-reports";
@@ -39,7 +40,17 @@ export function GenerateReportForm({
   prefillDateTo: string | null;
   onCreated: (reportId: number) => void;
 }) {
-  const [filters, setFilters] = useState(prefillFilters);
+  // Split prefilled conditions: country → the dedicated multi-select,
+  // everything else → the generic builder (one source of truth per field).
+  const [countries, setCountries] = useState<string[]>(() =>
+    prefillFilters
+      .filter((c) => c.field === "country")
+      .flatMap((c) => (Array.isArray(c.value) ? c.value : [c.value]))
+      .map((v) => String(v).toUpperCase()),
+  );
+  const [filters, setFilters] = useState(
+    prefillFilters.filter((c) => c.field !== "country"),
+  );
   // If the user landed here with explicit dates in the URL (from the
   // dashboard's "Generate report from current filters" link), default
   // to custom + seed the inputs. Otherwise default to a sensible 7d.
@@ -54,16 +65,51 @@ export function GenerateReportForm({
   const queryClient = useQueryClient();
   const isGroup = scope.kind === "group";
 
+  // Merge the dedicated country control back into one segment list.
+  const effectiveFilters: SegmentCondition[] = useMemo(
+    () =>
+      countries.length > 0
+        ? [...filters, { field: "country", op: "in", value: countries }]
+        : filters,
+    [filters, countries],
+  );
+
+  // Resolved window — memoized so `new Date()` doesn't churn the preview
+  // query key every render (a few minutes' staleness is fine for a count).
+  const previewRange = useMemo(
+    () => resolveRange({ range, customFrom, customTo }),
+    [range, customFrom, customTo],
+  );
+
+  const scopeBody = isGroup
+    ? { group_id: scope.id }
+    : { topic_id: scope.id };
+
+  // Live pre-flight scope estimate (no LLM) — refetches as the form changes.
+  const preview = useQuery({
+    queryKey: [
+      "report-preview",
+      scopeBody,
+      effectiveFilters,
+      previewRange.dateFrom,
+      previewRange.dateTo,
+    ],
+    queryFn: () =>
+      apiClient.previewReport({
+        ...scopeBody,
+        filters: effectiveFilters,
+        date_from: previewRange.dateFrom || undefined,
+        date_to: previewRange.dateTo || undefined,
+      }),
+    staleTime: 60_000,
+  });
+
   const mutation = useMutation({
     mutationFn: () => {
-      const { dateFrom, dateTo } = resolveRange({
-        range,
-        customFrom,
-        customTo,
-      });
+      const { dateFrom, dateTo } = resolveRange({ range, customFrom, customTo });
       return apiClient.generateSegmentReport({
-        ...(isGroup ? { group_id: scope.id } : { topic_id: scope.id }),
-        filters,
+        ...scopeBody,
+        filters: effectiveFilters,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
       });
@@ -80,7 +126,13 @@ export function GenerateReportForm({
         New report
       </h3>
 
-      <SegmentFilterBuilder conditions={filters} onChange={setFilters} />
+      <CountryMultiSelect value={countries} onChange={setCountries} />
+
+      <SegmentFilterBuilder
+        conditions={filters}
+        onChange={setFilters}
+        excludeFields={["country"]}
+      />
 
       <div>
         <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
@@ -139,12 +191,18 @@ export function GenerateReportForm({
         )}
       </div>
 
+      <PreviewLine
+        loading={preview.isFetching}
+        error={preview.error as Error | null}
+        data={preview.data}
+      />
+
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           size="sm"
           onClick={() => mutation.mutate()}
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || preview.data?.n_mentions === 0}
         >
           <Play className="mr-1 size-3" />
           {mutation.isPending ? "Generating…" : "Generate now"}
@@ -184,7 +242,7 @@ export function GenerateReportForm({
       {showSchedule && !isGroup && (
         <ScheduledReportCreateForm
           topicId={scope.id}
-          initialFilters={filters}
+          initialFilters={effectiveFilters}
           onClose={() => setShowSchedule(false)}
           onSaved={() => {
             setShowSchedule(false);
@@ -203,6 +261,117 @@ export function GenerateReportForm({
         </p>
       )}
     </div>
+  );
+}
+
+// ---- country multi-select ----
+
+function CountryMultiSelect({
+  value,
+  onChange,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const remaining = ALL_ISO2.filter((iso) => !value.includes(iso));
+  return (
+    <div>
+      <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
+        Countries{" "}
+        <span className="normal-case text-text-tertiary/70">
+          (source-origin; empty = all)
+        </span>
+      </label>
+      {value.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1">
+          {value.map((iso) => (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => onChange(value.filter((v) => v !== iso))}
+              className="flex items-center gap-1 border border-border bg-muted px-2 py-1 font-mono text-[11px] hover:border-destructive"
+              title={`${countryName(iso)} — click to remove`}
+            >
+              <span>
+                {iso2ToFlagEmoji(iso)} {iso}
+              </span>
+              <X className="size-3 text-text-tertiary" />
+            </button>
+          ))}
+        </div>
+      )}
+      <select
+        value=""
+        onChange={(e) => {
+          if (e.target.value) onChange([...value, e.target.value]);
+        }}
+        className={cn(
+          "h-8 w-full border border-border bg-card px-2",
+          "font-mono text-[11px] text-foreground",
+          "outline-none transition-colors hover:border-strong focus:border-strong",
+        )}
+      >
+        <option value="">+ add country…</option>
+        {remaining.map((iso) => (
+          <option key={iso} value={iso} className="bg-card">
+            {iso2ToFlagEmoji(iso)} {iso} · {countryName(iso)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ---- live scope preview ----
+
+function PreviewLine({
+  loading,
+  error,
+  data,
+}: {
+  loading: boolean;
+  error: Error | null;
+  data: { n_mentions: number; n_domains: number; n_relevant: number; will_run_sync: boolean } | undefined;
+}) {
+  if (error) {
+    return (
+      <p className="font-mono text-[11px] text-destructive">
+        scope preview failed: {error.message}
+      </p>
+    );
+  }
+  if (!data) {
+    return (
+      <p className="font-mono text-[11px] text-text-tertiary">
+        {loading ? "estimating scope…" : "…"}
+      </p>
+    );
+  }
+  if (data.n_mentions === 0) {
+    return (
+      <p className="font-mono text-[11px] text-warning">
+        No enriched mentions in scope — widen the date range or relax
+        filters. ({data.n_relevant} collected, none analyzed yet)
+      </p>
+    );
+  }
+  return (
+    <p className="font-mono text-[11px] text-text-secondary">
+      <span className={cn(loading && "opacity-50")}>
+        ≈ <span className="text-foreground">{data.n_mentions.toLocaleString()}</span>{" "}
+        mentions ·{" "}
+        <span className="text-foreground">{data.n_domains.toLocaleString()}</span>{" "}
+        domains in scope
+        {data.n_relevant > data.n_mentions && (
+          <span className="text-text-tertiary">
+            {" "}
+            (of {data.n_relevant.toLocaleString()} collected)
+          </span>
+        )}
+        {" · "}
+        {data.will_run_sync ? "runs inline" : "runs in background"}
+      </span>
+    </p>
   );
 }
 

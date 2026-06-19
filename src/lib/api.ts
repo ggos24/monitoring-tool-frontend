@@ -14,6 +14,7 @@ import type {
   Overview,
   PromptTemplateOut,
   Report,
+  ReportPreview,
   RssFeed,
   TopicGroup,
   TopicGroupCreate,
@@ -295,6 +296,9 @@ export const apiClient = {
 
   generateSegmentReport: (body: SegmentReportRequest) =>
     api<Report>("/api/reports/segment", { method: "POST", body }),
+
+  previewReport: (body: SegmentReportRequest) =>
+    api<ReportPreview>("/api/reports/preview", { method: "POST", body }),
 
   getReport: (id: number) => api<Report>(`/api/reports/${id}`),
 

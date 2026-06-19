@@ -59,11 +59,18 @@ export function SegmentFilterBuilder({
   conditions,
   onChange,
   addLabel = "+ Add filter",
+  excludeFields = [],
 }: {
   conditions: SegmentCondition[];
   onChange: (next: SegmentCondition[]) => void;
   addLabel?: string;
+  // Fields handled by a dedicated control elsewhere (e.g. `country` via
+  // the report form's country multi-select) — omitted from the generic
+  // field dropdown so there's one source of truth per field.
+  excludeFields?: SegmentField[];
 }) {
+  const fieldChoices = SEGMENT_FIELDS.filter((f) => !excludeFields.includes(f));
+  const addField = (fieldChoices[0] ?? "source_score") as SegmentField;
   function updateCondition(index: number, patch: Partial<SegmentCondition>) {
     onChange(
       conditions.map((c, i) => {
@@ -91,7 +98,16 @@ export function SegmentFilterBuilder({
         </span>
         <button
           type="button"
-          onClick={() => onChange([...conditions, defaultCondition()])}
+          onClick={() =>
+            onChange([
+              ...conditions,
+              {
+                field: addField,
+                op: defaultOp(addField),
+                value: defaultValue(addField),
+              },
+            ])
+          }
           className="cursor-pointer border border-border bg-card px-2 py-0.5 font-mono text-[10px] text-text-tertiary hover:border-strong hover:text-foreground"
         >
           {addLabel}
@@ -107,6 +123,7 @@ export function SegmentFilterBuilder({
             <ConditionRow
               key={i}
               condition={c}
+              fieldChoices={fieldChoices}
               onChange={(patch) => updateCondition(i, patch)}
               onRemove={() =>
                 onChange(conditions.filter((_, idx) => idx !== i))
@@ -132,14 +149,21 @@ export function ConditionChip({ condition }: { condition: SegmentCondition }) {
 
 function ConditionRow({
   condition,
+  fieldChoices,
   onChange,
   onRemove,
 }: {
   condition: SegmentCondition;
+  fieldChoices: readonly SegmentField[];
   onChange: (patch: Partial<SegmentCondition>) => void;
   onRemove: () => void;
 }) {
   const ops = OPS_BY_FIELD[condition.field];
+  // Keep the current field selectable even if excluded (e.g. a prefilled
+  // condition), so the dropdown never shows a blank value.
+  const options = fieldChoices.includes(condition.field)
+    ? fieldChoices
+    : [condition.field, ...fieldChoices];
   return (
     <div className="grid grid-cols-[1fr_auto_2fr_auto] items-center gap-2">
       <select
@@ -148,7 +172,7 @@ function ConditionRow({
         className={inputClass()}
         title={FIELD_HELP[condition.field]}
       >
-        {SEGMENT_FIELDS.map((f) => (
+        {options.map((f) => (
           <option key={f} value={f} className="bg-card">
             {f}
           </option>
