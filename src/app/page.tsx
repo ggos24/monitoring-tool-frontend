@@ -55,6 +55,11 @@ export default function Home() {
     }
   }, [topicsQuery.data, scopeSel]);
 
+  // Distinguish "still loading / about to auto-select" (→ skeletons) from a
+  // genuinely empty backend (→ a message, so skeletons don't spin forever).
+  const noTopics =
+    topicsQuery.isSuccess && (topicsQuery.data?.length ?? 0) === 0;
+
   const handleSelectScope = (next: ReportScopeSel) => {
     setScopeSel(next);
     setCountry(null);
@@ -122,72 +127,72 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mb-6">
-          {scope !== null && (
-            <KpiGrid
-              scope={scope}
-              days={days}
-              country={country}
-              selectedDay={selectedDay}
-            />
-          )}
-        </div>
+        {noTopics ? (
+          <div className="mb-6 border border-border bg-card px-5 py-16 text-center">
+            <p className="font-mono text-xs text-text-tertiary">
+              No topics yet. Add one in Settings to start monitoring.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-6">
+              <KpiGrid
+                scope={scope}
+                days={days}
+                country={country}
+                selectedDay={selectedDay}
+              />
+            </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
-          <div className="bg-card lg:col-span-2">
-            {scope !== null && (
-              <TimelineChart
-                scope={scope}
-                days={days}
-                country={country}
-                selectedDay={selectedDay}
-                onSelectDay={handleSelectDay}
-              />
-            )}
-          </div>
-          <div className="bg-card">
-            {scope !== null && (
-              <SourceQualityBreakdown
-                scope={scope}
-                days={days}
-                country={country}
-                selectedDay={selectedDay}
-              />
-            )}
-          </div>
-        </div>
+            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
+              <div className="bg-card lg:col-span-2">
+                <TimelineChart
+                  scope={scope}
+                  days={days}
+                  country={country}
+                  selectedDay={selectedDay}
+                  onSelectDay={handleSelectDay}
+                />
+              </div>
+              <div className="bg-card">
+                <SourceQualityBreakdown
+                  scope={scope}
+                  days={days}
+                  country={country}
+                  selectedDay={selectedDay}
+                />
+              </div>
+            </div>
 
-        <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
-          <div className="bg-card lg:col-span-2">
-            {scope !== null && (
-              <SourcesList
-                scope={scope}
-                days={days}
-                country={country}
-                selectedDay={selectedDay}
-                source={source}
-                quality={quality}
-                selectedDomain={selectedDomain}
-                onToggleDomain={toggleDomain}
-              />
-            )}
-          </div>
-          <div className="bg-card lg:col-span-5">
-            {scope !== null && (
-              <MentionsList
-                scope={scope}
-                domain={selectedDomain}
-                country={country}
-                selectedDay={selectedDay}
-                source={source}
-                quality={quality}
-                onChangeSource={setSource}
-                onChangeQuality={setQuality}
-                onClearDomain={() => setSelectedDomain(null)}
-              />
-            )}
-          </div>
-        </div>
+            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
+              <div className="bg-card lg:col-span-2">
+                <SourcesList
+                  scope={scope}
+                  days={days}
+                  country={country}
+                  selectedDay={selectedDay}
+                  source={source}
+                  quality={quality}
+                  selectedDomain={selectedDomain}
+                  onToggleDomain={toggleDomain}
+                />
+              </div>
+              <div className="bg-card lg:col-span-5">
+                <MentionsList
+                  scope={scope}
+                  domain={selectedDomain}
+                  country={country}
+                  selectedDay={selectedDay}
+                  source={source}
+                  quality={quality}
+                  onChangeSource={setSource}
+                  onChangeQuality={setQuality}
+                  onClearDomain={() => setSelectedDomain(null)}
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         <ResearchAssistant />
       </main>

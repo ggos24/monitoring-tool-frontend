@@ -91,8 +91,10 @@ export function KpiGrid({
   const trendTitle = selectedDay ? "vs previous day" : `vs previous ${days}d`;
   const periodSubtitle = selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`;
 
-  const isMentionsLoading = enabled && currentMentions.isLoading;
-  const isSourcesLoading = enabled && currentSources.isLoading;
+  // Treat "no scope yet" (initial load, before the first topic auto-selects)
+  // as loading so the whole grid shows skeletons instead of a blank flash.
+  const isMentionsLoading = !enabled || currentMentions.isLoading;
+  const isSourcesLoading = !enabled || currentSources.isLoading;
 
   return (
     <div className="grid grid-cols-2 gap-px bg-strong md:grid-cols-4">

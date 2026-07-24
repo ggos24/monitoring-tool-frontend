@@ -75,9 +75,7 @@ export function SourceQualityBreakdown({
         {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
       </div>
 
-      {!enabled ? (
-        <Empty message="Select a topic." />
-      ) : isLoading ? (
+      {!enabled || isLoading ? (
         <div className="space-y-4">
           {BANDS.map((b) => (
             <div key={b.key}>

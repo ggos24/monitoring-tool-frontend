@@ -89,9 +89,7 @@ export function TimelineChart({
           click draws the browser focus ring around the whole chart. We convey
           the clicked day with the on-chart line, so suppress that ring. */}
       <div className="h-64 [&_.recharts-surface]:outline-none">
-        {!enabled ? (
-          <EmptyState message="Select a topic to load timeline" />
-        ) : isLoading ? (
+        {!enabled || isLoading ? (
           <Skeleton className="h-full w-full" />
         ) : error ? (
           <ErrorState onRetry={() => refetch()} />
