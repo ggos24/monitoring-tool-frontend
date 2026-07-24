@@ -8,6 +8,7 @@ import { ChevronDown, Globe, Search } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
+import { dayRange } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
 type CountryItem = {
@@ -20,20 +21,29 @@ type CountryItem = {
 export function CountryFilter({
   scope,
   days,
+  selectedDay,
   value,
   onChange,
 }: {
   scope: ScopeParam | null;
   days: number;
+  selectedDay: string | null;
   value: string | null;
   onChange: (iso2: string | null) => void;
 }) {
   const enabled = scope !== null;
   const [open, setOpen] = useState(false);
+  const range = selectedDay ? dayRange(selectedDay) : null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["countries", scope, days],
-    queryFn: () => apiClient.countries(scope!, days, 100),
+    queryKey: ["countries", scope, days, range?.from ?? null, range?.to ?? null],
+    queryFn: () =>
+      apiClient.countries(
+        scope!,
+        days,
+        100,
+        range ? { date_from: range.from, date_to: range.to } : undefined,
+      ),
     enabled,
     staleTime: 60_000,
   });

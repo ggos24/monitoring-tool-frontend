@@ -8,6 +8,7 @@ import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
+import { dayRange, formatDayLabel } from "@/lib/period";
 import type { CountryConfidence, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ export function SourcesList({
   scope,
   days,
   country,
+  selectedDay,
   source,
   quality,
   selectedDomain,
@@ -23,6 +25,7 @@ export function SourcesList({
   scope: ScopeParam | null;
   days: number;
   country: string | null;
+  selectedDay: string | null;
   source: "all" | "gn" | "gdelt" | "firehose" | "rss";
   quality: "all" | "trusted" | "suspect" | "propaganda";
   selectedDomain: string | null;
@@ -30,13 +33,26 @@ export function SourcesList({
 }) {
   const enabled = scope !== null;
   const LIMIT = 25;
+  const range = selectedDay ? dayRange(selectedDay) : null;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["sources", scope, days, country, source, quality, LIMIT],
+    queryKey: [
+      "sources",
+      scope,
+      days,
+      country,
+      source,
+      quality,
+      LIMIT,
+      range?.from ?? null,
+      range?.to ?? null,
+    ],
     queryFn: () =>
       apiClient.topSources(scope!, days, LIMIT, country, {
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
+        date_from: range?.from,
+        date_to: range?.to,
       }),
     enabled,
   });
@@ -45,7 +61,8 @@ export function SourcesList({
     <div className="flex h-full flex-col bg-card p-5">
       <KickerLabel>Top sources</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        Top {LIMIT} domains by mention count, last {days}d
+        Top {LIMIT} domains by mention count,{" "}
+        {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
       </div>
 
       {!enabled ? (

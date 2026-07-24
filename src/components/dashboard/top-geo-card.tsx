@@ -5,25 +5,35 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
+import { dayRange, formatDayLabel } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Fills the 4th KPI slot (previously "Topics monitored", which duplicated the
 // scope selector). Shows the top publishing countries for the current scope +
-// period. Shares the ["countries", scope, days] query with CountryFilter, so
-// this card adds no extra request.
+// period (or a drilled-down day). Shares the ["countries", …] query with
+// CountryFilter, so this card adds no extra request.
 export function TopGeoCard({
   scope,
   days,
+  selectedDay,
 }: {
   scope: ScopeParam | null;
   days: number;
+  selectedDay: string | null;
 }) {
   const enabled = scope !== null;
+  const range = selectedDay ? dayRange(selectedDay) : null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["countries", scope, days],
-    queryFn: () => apiClient.countries(scope!, days, 100),
+    queryKey: ["countries", scope, days, range?.from ?? null, range?.to ?? null],
+    queryFn: () =>
+      apiClient.countries(
+        scope!,
+        days,
+        100,
+        range ? { date_from: range.from, date_to: range.to } : undefined,
+      ),
     enabled,
     staleTime: 60_000,
   });
@@ -79,7 +89,7 @@ export function TopGeoCard({
       )}
 
       <div className="mt-3 font-mono text-[11px] text-text-tertiary">
-        by mentions, last {days}d
+        by mentions, {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
       </div>
     </div>
   );

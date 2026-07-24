@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
-import { periodRange } from "@/lib/period";
+import { effectiveRanges, formatDayLabel } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -28,16 +28,18 @@ export function SourceQualityBreakdown({
   scope,
   days,
   country,
+  selectedDay,
 }: {
   scope: ScopeParam | null;
   days: number;
   country: string | null;
+  selectedDay: string | null;
 }) {
   const enabled = scope !== null;
-  const { from } = periodRange(days);
+  const { curFrom, curTo } = effectiveRanges(days, selectedDay);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["source-quality", scope, days, country, from],
+    queryKey: ["source-quality", scope, country, curFrom, curTo],
     enabled,
     queryFn: async () => {
       const [trusted, suspect, propaganda] = await Promise.all(
@@ -48,7 +50,8 @@ export function SourceQualityBreakdown({
               limit: 1,
               score_band: b.key,
               country_iso2: country ?? undefined,
-              date_from: from,
+              date_from: curFrom,
+              date_to: curTo,
             })
             .then((r) => r.total),
         ),
@@ -68,7 +71,8 @@ export function SourceQualityBreakdown({
     <div className="bg-card p-5">
       <KickerLabel>Source quality</KickerLabel>
       <div className="mt-1 mb-4 text-sm text-text-secondary">
-        Share of coverage by outlet tier, last {days}d
+        Share of coverage by outlet tier,{" "}
+        {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
       </div>
 
       {!enabled ? (

@@ -28,6 +28,47 @@ export function periodRange(days: number): PeriodRange {
   return { from, prevFrom, prevTo: from };
 }
 
+/** Inclusive UTC [from, to] bounds for a single `YYYY-MM-DD` day. */
+export function dayRange(day: string): { from: string; to: string } {
+  return { from: `${day}T00:00:00.000Z`, to: `${day}T23:59:59.999Z` };
+}
+
+/** Compact UTC day label, e.g. "Jul 16". Accepts `YYYY-MM-DD` or ISO. */
+export function formatDayLabel(day: string): string {
+  const d = new Date(`${day.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return day;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+export type EffectiveRanges = {
+  /** Current window start (ISO). */
+  curFrom: string;
+  /** Current window end (ISO), or undefined = open to now (period mode). */
+  curTo: string | undefined;
+  /** Previous equal-length window start/end (ISO), for the ±% delta. */
+  prevFrom: string;
+  prevTo: string;
+};
+
+/**
+ * The window every KPI/panel should query. When `day` is set (drill-down),
+ * that single day and the day before it; otherwise the selected rolling
+ * period and the one before it. Unifies both modes so callers don't branch.
+ */
+export function effectiveRanges(days: number, day: string | null): EffectiveRanges {
+  if (day) {
+    const { from, to } = dayRange(day);
+    const prevFrom = new Date(new Date(from).getTime() - DAY_MS).toISOString();
+    return { curFrom: from, curTo: to, prevFrom, prevTo: from };
+  }
+  const { from, prevFrom, prevTo } = periodRange(days);
+  return { curFrom: from, curTo: undefined, prevFrom, prevTo };
+}
+
 export type Trend =
   | { direction: "up"; percentage: number }
   | { direction: "down"; percentage: number }

@@ -202,6 +202,8 @@ export const apiClient = {
     extra?: {
       source?: "gn" | "gdelt" | "firehose" | "rss";
       score_band?: "trusted" | "suspect" | "propaganda";
+      date_from?: string;
+      date_to?: string;
     },
   ) => {
     const qs = scopeQuery(scope);
@@ -210,13 +212,47 @@ export const apiClient = {
     if (country_iso2) qs.set("country_iso2", country_iso2);
     if (extra?.source) qs.set("source", extra.source);
     if (extra?.score_band) qs.set("score_band", extra.score_band);
+    if (extra?.date_from) qs.set("date_from", extra.date_from);
+    if (extra?.date_to) qs.set("date_to", extra.date_to);
     return api<SourceCount[]>(`/api/stats/sources?${qs}`);
   },
 
-  countries: (scope: ScopeParam, days = 7, limit = 25) => {
+  // Distinct source-domain count for the "Sources" KPI (period-scoped, with
+  // date-range + country/source/score_band filters). Backed by the
+  // /stats/sources/count endpoint so the previous-period delta is one cheap
+  // call per window.
+  sourcesCount: (
+    scope: ScopeParam,
+    opts: {
+      days?: number;
+      country_iso2?: string | null;
+      source?: "gn" | "gdelt" | "firehose" | "rss";
+      score_band?: "trusted" | "suspect" | "propaganda";
+      date_from?: string;
+      date_to?: string;
+    } = {},
+  ) => {
+    const qs = scopeQuery(scope);
+    if (opts.days !== undefined) qs.set("days", String(opts.days));
+    if (opts.country_iso2) qs.set("country_iso2", opts.country_iso2);
+    if (opts.source) qs.set("source", opts.source);
+    if (opts.score_band) qs.set("score_band", opts.score_band);
+    if (opts.date_from) qs.set("date_from", opts.date_from);
+    if (opts.date_to) qs.set("date_to", opts.date_to);
+    return api<{ count: number }>(`/api/stats/sources/count?${qs}`);
+  },
+
+  countries: (
+    scope: ScopeParam,
+    days = 7,
+    limit = 25,
+    opts?: { date_from?: string; date_to?: string },
+  ) => {
     const qs = scopeQuery(scope);
     qs.set("days", String(days));
     qs.set("limit", String(limit));
+    if (opts?.date_from) qs.set("date_from", opts.date_from);
+    if (opts?.date_to) qs.set("date_to", opts.date_to);
     return api<CountryCount[]>(`/api/stats/countries?${qs}`);
   },
 

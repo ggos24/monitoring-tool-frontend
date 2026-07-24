@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
@@ -16,6 +15,7 @@ import {
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
+import { formatDayLabel } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { theme } from "@/lib/theme";
@@ -30,13 +30,18 @@ export function TimelineChart({
   scope,
   days,
   country,
+  selectedDay,
+  onSelectDay,
 }: {
   scope: ScopeParam | null;
   days: number;
   country: string | null;
+  selectedDay: string | null;
+  onSelectDay: (day: string) => void;
 }) {
   const enabled = scope !== null;
   const granularity: "hour" | "day" = days <= 1 ? "hour" : "day";
+  const canDrill = granularity === "day";
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["timeline", scope, days, granularity, country],
@@ -47,21 +52,33 @@ export function TimelineChart({
   const subtitle =
     granularity === "hour"
       ? `Hourly mention count, last ${days * 24} hours (UTC)`
-      : `Daily mention count, last ${days} days`;
+      : selectedDay
+        ? `Daily mention count, last ${days} days · showing ${formatDayLabel(selectedDay)}`
+        : `Daily mention count, last ${days} days · click a day to filter`;
 
-  // Mark when tracking started so a long flat-zero stretch reads as "we
-  // weren't collecting yet" rather than "no coverage". Only meaningful on
-  // the daily view and only when that date falls inside the window.
-  const trackingStart = useTrackingStart(scope);
+  // Anchor the "no data yet" marker to the earliest day that actually has
+  // mentions — NOT the topic-creation date, since collectors backfill
+  // articles published before the topic was set up (so data legitimately
+  // exists before then). The leading flat-zero run predates any coverage;
+  // shade it so it doesn't read as a quiet stretch.
   const firstBucket = data?.[0]?.date;
   const lastBucket = data?.[data.length - 1]?.date;
-  const showTrackingMarker =
-    granularity === "day" &&
-    !!trackingStart &&
+  const firstDataDate = data?.find((d) => d.count > 0)?.date;
+  const showDataMarker =
+    canDrill && !!firstBucket && !!firstDataDate && firstDataDate > firstBucket;
+  const showSelected =
+    canDrill &&
+    !!selectedDay &&
     !!firstBucket &&
     !!lastBucket &&
-    trackingStart > firstBucket &&
-    trackingStart <= lastBucket;
+    selectedDay >= firstBucket &&
+    selectedDay <= lastBucket;
+
+  const handleChartClick = (state: { activeLabel?: string | number } | null) => {
+    if (!canDrill) return;
+    const label = state?.activeLabel;
+    if (typeof label === "string" && label) onSelectDay(label);
+  };
 
   return (
     <div className="bg-card p-5">
@@ -82,6 +99,8 @@ export function TimelineChart({
             <AreaChart
               data={data}
               margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              onClick={handleChartClick}
+              style={{ cursor: canDrill ? "pointer" : "default" }}
             >
               <CartesianGrid
                 horizontal
@@ -89,10 +108,10 @@ export function TimelineChart({
                 stroke={theme.borderDefault}
                 strokeDasharray="0"
               />
-              {showTrackingMarker && firstBucket && trackingStart && (
+              {showDataMarker && firstBucket && firstDataDate && (
                 <ReferenceArea
                   x1={firstBucket}
-                  x2={trackingStart}
+                  x2={firstDataDate}
                   fill={theme.textMuted}
                   fillOpacity={0.07}
                   stroke="none"
@@ -134,14 +153,22 @@ export function TimelineChart({
                 activeDot={{ r: 5, fill: theme.accentSuccess, stroke: "none" }}
                 isAnimationActive={false}
               />
-              {showTrackingMarker && trackingStart && (
+              {showSelected && selectedDay && (
                 <ReferenceLine
-                  x={trackingStart}
+                  x={selectedDay}
+                  stroke={theme.accentSuccess}
+                  strokeWidth={1.5}
+                  ifOverflow="extendDomain"
+                />
+              )}
+              {showDataMarker && firstDataDate && (
+                <ReferenceLine
+                  x={firstDataDate}
                   stroke={theme.borderStrong}
                   strokeDasharray="3 3"
                   ifOverflow="extendDomain"
-                  label={renderTrackingLabel(
-                    `tracking since ${formatShortDate(trackingStart)}`,
+                  label={renderMarkerLabel(
+                    `data since ${formatDayLabel(firstDataDate)}`,
                   )}
                 />
               )}
@@ -153,54 +180,8 @@ export function TimelineChart({
   );
 }
 
-// Resolve the scope's tracking-start date (UTC `YYYY-MM-DD`) from the topic
-// AST provenance. For a group we take the earliest member start — before
-// that day no member was collecting, so the whole span is "not tracked".
-// Reuses the cached ["topics"]/["topic-groups"] queries, so no extra fetch.
-function useTrackingStart(scope: ScopeParam | null): string | null {
-  const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
-  const isGroup =
-    !!scope && typeof scope === "object" && "group_id" in scope;
-  const groupsQuery = useQuery({
-    queryKey: ["topic-groups"],
-    queryFn: apiClient.topicGroups,
-    enabled: isGroup,
-  });
-
-  return useMemo(() => {
-    const topics = topicsQuery.data;
-    if (!scope || !topics) return null;
-
-    let topicIds: number[];
-    if (typeof scope === "number") topicIds = [scope];
-    else if ("group_id" in scope)
-      topicIds =
-        groupsQuery.data?.find((g) => g.id === scope.group_id)?.topic_ids ?? [];
-    else topicIds = [scope.topic_id];
-
-    const starts = topicIds
-      .map((id) => topics.find((t) => t.id === id)?.topic_ast?.provenance?.created_at)
-      .filter((v): v is string => !!v)
-      .map((iso) => new Date(iso).getTime())
-      .filter((ms) => !Number.isNaN(ms));
-
-    if (starts.length === 0) return null;
-    return new Date(Math.min(...starts)).toISOString().slice(0, 10);
-  }, [scope, isGroup, topicsQuery.data, groupsQuery.data]);
-}
-
-function formatShortDate(isoDate: string): string {
-  const d = new Date(`${isoDate}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return isoDate;
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function renderTrackingLabel(text: string) {
-  return function TrackingLabel(props: {
+function renderMarkerLabel(text: string, fill: string = theme.textTertiary) {
+  return function MarkerLabel(props: {
     viewBox?: { x?: number; y?: number; width?: number; height?: number };
   }) {
     const vb = props?.viewBox;
@@ -209,7 +190,7 @@ function renderTrackingLabel(text: string) {
       <text
         x={vb.x + 6}
         y={vb.y + 12}
-        fill={theme.textTertiary}
+        fill={fill}
         textAnchor="start"
         style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }}
       >

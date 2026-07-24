@@ -17,6 +17,7 @@ import type {
   ScopeParam,
   StanceLabel,
 } from "@/lib/types";
+import { dayRange } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,6 +59,7 @@ export function MentionsList({
   scope,
   domain,
   country,
+  selectedDay,
   source,
   quality,
   onChangeSource,
@@ -67,6 +69,7 @@ export function MentionsList({
   scope: ScopeParam | null;
   domain: string | null;
   country: string | null;
+  selectedDay: string | null;
   source: SourceFilter;
   quality: QualityFilter;
   onChangeSource: (v: SourceFilter) => void;
@@ -74,6 +77,7 @@ export function MentionsList({
   onClearDomain: () => void;
 }) {
   const enabled = scope !== null;
+  const range = selectedDay ? dayRange(selectedDay) : null;
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -87,7 +91,7 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, scope, domain, country, source, quality, stance]);
+  }, [debounced, scope, domain, country, selectedDay, source, quality, stance]);
 
   const queryKey = [
     "mentions",
@@ -99,6 +103,8 @@ export function MentionsList({
     quality,
     stance,
     page,
+    range?.from ?? null,
+    range?.to ?? null,
   ] as const;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -114,6 +120,8 @@ export function MentionsList({
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
         stance_label: stance === "all" ? undefined : stance,
+        date_from: range?.from,
+        date_to: range?.to,
       }),
     enabled,
     placeholderData: keepPreviousData,

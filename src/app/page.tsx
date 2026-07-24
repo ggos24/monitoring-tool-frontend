@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import { TopBar } from "@/components/dashboard/top-bar";
@@ -11,6 +12,7 @@ import {
   type ReportScopeSel,
 } from "@/components/reports/scope-selector";
 import type { ScopeParam } from "@/lib/types";
+import { formatDayLabel } from "@/lib/period";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { CountryFilter } from "@/components/dashboard/country-filter";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
@@ -21,7 +23,6 @@ import {
   type QualityFilter,
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
-import { AnomalyAlert } from "@/components/dashboard/anomaly-alert";
 import { SourceQualityBreakdown } from "@/components/dashboard/source-quality-breakdown";
 import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
@@ -31,6 +32,9 @@ export default function Home() {
   const [days, setDays] = useState<number>(7);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
+  // every panel scopes to that day instead of the rolling period.
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
   const [quality, setQuality] = useState<QualityFilter>("all");
 
@@ -55,6 +59,7 @@ export default function Home() {
     setScopeSel(next);
     setCountry(null);
     setSelectedDomain(null);
+    setSelectedDay(null);
     setSource("all");
     setQuality("all");
   };
@@ -62,6 +67,16 @@ export default function Home() {
   const handleSelectCountry = (iso2: string | null) => {
     setCountry(iso2);
     setSelectedDomain(null);
+  };
+
+  // Picking a period exits the day drill-down; picking the same day again
+  // toggles it off.
+  const handleSelectDays = (d: number) => {
+    setDays(d);
+    setSelectedDay(null);
+  };
+  const handleSelectDay = (day: string) => {
+    setSelectedDay((prev) => (prev === day ? null : day));
   };
 
   const toggleDomain = (domain: string) => {
@@ -79,11 +94,24 @@ export default function Home() {
               <CountryFilter
                 scope={scope}
                 days={days}
+                selectedDay={selectedDay}
                 value={country}
                 onChange={handleSelectCountry}
               />
             )}
-            <PeriodToggle value={days} onChange={setDays} />
+            {selectedDay && (
+              <button
+                type="button"
+                onClick={() => setSelectedDay(null)}
+                title="Clear day filter — back to the full period"
+                className="inline-flex h-8 items-center gap-1.5 border border-strong bg-elevated px-2 font-mono text-[11px] text-foreground transition-colors hover:bg-overlay"
+              >
+                <span className="size-1.5 bg-success" aria-hidden />
+                <span>{formatDayLabel(selectedDay)}</span>
+                <X className="size-3 text-text-tertiary" />
+              </button>
+            )}
+            <PeriodToggle value={days} onChange={handleSelectDays} />
             <GenerateReportLink
               scope={scope}
               days={days}
@@ -96,18 +124,25 @@ export default function Home() {
 
         <div className="mb-6">
           {scope !== null && (
-            <KpiGrid scope={scope} days={days} country={country} />
+            <KpiGrid
+              scope={scope}
+              days={days}
+              country={country}
+              selectedDay={selectedDay}
+            />
           )}
-        </div>
-
-        <div className="mb-6">
-          <AnomalyAlert />
         </div>
 
         <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
           <div className="bg-card lg:col-span-2">
             {scope !== null && (
-              <TimelineChart scope={scope} days={days} country={country} />
+              <TimelineChart
+                scope={scope}
+                days={days}
+                country={country}
+                selectedDay={selectedDay}
+                onSelectDay={handleSelectDay}
+              />
             )}
           </div>
           <div className="bg-card">
@@ -116,6 +151,7 @@ export default function Home() {
                 scope={scope}
                 days={days}
                 country={country}
+                selectedDay={selectedDay}
               />
             )}
           </div>
@@ -128,6 +164,7 @@ export default function Home() {
                 scope={scope}
                 days={days}
                 country={country}
+                selectedDay={selectedDay}
                 source={source}
                 quality={quality}
                 selectedDomain={selectedDomain}
@@ -141,6 +178,7 @@ export default function Home() {
                 scope={scope}
                 domain={selectedDomain}
                 country={country}
+                selectedDay={selectedDay}
                 source={source}
                 quality={quality}
                 onChangeSource={setSource}
