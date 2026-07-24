@@ -119,13 +119,23 @@ export type TimelinePoint = {
 
 export type CountryConfidence = "high" | "medium" | "heuristic";
 
+export type ReachBand = "high" | "mid" | "low";
+
 export type SourceCount = {
   domain: string;
   count: number;
+  // Editorial TRUST tier (0-5). Separate axis from reach (Decision 32).
   score: number;
   is_propaganda: boolean;
   country_iso2?: string | null;
   country_confidence?: CountryConfidence | null;
+  // REACH axis (Decision 32): audience/authority, independent of trust.
+  //   reach_score — continuous 0-100 (sort key)
+  //   reach_tier  — 0-5 display badge, parallel to `score`
+  //   reach_band  — high/mid/low, for colour coding
+  reach_score?: number | null;
+  reach_tier?: number | null;
+  reach_band?: ReachBand | null;
 };
 
 export type CountryCount = {
@@ -143,8 +153,13 @@ export type CountryAttribution = {
 };
 
 export type DomainScoringSignal = {
-  provider: "viginum" | "euvsdisinfo" | "tranco";
-  dimension: "editorial_quality" | "traffic";
+  provider:
+    | "viginum"
+    | "euvsdisinfo"
+    | "tranco"
+    | "dataforseo_ilr"
+    | "dataforseo_etv";
+  dimension: "editorial_quality" | "traffic" | "authority";
   flag: string | null;
   raw_value: Record<string, unknown> | null;
   observed_at: string | null;
@@ -159,6 +174,14 @@ export type DomainScoringDetail = {
   formula_version: string;
   refreshed_at: string;
   signals: DomainScoringSignal[];
+  // REACH axis (Decision 32). null until the DataForSEO refresh + scoring
+  // recompute have run for this domain.
+  reach_score: number | null;
+  reach_tier: number | null;
+  reach_band: ReachBand | null;
+  reach_authority: number | null;
+  reach_traffic: number | null;
+  reach_formula_version: string | null;
 };
 
 export type JobRun = {

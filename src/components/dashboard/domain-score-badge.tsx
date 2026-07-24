@@ -31,6 +31,9 @@ const REASON_TEXT: Record<string, string> = {
     "Frequently cited as trustworthy on EUvsDisinfo (≥20 references).",
   trusted_mid_euvsdisinfo:
     "Cited as trustworthy on EUvsDisinfo (5–19 references).",
+  trusted_low_high_reach:
+    "Trustworthy on EUvsDisinfo and high real-world reach.",
+  // Legacy v3 reasons — kept so historical scoring_entity rows still explain.
   trusted_low_popular: "Trustworthy on EUvsDisinfo and high-traffic on Tranco.",
   trusted_low_euvsdisinfo:
     "Cited as trustworthy on EUvsDisinfo (1–4 references).",
@@ -44,6 +47,8 @@ const PROVIDER_LABEL: Record<DomainScoringSignal["provider"], string> = {
   viginum: "VIGINUM",
   euvsdisinfo: "EUvsDisinfo",
   tranco: "Tranco",
+  dataforseo_ilr: "InLink Rank",
+  dataforseo_etv: "Est. traffic",
 };
 
 export function DomainScoreBadge({
@@ -231,6 +236,26 @@ function PopoverBody({ data }: { data: DomainScoringDetail }) {
         {reasonSentence}
       </div>
 
+      {typeof data.reach_score === "number" && (
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="mb-2 font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground">
+            Reach
+          </div>
+          <div className="flex items-baseline justify-between font-mono text-[11px]">
+            <span className="text-foreground">
+              {data.reach_tier ?? "—"}/5
+              {data.reach_band ? ` · ${data.reach_band}` : ""}
+            </span>
+            <span className="text-text-tertiary tabular-nums">
+              {data.reach_score}/100
+            </span>
+          </div>
+          <div className="mt-1 font-mono text-[10px] text-text-tertiary tabular-nums">
+            {formatReachComponents(data)}
+          </div>
+        </div>
+      )}
+
       <div className="mt-3 border-t border-border pt-3">
         <div className="mb-2 font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground">
           Signals
@@ -286,6 +311,16 @@ function formatRawValue(signal: DomainScoringSignal): string {
     const rank = signal.raw_value["rank"];
     return typeof rank === "number" ? `Rank ${rank.toLocaleString()}` : "";
   }
+  if (signal.provider === "dataforseo_ilr") {
+    const rank = signal.raw_value["rank"];
+    return typeof rank === "number" ? `${rank}/1000` : "";
+  }
+  if (signal.provider === "dataforseo_etv") {
+    const etv = signal.raw_value["etv"];
+    return typeof etv === "number"
+      ? `~${Math.round(etv).toLocaleString()} organic/mo`
+      : "";
+  }
   if (signal.provider === "euvsdisinfo") {
     const trusted = signal.raw_value["trusted_freq"];
     const disinfo = signal.raw_value["disinfo_freq"];
@@ -295,6 +330,17 @@ function formatRawValue(signal: DomainScoringSignal): string {
     return parts.join(" · ");
   }
   return "";
+}
+
+function formatReachComponents(data: DomainScoringDetail): string {
+  const parts: string[] = [];
+  if (typeof data.reach_authority === "number") {
+    parts.push(`authority ${Math.round(data.reach_authority * 100)}%`);
+  }
+  if (typeof data.reach_traffic === "number") {
+    parts.push(`traffic ${Math.round(data.reach_traffic * 100)}%`);
+  }
+  return parts.join(" · ");
 }
 
 function formatDate(iso: string): string {

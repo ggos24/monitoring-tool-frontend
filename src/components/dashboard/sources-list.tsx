@@ -5,11 +5,12 @@ import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
 import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
+import { ReachBadge } from "@/components/dashboard/reach-badge";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
 import { dayRange, formatDayLabel } from "@/lib/period";
-import type { CountryConfidence, ScopeParam } from "@/lib/types";
+import type { CountryConfidence, ReachBand, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function SourcesList({
@@ -100,6 +101,9 @@ export function SourcesList({
                   count={s.count}
                   score={s.score}
                   isPropaganda={s.is_propaganda}
+                  reachTier={s.reach_tier ?? null}
+                  reachScore={s.reach_score ?? null}
+                  reachBand={s.reach_band ?? null}
                   countryIso2={s.country_iso2 ?? null}
                   countryConfidence={s.country_confidence ?? null}
                   isActive={s.domain === selectedDomain}
@@ -122,6 +126,9 @@ function SourceRow({
   count,
   score,
   isPropaganda,
+  reachTier,
+  reachScore,
+  reachBand,
   countryIso2,
   countryConfidence,
   isActive,
@@ -131,6 +138,9 @@ function SourceRow({
   count: number;
   score: number;
   isPropaganda: boolean;
+  reachTier: number | null;
+  reachScore: number | null;
+  reachBand: ReachBand | null;
   countryIso2: string | null;
   countryConfidence: CountryConfidence | null;
   isActive: boolean;
@@ -173,15 +183,24 @@ function SourceRow({
             <CountryFlag iso2={countryIso2} confidence={countryConfidence} />
             <span className="truncate">{domain}</span>
           </span>
-          <span className="flex shrink-0 items-center gap-6">
+          <span className="flex shrink-0 items-center gap-4">
             <span className="w-8 text-right font-mono text-xs font-medium text-foreground tabular-nums">
               {count}
             </span>
-            <DomainScoreBadge
-            score={score}
-            isPropaganda={isPropaganda}
-            domain={domain}
-          />
+            <span className="flex w-[18px] justify-center">
+              <DomainScoreBadge
+                score={score}
+                isPropaganda={isPropaganda}
+                domain={domain}
+              />
+            </span>
+            <span className="flex w-[18px] justify-center">
+              <ReachBadge
+                tier={reachTier}
+                score={reachScore}
+                band={reachBand}
+              />
+            </span>
           </span>
         </div>
       </button>
@@ -195,9 +214,17 @@ function ColumnHeader() {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <span className={cls}>Domain</span>
-      <span className="flex shrink-0 items-baseline gap-3">
-        <span className={cls}>Mentions</span>
-        <span className={cls}>Score</span>
+      <span className="flex shrink-0 items-baseline gap-4">
+        <span className={cn(cls, "w-8 text-right")}>Ment.</span>
+        <span className={cn(cls, "w-[18px] text-center")} title="Editorial trust (0-5)">
+          Tr
+        </span>
+        <span
+          className={cn(cls, "w-[18px] text-center")}
+          title="Audience reach (0-5)"
+        >
+          Re
+        </span>
       </span>
     </div>
   );
