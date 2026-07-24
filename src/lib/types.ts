@@ -121,7 +121,14 @@ export type CountryConfidence = "high" | "medium" | "heuristic";
 
 export type ReachBand = "high" | "mid" | "low";
 
+// Editorial quality bands (Decision 33): `unvetted` (trust=2 only) is a
+// SUBSET of `suspect` (trust 1-2) — the review queue for domains that have
+// no third-party editorial signal yet.
+export type ScoreBand = "trusted" | "suspect" | "unvetted" | "propaganda";
+
 export type SourceCount = {
+  // Canonical publisher identity (Decision 33) — normalized domain, so
+  // www./alias variants arrive merged into one row.
   domain: string;
   count: number;
   // Editorial TRUST tier (0-5). Separate axis from reach (Decision 32).
@@ -136,6 +143,9 @@ export type SourceCount = {
   reach_score?: number | null;
   reach_tier?: number | null;
   reach_band?: ReachBand | null;
+  // Syndication front-end (yahoo/msn/aol — Decision 33): trust/reach
+  // describe the platform, not the original publisher.
+  is_aggregator?: boolean;
 };
 
 export type CountryCount = {

@@ -23,6 +23,7 @@ import type {
   RssFeedCreate,
   RssFeedPatch,
   SegmentReportRequest,
+  ScoreBand,
   SourceCount,
   StanceLabel,
   TimelinePoint,
@@ -143,7 +144,7 @@ type MentionsParams = {
   date_from?: string;
   date_to?: string;
   source?: "gn" | "gdelt" | "firehose" | "rss";
-  score_band?: "trusted" | "suspect" | "propaganda";
+  score_band?: ScoreBand;
   country_iso2?: string;
 };
 
@@ -201,7 +202,7 @@ export const apiClient = {
     country_iso2?: string | null,
     extra?: {
       source?: "gn" | "gdelt" | "firehose" | "rss";
-      score_band?: "trusted" | "suspect" | "propaganda";
+      score_band?: ScoreBand;
       date_from?: string;
       date_to?: string;
     },
@@ -227,7 +228,7 @@ export const apiClient = {
       days?: number;
       country_iso2?: string | null;
       source?: "gn" | "gdelt" | "firehose" | "rss";
-      score_band?: "trusted" | "suspect" | "propaganda";
+      score_band?: ScoreBand;
       date_from?: string;
       date_to?: string;
     } = {},

@@ -28,7 +28,7 @@ export function SourcesList({
   country: string | null;
   selectedDay: string | null;
   source: "all" | "gn" | "gdelt" | "firehose" | "rss";
-  quality: "all" | "trusted" | "suspect" | "propaganda";
+  quality: "all" | "trusted" | "suspect" | "unvetted" | "propaganda";
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
@@ -104,6 +104,7 @@ export function SourcesList({
                   reachBand={s.reach_band ?? null}
                   countryIso2={s.country_iso2 ?? null}
                   countryConfidence={s.country_confidence ?? null}
+                  isAggregator={s.is_aggregator ?? false}
                   isActive={s.domain === selectedDomain}
                   onToggle={onToggleDomain}
                 />
@@ -129,6 +130,7 @@ function SourceRow({
   reachBand,
   countryIso2,
   countryConfidence,
+  isAggregator,
   isActive,
   onToggle,
 }: {
@@ -141,6 +143,7 @@ function SourceRow({
   reachBand: ReachBand | null;
   countryIso2: string | null;
   countryConfidence: CountryConfidence | null;
+  isAggregator: boolean;
   isActive: boolean;
   onToggle: (domain: string) => void;
 }) {
@@ -180,6 +183,14 @@ function SourceRow({
             />
             <CountryFlag iso2={countryIso2} confidence={countryConfidence} />
             <span className="truncate">{domain}</span>
+            {isAggregator && (
+              <span
+                title="Syndication platform — trust and reach describe the aggregator, not the original publisher"
+                className="shrink-0 border border-border px-1 py-px font-mono text-[9px] uppercase leading-none tracking-[0.1em] text-muted-foreground"
+              >
+                agg
+              </span>
+            )}
           </span>
           <span className="flex shrink-0 items-center gap-4">
             <span className="w-8 text-right font-mono text-xs font-medium text-foreground tabular-nums">

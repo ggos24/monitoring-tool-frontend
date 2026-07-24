@@ -27,7 +27,12 @@ const PAGE_SIZE = 10;
 
 type StanceFilter = "all" | StanceLabel;
 export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
-export type QualityFilter = "all" | "trusted" | "suspect" | "propaganda";
+export type QualityFilter =
+  | "all"
+  | "trusted"
+  | "suspect"
+  | "unvetted"
+  | "propaganda";
 
 const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -52,6 +57,9 @@ const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "trusted", label: "Trusted" },
   { key: "suspect", label: "Suspect" },
+  // Unvetted (trust=2 only) is a subset of Suspect (1-2) — the "needs
+  // vetting" review queue: big-but-unverified outlets (Decision 33).
+  { key: "unvetted", label: "Unvetted" },
   { key: "propaganda", label: "Propaganda" },
 ];
 
