@@ -85,7 +85,10 @@ export function TimelineChart({
       <KickerLabel>Mentions over time</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-secondary">{subtitle}</div>
 
-      <div className="h-64">
+      {/* Recharts makes its <svg> surface focusable for keyboard a11y, so a
+          click draws the browser focus ring around the whole chart. We convey
+          the clicked day with the on-chart line, so suppress that ring. */}
+      <div className="h-64 [&_.recharts-surface]:outline-none">
         {!enabled ? (
           <EmptyState message="Select a topic to load timeline" />
         ) : isLoading ? (
