@@ -22,7 +22,7 @@ import {
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
 import { AnomalyAlert } from "@/components/dashboard/anomaly-alert";
-import { SentimentBreakdown } from "@/components/dashboard/sentiment-breakdown";
+import { SourceQualityBreakdown } from "@/components/dashboard/source-quality-breakdown";
 import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 
@@ -111,7 +111,13 @@ export default function Home() {
             )}
           </div>
           <div className="bg-card">
-            <SentimentBreakdown />
+            {scope !== null && (
+              <SourceQualityBreakdown
+                scope={scope}
+                days={days}
+                country={country}
+              />
+            )}
           </div>
         </div>
 

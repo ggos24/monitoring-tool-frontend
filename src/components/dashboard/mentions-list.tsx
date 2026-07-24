@@ -40,7 +40,10 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "gn", label: "Google News" },
   { key: "gdelt", label: "GDELT" },
-  { key: "firehose", label: "Firehose" },
+  // "Firehose" is hidden for now — we don't ingest from that source yet.
+  // The filter type + backend wiring stay intact so it can be re-enabled
+  // by simply un-commenting this line.
+  // { key: "firehose", label: "Firehose" },
   { key: "rss", label: "RSS" },
 ];
 

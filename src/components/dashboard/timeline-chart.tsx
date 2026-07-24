@@ -1,10 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -46,6 +49,20 @@ export function TimelineChart({
       ? `Hourly mention count, last ${days * 24} hours (UTC)`
       : `Daily mention count, last ${days} days`;
 
+  // Mark when tracking started so a long flat-zero stretch reads as "we
+  // weren't collecting yet" rather than "no coverage". Only meaningful on
+  // the daily view and only when that date falls inside the window.
+  const trackingStart = useTrackingStart(scope);
+  const firstBucket = data?.[0]?.date;
+  const lastBucket = data?.[data.length - 1]?.date;
+  const showTrackingMarker =
+    granularity === "day" &&
+    !!trackingStart &&
+    !!firstBucket &&
+    !!lastBucket &&
+    trackingStart > firstBucket &&
+    trackingStart <= lastBucket;
+
   return (
     <div className="bg-card p-5">
       <KickerLabel>Mentions over time</KickerLabel>
@@ -72,6 +89,16 @@ export function TimelineChart({
                 stroke={theme.borderDefault}
                 strokeDasharray="0"
               />
+              {showTrackingMarker && firstBucket && trackingStart && (
+                <ReferenceArea
+                  x1={firstBucket}
+                  x2={trackingStart}
+                  fill={theme.textMuted}
+                  fillOpacity={0.07}
+                  stroke="none"
+                  ifOverflow="extendDomain"
+                />
+              )}
               <XAxis
                 dataKey="date"
                 tick={TICK_STYLE}
@@ -107,12 +134,89 @@ export function TimelineChart({
                 activeDot={{ r: 5, fill: theme.accentSuccess, stroke: "none" }}
                 isAnimationActive={false}
               />
+              {showTrackingMarker && trackingStart && (
+                <ReferenceLine
+                  x={trackingStart}
+                  stroke={theme.borderStrong}
+                  strokeDasharray="3 3"
+                  ifOverflow="extendDomain"
+                  label={renderTrackingLabel(
+                    `tracking since ${formatShortDate(trackingStart)}`,
+                  )}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
     </div>
   );
+}
+
+// Resolve the scope's tracking-start date (UTC `YYYY-MM-DD`) from the topic
+// AST provenance. For a group we take the earliest member start — before
+// that day no member was collecting, so the whole span is "not tracked".
+// Reuses the cached ["topics"]/["topic-groups"] queries, so no extra fetch.
+function useTrackingStart(scope: ScopeParam | null): string | null {
+  const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
+  const isGroup =
+    !!scope && typeof scope === "object" && "group_id" in scope;
+  const groupsQuery = useQuery({
+    queryKey: ["topic-groups"],
+    queryFn: apiClient.topicGroups,
+    enabled: isGroup,
+  });
+
+  return useMemo(() => {
+    const topics = topicsQuery.data;
+    if (!scope || !topics) return null;
+
+    let topicIds: number[];
+    if (typeof scope === "number") topicIds = [scope];
+    else if ("group_id" in scope)
+      topicIds =
+        groupsQuery.data?.find((g) => g.id === scope.group_id)?.topic_ids ?? [];
+    else topicIds = [scope.topic_id];
+
+    const starts = topicIds
+      .map((id) => topics.find((t) => t.id === id)?.topic_ast?.provenance?.created_at)
+      .filter((v): v is string => !!v)
+      .map((iso) => new Date(iso).getTime())
+      .filter((ms) => !Number.isNaN(ms));
+
+    if (starts.length === 0) return null;
+    return new Date(Math.min(...starts)).toISOString().slice(0, 10);
+  }, [scope, isGroup, topicsQuery.data, groupsQuery.data]);
+}
+
+function formatShortDate(isoDate: string): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function renderTrackingLabel(text: string) {
+  return function TrackingLabel(props: {
+    viewBox?: { x?: number; y?: number; width?: number; height?: number };
+  }) {
+    const vb = props?.viewBox;
+    if (!vb || vb.x == null || vb.y == null) return null;
+    return (
+      <text
+        x={vb.x + 6}
+        y={vb.y + 12}
+        fill={theme.textTertiary}
+        textAnchor="start"
+        style={{ fontFamily: "var(--font-geist-mono)", fontSize: 10 }}
+      >
+        {text}
+      </text>
+    );
+  };
 }
 
 function formatTick(v: string, granularity: "hour" | "day") {

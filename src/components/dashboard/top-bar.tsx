@@ -18,7 +18,9 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { label: "Overview", href: "/", routable: true },
-  { label: "Mentions", href: "#" },
+  // "Mentions" is hidden for now — the standalone mentions view isn't in
+  // use yet. Kept here (commented) so it can be restored without rework.
+  // { label: "Mentions", href: "#" },
   { label: "Sources", href: "/sources", routable: true },
   { label: "Reports", href: "/reports", routable: true },
   { label: "Settings", href: "/settings", routable: true },

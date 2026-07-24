@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
+import { computeTrend, periodRange } from "@/lib/period";
 import { KpiCard } from "./kpi-card";
+import { TopGeoCard } from "./top-geo-card";
 
 export function KpiGrid({
   scope,
@@ -16,21 +18,33 @@ export function KpiGrid({
   country: string | null;
 }) {
   const enabled = scope !== null;
+  const { from, prevFrom, prevTo } = periodRange(days);
 
-  const mentionsQuery = useQuery({
-    queryKey: ["mentions", scope, "kpi", days, country],
+  // Total mentions is now scoped to the selected period (matching the
+  // "last Nd" label) so the previous-period delta below is meaningful.
+  const currentQuery = useQuery({
+    queryKey: ["mentions", scope, "kpi", days, country, from],
     queryFn: () =>
       apiClient.mentions({
         scope: scope!,
         limit: 1,
         country_iso2: country ?? undefined,
+        date_from: from,
       }),
     enabled,
   });
 
-  const topicsQuery = useQuery({
-    queryKey: ["topics"],
-    queryFn: apiClient.topics,
+  const previousQuery = useQuery({
+    queryKey: ["mentions", scope, "kpi-prev", days, country, prevFrom, prevTo],
+    queryFn: () =>
+      apiClient.mentions({
+        scope: scope!,
+        limit: 1,
+        country_iso2: country ?? undefined,
+        date_from: prevFrom,
+        date_to: prevTo,
+      }),
+    enabled,
   });
 
   // /api/stats/overview is NOT country-aware. When a country filter is
@@ -54,8 +68,8 @@ export function KpiGrid({
     staleTime: 30_000,
   });
 
-  const totalMentions = mentionsQuery.data?.total ?? 0;
-  const activeTopics = topicsQuery.data?.filter((t) => t.is_active).length ?? 0;
+  const totalMentions = currentQuery.data?.total ?? 0;
+  const previousMentions = previousQuery.data?.total;
   const filteredCount = filteredSourcesQuery.data?.length ?? 0;
   const sourceCount =
     country === null
@@ -65,7 +79,12 @@ export function KpiGrid({
         : filteredCount;
   const dailyAvg = days > 0 ? Math.round(totalMentions / days) : 0;
 
-  const isMentionsLoading = enabled && mentionsQuery.isLoading;
+  // Same percentage drives both Total mentions and Daily average — the daily
+  // average is just the period total divided by a constant (days).
+  const trend = computeTrend(currentQuery.data?.total, previousMentions);
+  const trendTitle = `vs previous ${days}d`;
+
+  const isMentionsLoading = enabled && currentQuery.isLoading;
   const isSourcesLoading =
     enabled &&
     (country === null ? overviewQuery.isLoading : filteredSourcesQuery.isLoading);
@@ -76,12 +95,16 @@ export function KpiGrid({
         kicker="Total mentions"
         value={totalMentions.toLocaleString()}
         subtitle={`last ${days}d`}
+        trend={trend}
+        trendTitle={trendTitle}
         isLoading={isMentionsLoading}
       />
       <KpiCard
         kicker="Daily average"
         value={dailyAvg.toLocaleString()}
         subtitle="per day"
+        trend={trend}
+        trendTitle={trendTitle}
         isLoading={isMentionsLoading}
       />
       <KpiCard
@@ -90,12 +113,7 @@ export function KpiGrid({
         subtitle="distinct domains"
         isLoading={isSourcesLoading}
       />
-      <KpiCard
-        kicker="Topics"
-        value={activeTopics}
-        subtitle="monitored"
-        isLoading={topicsQuery.isLoading}
-      />
+      <TopGeoCard scope={scope} days={days} />
     </div>
   );
 }
