@@ -32,6 +32,7 @@ export type QualityFilter =
   | "trusted"
   | "suspect"
   | "unvetted"
+  | "contested"
   | "propaganda";
 
 const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
@@ -60,6 +61,10 @@ const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
   // Unvetted (trust=2 only) is a subset of Suspect (1-2) — the "needs
   // vetting" review queue: big-but-unverified outlets (Decision 33).
   { key: "unvetted", label: "Unvetted" },
+  // Contested (Decision 34) — domains where independent sources disagree
+  // (e.g. EUvsDisinfo citations vs Wikipedia RSP): the editorial-review
+  // queue. Resolved by CURRENT entity verdict, not mention snapshots.
+  { key: "contested", label: "Contested" },
   { key: "propaganda", label: "Propaganda" },
 ];
 

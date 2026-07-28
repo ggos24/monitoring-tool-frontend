@@ -203,6 +203,9 @@ export const apiClient = {
     extra?: {
       source?: "gn" | "gdelt" | "firehose" | "rss";
       score_band?: ScoreBand;
+      // "mentions" (default) — volume order; "priority" — trust-gated,
+      // reach-ranked "who to watch" order (Decision 34 follow-up).
+      sort?: "mentions" | "priority";
       date_from?: string;
       date_to?: string;
     },
@@ -213,6 +216,7 @@ export const apiClient = {
     if (country_iso2) qs.set("country_iso2", country_iso2);
     if (extra?.source) qs.set("source", extra.source);
     if (extra?.score_band) qs.set("score_band", extra.score_band);
+    if (extra?.sort && extra.sort !== "mentions") qs.set("sort", extra.sort);
     if (extra?.date_from) qs.set("date_from", extra.date_from);
     if (extra?.date_to) qs.set("date_to", extra.date_to);
     return api<SourceCount[]>(`/api/stats/sources?${qs}`);

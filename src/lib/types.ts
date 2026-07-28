@@ -121,10 +121,16 @@ export type CountryConfidence = "high" | "medium" | "heuristic";
 
 export type ReachBand = "high" | "mid" | "low";
 
-// Editorial quality bands (Decision 33): `unvetted` (trust=2 only) is a
+// Editorial quality bands (Decision 33/34): `unvetted` (trust=2 only) is a
 // SUBSET of `suspect` (trust 1-2) — the review queue for domains that have
-// no third-party editorial signal yet.
-export type ScoreBand = "trusted" | "suspect" | "unvetted" | "propaganda";
+// no third-party editorial signal yet; `contested` = domains whose CURRENT
+// v6 verdict is contested_signals (independent sources disagree).
+export type ScoreBand =
+  | "trusted"
+  | "suspect"
+  | "unvetted"
+  | "contested"
+  | "propaganda";
 
 export type SourceCount = {
   // Canonical publisher identity (Decision 33) — normalized domain, so
@@ -146,6 +152,9 @@ export type SourceCount = {
   // Syndication front-end (yahoo/msn/aol — Decision 33): trust/reach
   // describe the platform, not the original publisher.
   is_aggregator?: boolean;
+  // Current v6 verdict is contested_signals (Decision 34) — independent
+  // sources disagree; the row gets an editorial-review chip.
+  is_contested?: boolean;
 };
 
 export type CountryCount = {

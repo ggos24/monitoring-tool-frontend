@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 
 type Style = { bg: string; fg: string; label: string };
 
-const STYLES: Record<number, Style> = {
+// Exported for the TrustReachComboBadge prototype (colour = trust band).
+export const TRUST_STYLES: Record<number, Style> = {
   0: { bg: "bg-red-700", fg: "text-red-50", label: "Propaganda" },
   1: { bg: "bg-orange-700", fg: "text-orange-50", label: "Low quality" },
   // Unknown sits on the elevated surface — bumped from bg-strong/text-text-tertiary
@@ -84,7 +85,7 @@ export function DomainScoreBadge({
   className?: string;
 }) {
   const clamped = Number.isInteger(score) && score >= 0 && score <= 5 ? score : 2;
-  const { bg, fg, label } = STYLES[clamped];
+  const { bg, fg, label } = TRUST_STYLES[clamped];
   const titleText =
     isPropaganda && clamped !== 0
       ? `Quality: ${clamped}/5 · ${label} · propaganda`
@@ -186,7 +187,7 @@ function PopoverHeader({
   score: number;
 }) {
   const clamped = Number.isInteger(score) && score >= 0 && score <= 5 ? score : 2;
-  const { bg, fg, label } = STYLES[clamped];
+  const { bg, fg, label } = TRUST_STYLES[clamped];
   return (
     <div className="flex items-center gap-2">
       <span
