@@ -171,6 +171,7 @@ export type DomainScoringSignal = {
     | "iffy"
     | "imi_whitelist"
     | "ifcn"
+    | "wikipedia_rsp"
     | "tranco"
     | "dataforseo_ilr"
     | "dataforseo_etv";

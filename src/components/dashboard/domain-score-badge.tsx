@@ -35,6 +35,8 @@ const REASON_TEXT: Record<string, string> = {
   contested_signals:
     "Independent sources disagree about this domain — treat with care.",
   low_quality_mbfc: "Rated low factual reporting by MBFC (idiap dataset).",
+  low_quality_rsp:
+    "Rated generally unreliable or deprecated by Wikipedia's perennial-sources consensus.",
   propaganda_hardlist_viginum:
     "Listed by VIGINUM Portal Kombat as a propaganda domain.",
   propaganda_euvsdisinfo: "High disinformation frequency on EUvsDisinfo.",
@@ -64,6 +66,7 @@ const PROVIDER_LABEL: Record<DomainScoringSignal["provider"], string> = {
   iffy: "Iffy index",
   imi_whitelist: "IMI white list",
   ifcn: "IFCN",
+  wikipedia_rsp: "Wikipedia RSP",
   tranco: "Tranco",
   dataforseo_ilr: "InLink Rank",
   dataforseo_etv: "Est. traffic",
