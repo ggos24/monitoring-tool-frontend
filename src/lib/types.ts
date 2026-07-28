@@ -282,6 +282,11 @@ export type EnrichmentSettings = {
   digest_min_new_mentions: number;
   report_cluster_size_target: number;
   reduce_model: string;
+  // Top-tier gate (Decision 34 follow-up): null = reach floor disabled.
+  // Trust 5 always passes; trust 4 needs the domain's current
+  // reach_score >= this value. exclude_aggregators drops yahoo/msn/aol.
+  min_reach_score: number | null;
+  exclude_aggregators: boolean;
   updated_at: string;
   updated_by: string;
 };

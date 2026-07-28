@@ -169,6 +169,31 @@ export function EnrichmentSettings() {
             />
 
             <SelectField
+              label="Minimum reach (trust-4 sources)"
+              help="Top-tier gate: trust-5 outlets always pass; trust-4 must clear this current reach_score. Off = no reach floor."
+              value={draft.min_reach_score === null ? "off" : String(draft.min_reach_score)}
+              options={[
+                { value: "off", label: "Off · no reach floor" },
+                { value: "34", label: "34 · mid reach and up" },
+                { value: "50", label: "50 · solid audience" },
+                { value: "67", label: "67 · high reach only" },
+              ]}
+              onChange={(v) =>
+                setDraft({
+                  ...draft,
+                  min_reach_score: v === "off" ? null : Number(v),
+                })
+              }
+            />
+
+            <ToggleField
+              label="Exclude aggregators"
+              help="Skip syndication front-ends (yahoo/msn/aol) — their copies duplicate articles enriched at the original publisher."
+              checked={draft.exclude_aggregators}
+              onChange={(v) => setDraft({ ...draft, exclude_aggregators: v })}
+            />
+
+            <SelectField
               label="Stance model"
               help="Gemini model used for per-article stance/framing. flash-lite is ~3× cheaper than flash."
               value={draft.stance_model}
