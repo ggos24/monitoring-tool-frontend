@@ -156,7 +156,7 @@ function BadgeWithTooltip({
         }
       />
       <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={6} align="start" side="top">
+        <Tooltip.Positioner className="z-[100]" sideOffset={6} align="start" side="top">
           <Tooltip.Popup
             className={cn(
               "z-50 w-72 border border-border bg-overlay p-4 text-text-secondary outline-none",
@@ -166,9 +166,9 @@ function BadgeWithTooltip({
           >
             <PopoverHeader domain={domain} score={data?.score ?? clamped} />
             {isLoading ? (
-              <LoadingState />
+              <ScoringPopoverLoading />
             ) : error ? (
-              <ErrorState error={error} onRetry={refetch} />
+              <ScoringPopoverError error={error} onRetry={refetch} />
             ) : data ? (
               <PopoverBody data={data} />
             ) : null}
@@ -207,7 +207,7 @@ function PopoverHeader({
   );
 }
 
-function LoadingState() {
+export function ScoringPopoverLoading() {
   return (
     <div className="mt-3 space-y-2">
       <Skeleton className="h-3 w-3/4" />
@@ -221,7 +221,7 @@ function LoadingState() {
   );
 }
 
-function ErrorState({
+export function ScoringPopoverError({
   error,
   onRetry,
 }: {
@@ -290,7 +290,7 @@ function PopoverBody({ data }: { data: DomainScoringDetail }) {
       </div>
 
       <div className="mt-3 border-t border-border pt-3 font-mono text-[10px] text-text-tertiary tabular-nums">
-        Refreshed {formatDate(data.refreshed_at)}
+        Refreshed {formatScoringDate(data.refreshed_at)}
       </div>
     </>
   );
@@ -381,7 +381,7 @@ function formatReachComponents(data: DomainScoringDetail): string {
   return parts.join(" · ");
 }
 
-function formatDate(iso: string): string {
+export function formatScoringDate(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toISOString().slice(0, 10);

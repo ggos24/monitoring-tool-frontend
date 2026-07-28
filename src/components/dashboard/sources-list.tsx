@@ -25,6 +25,8 @@ export function SourcesList({
   selectedDay,
   source,
   quality,
+  sort,
+  onChangeSort,
   selectedDomain,
   onToggleDomain,
 }: {
@@ -40,15 +42,16 @@ export function SourcesList({
     | "unvetted"
     | "contested"
     | "propaganda";
+  sort: SortMode;
+  onChangeSort: (v: SortMode) => void;
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = scope !== null;
   const LIMIT = 25;
   const range = selectedDay ? dayRange(selectedDay) : null;
-  // Panel-local presentation state (unlike source/quality, which couple to
-  // the Mentions filter bar and live on the page).
-  const [sort, setSort] = useState<SortMode>("mentions");
+  // `sort` lives on the page (it also orders the Mentions list); `view`
+  // stays panel-local presentation state.
   const [view, setView] = useState<ViewMode>("split");
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -88,7 +91,7 @@ export function SourcesList({
         <MiniToggle
           label="Sort"
           value={sort}
-          onChange={setSort}
+          onChange={onChangeSort}
           options={[
             { key: "mentions", label: "Ment." },
             { key: "priority", label: "Priority" },
@@ -273,6 +276,7 @@ function SourceRow({
                     tier={reachTier}
                     score={reachScore}
                     band={reachBand}
+                    domain={domain}
                   />
                 </span>
               </>
@@ -398,7 +402,7 @@ function CountryFlag({
         }
       />
       <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={4} side="top">
+        <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top">
           <Tooltip.Popup
             className={cn(
               "z-50 border border-border bg-card px-2 py-1",

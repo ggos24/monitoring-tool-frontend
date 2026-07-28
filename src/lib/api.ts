@@ -146,6 +146,9 @@ type MentionsParams = {
   source?: "gn" | "gdelt" | "firehose" | "rss";
   score_band?: ScoreBand;
   country_iso2?: string;
+  // "recent" (default) — chronological; "priority" — order by source
+  // standing (trust band, then reach), coupled to Top sources sort.
+  sort?: "recent" | "priority";
 };
 
 export const apiClient = {
@@ -179,6 +182,7 @@ export const apiClient = {
     if (params.source) qs.set("source", params.source);
     if (params.score_band) qs.set("score_band", params.score_band);
     if (params.country_iso2) qs.set("country_iso2", params.country_iso2);
+    if (params.sort && params.sort !== "recent") qs.set("sort", params.sort);
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 

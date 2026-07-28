@@ -37,6 +37,11 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
   const [quality, setQuality] = useState<QualityFilter>("all");
+  // Shared panel order (Decision 34 follow-up): Top sources sort mode also
+  // orders the Mentions list, so "priority" reads coherently across both.
+  const [sourceSort, setSourceSort] = useState<"mentions" | "priority">(
+    "mentions",
+  );
 
   // The API scope param: single topic or a group union.
   const scope: ScopeParam | null = scopeSel
@@ -173,6 +178,8 @@ export default function Home() {
                   selectedDay={selectedDay}
                   source={source}
                   quality={quality}
+                  sort={sourceSort}
+                  onChangeSort={setSourceSort}
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
                 />
@@ -185,6 +192,7 @@ export default function Home() {
                   selectedDay={selectedDay}
                   source={source}
                   quality={quality}
+                  sort={sourceSort}
                   onChangeSource={setSource}
                   onChangeQuality={setQuality}
                   onClearDomain={() => setSelectedDomain(null)}

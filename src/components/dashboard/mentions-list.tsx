@@ -75,6 +75,7 @@ export function MentionsList({
   selectedDay,
   source,
   quality,
+  sort,
   onChangeSource,
   onChangeQuality,
   onClearDomain,
@@ -85,6 +86,9 @@ export function MentionsList({
   selectedDay: string | null;
   source: SourceFilter;
   quality: QualityFilter;
+  // Shared with the Top sources panel: "priority" orders mentions by
+  // source standing (trust band → reach → recency) instead of recency.
+  sort: "mentions" | "priority";
   onChangeSource: (v: SourceFilter) => void;
   onChangeQuality: (v: QualityFilter) => void;
   onClearDomain: () => void;
@@ -104,7 +108,7 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, scope, domain, country, selectedDay, source, quality, stance]);
+  }, [debounced, scope, domain, country, selectedDay, source, quality, stance, sort]);
 
   const queryKey = [
     "mentions",
@@ -115,6 +119,7 @@ export function MentionsList({
     source,
     quality,
     stance,
+    sort,
     page,
     range?.from ?? null,
     range?.to ?? null,
@@ -133,6 +138,7 @@ export function MentionsList({
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
         stance_label: stance === "all" ? undefined : stance,
+        sort: sort === "priority" ? "priority" : undefined,
         date_from: range?.from,
         date_to: range?.to,
       }),
@@ -165,7 +171,14 @@ export function MentionsList({
   return (
     <div className="bg-card p-5">
       <div className="flex items-center justify-between">
-        <KickerLabel>Mentions</KickerLabel>
+        <div className="flex items-baseline gap-3">
+          <KickerLabel>Mentions</KickerLabel>
+          {sort === "priority" && (
+            <span className="font-mono text-[10px] text-text-tertiary">
+              sorted by source priority
+            </span>
+          )}
+        </div>
         <div className="font-mono text-[11px] text-text-tertiary tabular-nums">
           {total > 0 && `${total.toLocaleString()} total`}
         </div>
@@ -449,7 +462,7 @@ function StanceBadge({ mention }: { mention: Mention }) {
         }
       />
       <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={4} side="top" align="end">
+        <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
               // Wider cap when card present so 3-5 bullets aren't squished;
@@ -554,7 +567,7 @@ function EnrichButton({
         }
       />
       <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={4} side="top" align="end">
+        <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
               "z-50 border border-border bg-overlay px-2 py-1.5",

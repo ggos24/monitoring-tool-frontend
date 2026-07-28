@@ -653,7 +653,7 @@ function StatusBadge({ feed }: { feed: RssFeed }) {
     <Tooltip.Root>
       <Tooltip.Trigger delay={150} closeDelay={100} render={content} />
       <Tooltip.Portal>
-        <Tooltip.Positioner sideOffset={4} side="top" align="start">
+        <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top" align="start">
           <Tooltip.Popup
             className={cn(
               "z-50 max-w-md border border-border bg-card px-3 py-2",
