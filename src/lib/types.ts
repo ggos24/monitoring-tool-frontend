@@ -165,7 +165,12 @@ export type CountryAttribution = {
 export type DomainScoringSignal = {
   provider:
     | "viginum"
+    | "nazk"
     | "euvsdisinfo"
+    | "mbfc"
+    | "iffy"
+    | "imi_whitelist"
+    | "ifcn"
     | "tranco"
     | "dataforseo_ilr"
     | "dataforseo_etv";

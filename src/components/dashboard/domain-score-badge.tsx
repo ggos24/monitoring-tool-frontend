@@ -23,10 +23,23 @@ const STYLES: Record<number, Style> = {
 };
 
 const REASON_TEXT: Record<string, string> = {
+  // v6 evidence model (Decision 34)
+  propaganda_sanctions_nazk:
+    "Media entity sanctioned by Ukraine's NSDC (NAZK registry).",
+  trusted_corroborated:
+    "Confirmed trustworthy by two or more independent sources.",
+  trusted_established: "Confirmed trustworthy by an authoritative source.",
+  trusted_emerging: "Positive quality signal from one source.",
+  trusted_emerging_high_reach:
+    "Positive quality signal and high real-world reach.",
+  contested_signals:
+    "Independent sources disagree about this domain — treat with care.",
+  low_quality_mbfc: "Rated low factual reporting by MBFC (idiap dataset).",
   propaganda_hardlist_viginum:
     "Listed by VIGINUM Portal Kombat as a propaganda domain.",
   propaganda_euvsdisinfo: "High disinformation frequency on EUvsDisinfo.",
   low_disinfo_euvsdisinfo: "Some disinformation references on EUvsDisinfo.",
+  // Legacy v4/v5 reasons — kept so historical scoring_entity rows still explain.
   trusted_top_euvsdisinfo:
     "Frequently cited as trustworthy on EUvsDisinfo (≥20 references).",
   trusted_mid_euvsdisinfo:
@@ -45,7 +58,12 @@ const REASON_TEXT: Record<string, string> = {
 
 const PROVIDER_LABEL: Record<DomainScoringSignal["provider"], string> = {
   viginum: "VIGINUM",
+  nazk: "NSDC sanctions",
   euvsdisinfo: "EUvsDisinfo",
+  mbfc: "MBFC (idiap)",
+  iffy: "Iffy index",
+  imi_whitelist: "IMI white list",
+  ifcn: "IFCN",
   tranco: "Tranco",
   dataforseo_ilr: "InLink Rank",
   dataforseo_etv: "Est. traffic",
@@ -328,6 +346,22 @@ function formatRawValue(signal: DomainScoringSignal): string {
     if (typeof trusted === "number") parts.push(`${trusted} trusted refs`);
     if (typeof disinfo === "number") parts.push(`${disinfo} disinfo refs`);
     return parts.join(" · ");
+  }
+  if (signal.provider === "mbfc") {
+    const factual = signal.raw_value["factual_reporting"];
+    const bias = signal.raw_value["bias"];
+    const parts: string[] = [];
+    if (typeof factual === "string") parts.push(`factual: ${factual}`);
+    if (typeof bias === "string" && bias) parts.push(`bias: ${bias}`);
+    return parts.join(" · ");
+  }
+  if (signal.provider === "iffy") {
+    const cred = signal.raw_value["mbfc_cred"];
+    return typeof cred === "string" && cred ? `credibility: ${cred}` : "";
+  }
+  if (signal.provider === "imi_whitelist" || signal.provider === "nazk") {
+    const annotation = signal.raw_value["annotation"];
+    return typeof annotation === "string" ? annotation : "";
   }
   return "";
 }
