@@ -22,6 +22,12 @@ export type TopicAst = {
   wikidata_qids: string[];
   languages: string[];
   terms: TopicTerms;
+  // CNF anchor groups (backend 2026-07-30 matcher rework). Each inner
+  // array is an OR-list; a headline passes the free anchor gate only
+  // when EVERY group has at least one word-boundary hit. Also compiled
+  // into the GDELT axis query for topic-type topics. Optional because
+  // ASTs created before the rework lack the key.
+  anchors?: string[][];
   must_co_occur: string[];
   must_not_co_occur: string[];
   gdelt_gkg_themes: string[];

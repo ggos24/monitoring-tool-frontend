@@ -176,7 +176,7 @@ export function AstReviewForm({ initial }: Props) {
           label="Core terms"
           items={ast.terms.core}
           maxItems={10}
-          helpText="Single tokens matched with word boundaries. Case-insensitive."
+          helpText="Direct name variants of the topic. A headline containing one is auto-accepted with no further checks — never add generic words (war, economy) here."
           placeholder="+ add core term"
           onChange={(next) =>
             setEdited({ ...ast, terms: { ...ast.terms, core: next } })
@@ -186,7 +186,7 @@ export function AstReviewForm({ initial }: Props) {
           label="Context"
           items={ast.terms.context}
           maxItems={10}
-          helpText="Multi-word descriptors that disambiguate the topic."
+          helpText="Related descriptors kept for reference. Not matched against headlines and not sent in queries."
           placeholder="+ add context"
           onChange={(next) =>
             setEdited({ ...ast, terms: { ...ast.terms, context: next } })
@@ -196,7 +196,7 @@ export function AstReviewForm({ initial }: Props) {
           label="Phrases"
           items={ast.terms.phrases}
           maxItems={10}
-          helpText="Exact phrases (quoted in queries)."
+          helpText="Exact multi-word phrases. Auto-accept on headline match (tolerant of commas and apostrophe style); quoted in Google News queries."
           placeholder='+ add "exact phrase"'
           onChange={(next) =>
             setEdited({ ...ast, terms: { ...ast.terms, phrases: next } })
@@ -214,11 +214,17 @@ export function AstReviewForm({ initial }: Props) {
         />
       </section>
 
+      <AnchorGroupsSection
+        anchors={ast.anchors ?? []}
+        topicType={ast.type}
+        onChange={(next) => setEdited({ ...ast, anchors: next })}
+      />
+
       <ChipList
         label="Exclude these (must_not_co_occur)"
         items={ast.must_not_co_occur}
         maxItems={20}
-        helpText="Drop matches containing these phrases — used to filter false-positive senses."
+        helpText="Hard filter: any mention containing one of these phrases is dropped immediately. Use for wrong-sense lookalikes; too-broad exclusions silently kill real coverage."
         placeholder="+ add exclusion"
         onChange={(next) => setEdited({ ...ast, must_not_co_occur: next })}
       />
@@ -324,6 +330,80 @@ export function AstReviewForm({ initial }: Props) {
         </div>
       </footer>
     </div>
+  );
+}
+
+// Anchor groups (backend 2026-07-30 matcher rework). One field, three
+// jobs: (1) for topic-type topics the groups compile into the GDELT
+// query — an article is fetched only when its FULL TEXT contains a word
+// from every group; (2) the free anchor gate — a HEADLINE must also hit
+// every group to be accepted without any LLM spend; (3) borderline
+// mentions get their provisional visible/hidden verdict from the same
+// check while they wait for the nightly LLM judge.
+function AnchorGroupsSection({
+  anchors,
+  topicType,
+  onChange,
+}: {
+  anchors: string[][];
+  topicType: TopicType;
+  onChange: (next: string[][]) => void;
+}) {
+  const groupOne = anchors[0] ?? [];
+  const groupTwo = anchors[1] ?? [];
+  const enabled = groupOne.length > 0 || groupTwo.length > 0;
+
+  function setGroup(index: 0 | 1, next: string[]) {
+    const groups = [anchors[0] ?? [], anchors[1] ?? [], ...anchors.slice(2)];
+    groups[index] = next;
+    // Trim trailing empty groups so "cleared everything" round-trips to [].
+    while (groups.length > 0 && groups[groups.length - 1].length === 0) {
+      groups.pop();
+    }
+    onChange(groups);
+  }
+
+  return (
+    <section className="space-y-3 border border-border bg-card/50 p-4">
+      <div className="space-y-1">
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+          Anchor groups — free headline filter
+        </span>
+        <p className="font-mono text-[10px] leading-relaxed text-muted-foreground">
+          A headline is accepted only if it contains at least one word from
+          group 1 AND one from group 2 (word-boundary match, so
+          &ldquo;Warsaw&rdquo; ≠ &ldquo;war&rdquo;). Costs nothing to run.
+          {topicType === "topic" &&
+            " Also builds the GDELT search: only articles whose full text hits both groups are fetched at all."}
+          {" "}Headlines that hit one group go to the nightly LLM judge instead
+          of being dropped outright.
+        </p>
+        {!enabled && (
+          <p className="font-mono text-[10px] text-amber-500">
+            Empty = gate off. Without groups this topic accepts everything the
+            sources return whenever LLM stages are down or over budget.
+          </p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <ChipList
+          label="Group 1 — who / where"
+          items={groupOne}
+          maxItems={40}
+          helpText="Words unique to this topic: places, actors, names (ukraine, kyiv, zelensky…). This group carries the precision — keep it specific."
+          placeholder="+ add subject word"
+          onChange={(next) => setGroup(0, next)}
+        />
+        <ChipList
+          label="Group 2 — what happens"
+          items={groupTwo}
+          maxItems={40}
+          helpText="Action and domain vocabulary (war, missile, attack, ceasefire…). Generic words are fine here — precision comes from requiring both groups together."
+          placeholder="+ add action word"
+          onChange={(next) => setGroup(1, next)}
+        />
+      </div>
+    </section>
   );
 }
 

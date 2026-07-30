@@ -60,8 +60,24 @@ export function buildAstPatch(
   if (!arrayEq(orig.entity_aliases, edited.entity_aliases)) {
     patch.entity_aliases = edited.entity_aliases;
   }
+  if (!anchorsEq(orig.anchors, edited.anchors)) {
+    patch.anchors = edited.anchors ?? [];
+  }
 
   return patch;
+}
+
+// Group ORDER is meaningful (group 1 = subject axis, group 2 = action
+// axis) so groups compare index-wise; token order within a group is not
+// meaningful. `undefined` (pre-rework AST without the key) equals [].
+function anchorsEq(
+  a: readonly string[][] | undefined,
+  b: readonly string[][] | undefined,
+): boolean {
+  const ga = a ?? [];
+  const gb = b ?? [];
+  if (ga.length !== gb.length) return false;
+  return ga.every((group, i) => arrayEq(group, gb[i]));
 }
 
 export function isEmptyPatch(patch: TopicAstPatch): boolean {
