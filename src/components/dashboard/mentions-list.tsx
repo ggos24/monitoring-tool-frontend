@@ -26,6 +26,11 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 10;
 
 type StanceFilter = "all" | StanceLabel;
+// Enrichment runs as one nightly batch (submit 22:00 UTC, verdicts land
+// 07:00 UTC), so the newest-first feed always opens on rows the pipeline
+// hasn't reached yet. This filter is how you get to what *has* been
+// analyzed without scrolling past a day of pending rows.
+type EnrichedFilter = "all" | "enriched" | "pending";
 export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
 export type QualityFilter =
   | "all"
@@ -52,6 +57,15 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
   // by simply un-commenting this line.
   // { key: "firehose", label: "Firehose" },
   { key: "rss", label: "RSS" },
+];
+
+// "Pending" mirrors the backend's own vocabulary for `enriched=false`
+// (enriched_at IS NULL). Note it also holds rows the batch will never
+// reach — below the trust/reach gate, or body fetch blocked.
+const ENRICHED_OPTIONS: { key: EnrichedFilter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "enriched", label: "Enriched" },
+  { key: "pending", label: "Pending" },
 ];
 
 const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
@@ -99,6 +113,7 @@ export function MentionsList({
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [stance, setStance] = useState<StanceFilter>("all");
+  const [enriched, setEnriched] = useState<EnrichedFilter>("all");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -108,7 +123,18 @@ export function MentionsList({
 
   useEffect(() => {
     setPage(0);
-  }, [debounced, scope, domain, country, selectedDay, source, quality, stance, sort]);
+  }, [
+    debounced,
+    scope,
+    domain,
+    country,
+    selectedDay,
+    source,
+    quality,
+    stance,
+    enriched,
+    sort,
+  ]);
 
   const queryKey = [
     "mentions",
@@ -119,6 +145,7 @@ export function MentionsList({
     source,
     quality,
     stance,
+    enriched,
     sort,
     page,
     range?.from ?? null,
@@ -138,6 +165,7 @@ export function MentionsList({
         source: source === "all" ? undefined : source,
         score_band: quality === "all" ? undefined : quality,
         stance_label: stance === "all" ? undefined : stance,
+        enriched: enriched === "all" ? undefined : enriched === "enriched",
         sort: sort === "priority" ? "priority" : undefined,
         date_from: range?.from,
         date_to: range?.to,
@@ -150,6 +178,7 @@ export function MentionsList({
     source !== "all" ||
     quality !== "all" ||
     stance !== "all" ||
+    enriched !== "all" ||
     domain !== null ||
     debounced !== "";
 
@@ -157,6 +186,7 @@ export function MentionsList({
     onChangeSource("all");
     onChangeQuality("all");
     setStance("all");
+    setEnriched("all");
     setSearch("");
     if (domain) onClearDomain();
   };
@@ -249,6 +279,12 @@ export function MentionsList({
           onChange={setStance}
           options={STANCE_OPTIONS}
         />
+        <ToggleGroup
+          label="Analysis"
+          value={enriched}
+          onChange={setEnriched}
+          options={ENRICHED_OPTIONS}
+        />
       </div>
 
       <div className="mt-4">
@@ -270,7 +306,11 @@ export function MentionsList({
             ))}
           </div>
         ) : items.length === 0 ? (
-          <EmptyMessage>No mentions in selected period.</EmptyMessage>
+          <EmptyMessage>
+            {enriched === "enriched"
+              ? "Nothing analyzed yet in this period — the nightly batch runs at 22:00 UTC and verdicts land at 07:00 UTC."
+              : "No mentions in selected period."}
+          </EmptyMessage>
         ) : (
           <ul
             className={cn(
