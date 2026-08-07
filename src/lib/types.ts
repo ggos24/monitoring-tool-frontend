@@ -335,6 +335,7 @@ export type DigestDefinition = {
   topic_id: number;
   segment: SegmentCondition[];
   period_kind: DigestPeriodKind;
+  report_type?: ReportType;
   active: boolean;
   created_at: string;
 };
@@ -344,12 +345,14 @@ export type DigestDefinitionCreate = {
   topic_id: number;
   segment: SegmentCondition[];
   period_kind?: DigestPeriodKind;
+  report_type?: ReportType;
   active?: boolean;
 };
 
 export type DigestDefinitionPatch = {
   name?: string;
   segment?: SegmentCondition[];
+  report_type?: ReportType;
   active?: boolean;
 };
 
@@ -359,28 +362,80 @@ export type DigestDefinitionPatch = {
 // on success. `error` non-null when status='failed' OR when status=
 // 'success' but the reduce step degraded (partial result).
 export type ReportStatus = "pending" | "running" | "success" | "failed";
+export type ReportType = "executive" | "intelligence_brief";
 
-// Narrative-reports PR (2026-06-12): the serialized cluster IS the
-// narrative card. `name` is the MAP-LLM headline; share_of_voice /
-// momentum / countries are deterministic stats. All four are absent or
-// null on reports generated before the upgrade — render fallbacks.
-export type ClusterMomentum = "rising" | "flat" | "falling";
+// Legacy reports stored a three-value string. V2 stores the complete,
+// deterministic within-window calculation and keeps `momentum_tag` as a
+// convenience alias. The UI accepts both so old report rows remain readable.
+export type LegacyClusterMomentum = "rising" | "flat" | "falling";
+export type ClusterMomentumTag = "spiking" | "building" | "steady" | "fading";
+export type ClusterMomentum = {
+  tag: ClusterMomentumTag;
+  slope_ratio: number | null;
+  topic_spiking: boolean;
+};
+
+export type ReportEvidenceRef = {
+  mention_id: number;
+  url: string | null;
+  domain: string | null;
+  title: string | null;
+  published_at: string | null;
+  // `quote`/verbatim_quote/headline is the shipped backend shape. `text`
+  // and the two alternate evidence types are accepted during the additive
+  // V2 rollout and make mixed-version API deployments harmless.
+  quote?: string | null;
+  text?: string | null;
+  evidence_type:
+    | "verbatim_quote"
+    | "headline"
+    | "direct_quote"
+    | "paraphrase";
+  verified_verbatim?: boolean;
+};
+
+export type NarrativeLifecycle = {
+  status: "new" | "returning";
+  direction: "new" | "growing" | "declining" | "stable" | "unknown";
+  previous_share: number | null;
+  share_delta: number | null;
+  match_score: number | null;
+};
+
+// Narrative-reports V2: the serialized cluster IS the narrative card.
+// LLM-written fields are optional; counts, shares, reach and momentum are
+// deterministic. Additive fields remain optional for legacy persisted rows.
 
 export type ReportClusterSummary = {
   cluster_id: number;
+  narrative_id?: string | null;
+  lifecycle?: NarrativeLifecycle | null;
   name?: string | null;
+  handle?: string | null;
+  claim?: string | null;
+  evidence?: string | null;
   label: string;
   n_mentions: number;
   n_publishers: number;
   share_of_voice?: number | null;
-  momentum?: ClusterMomentum | null;
+  reach_sov?: number | null;
+  prominence?: number | null;
+  mean_source_score?: number | null;
+  mean_reach_score?: number | null;
+  propaganda_share?: number | null;
+  daily_series?: { date: string; count: number }[] | null;
+  momentum?: ClusterMomentum | LegacyClusterMomentum | null;
+  momentum_tag?: ClusterMomentumTag | null;
   countries?: Record<string, number> | null;
   dominant_stance: StanceLabel | null;
   stance_distribution: Record<StanceLabel, number>;
-  top_quotes: string[];
-  top_domains: string[];
-  top_titles: string[];
-  members: number[];
+  top_quotes?: string[];
+  top_domains?: string[];
+  top_titles?: string[];
+  members?: number[];
+  evidence_refs?: ReportEvidenceRef[];
+  decision_status?: "monitor" | "verify" | "investigate" | "escalate";
+  decision_reason?: string | null;
   narrative: string | null;
   contested: string | null;
 };
@@ -412,17 +467,56 @@ export type StanceByCountryEntry = {
 
 // Coverage-disclosure block (audit honesty pack) — present on reports
 // since the 2026-06-12 deploy.
-export type ReportDataBasis = {
+export type ReportBasis = {
   relevant_total: number;
   eligible_total: number;
   enriched_total: number;
-  analyzed_in_report: number;
-  enrichment_gate_min_score: number;
-  excluded_propaganda: number;
-  excluded_low_tier: number;
-  coverage_pct: number;
-  country_unresolved_pct: number;
-  note: string;
+  eligible_enriched_total?: number;
+  clusterable_total?: number;
+  analyzed_in_report?: number;
+  clustered_in_report?: number;
+  clustered_mentions?: number;
+  gate_excluded_total?: number;
+  enrichment_gate_min_score?: number;
+  enrichment_gate_min_reach_score?: number | null;
+  excluded_propaganda?: number;
+  excluded_low_tier?: number;
+  excluded_aggregators?: number;
+  excluded_reach_gate?: number;
+  analyzed_outside_current_gate?: number;
+  coverage_pct?: number;
+  enrichment_coverage_pct?: number;
+  analysis_coverage_pct?: number;
+  embedding_coverage_pct?: number;
+  country_unresolved_pct?: number;
+  gate?: {
+    min_source_score?: number;
+    min_reach_score?: number | null;
+    exclude_aggregators?: boolean;
+    [key: string]: unknown;
+  };
+  enrichment_gate?: {
+    min_source_score?: number;
+    min_reach_score?: number | null;
+    exclude_aggregators?: boolean;
+    exclude_propaganda?: boolean;
+    [key: string]: unknown;
+  };
+  note?: string;
+};
+
+export type ReportDataBasis = ReportBasis & {
+  // V2 separates the full topic corpus from the operator-selected slice.
+  // These can also be duplicated at aggregates.* during a rolling deploy.
+  topic_corpus_basis?: ReportBasis;
+  selected_scope_basis?: ReportBasis;
+};
+
+export type DepartedNarrative = {
+  narrative_id: string;
+  name: string;
+  previous_share: number | null;
+  status: "not_observed";
 };
 
 // topic-groups: per-member-topic share of voice (group reports only).
@@ -450,6 +544,10 @@ export type ReportAggregates = {
   n_mentions: number;
   publisher_weighted_stance: Record<StanceLabel, number>;
   tier_breakdown: Record<string, ReportTierBreakdownEntry>;
+  reach_weighted_sov?: {
+    overall?: { total_reach?: number };
+    by_tier?: Record<string, { reach: number; sov_pct: number }>;
+  };
   recency_timeline: { date: string; n: number; dominant_stance: StanceLabel | null }[];
   volume_z_score: number | null;
   sentiment_distribution: Record<StanceLabel, number>;
@@ -458,6 +556,10 @@ export type ReportAggregates = {
   top_sources_per_stance?: Record<StanceLabel, { domain: string; n: number }[]>;
   propaganda_share?: number;
   data_basis?: ReportDataBasis;
+  topic_corpus_basis?: ReportBasis;
+  selected_scope_basis?: ReportBasis;
+  departed_narratives?: DepartedNarrative[];
+  data_quality?: ReportDataQuality;
   per_topic?: PerTopicEntry[];
   framing_distribution?: Record<string, number>;
   scope?: ReportScope;
@@ -466,6 +568,28 @@ export type ReportAggregates = {
   dominant_framing?: string | null;
   notable_divergence?: string | null;
   confidence?: number | null;
+  bottom_line?: string | null;
+  bluf_bullets?: string[];
+  trends?: string | null;
+  watchlist?: string[];
+  caveats?: string | null;
+};
+
+export type ReportDataQuality = {
+  version?: string;
+  rubric_version?: string;
+  grade: "high" | "moderate" | "low";
+  score: number;
+  reasons: string[];
+  metrics?: {
+    selected_scope_coverage_pct?: number;
+    analyzed_mentions?: number;
+    embedding_coverage_pct?: number;
+    evidence_coverage_pct?: number;
+    country_resolved_pct?: number;
+    [key: string]: number | undefined;
+  };
+  components?: Record<string, number>;
 };
 
 export type Report = {
@@ -473,6 +597,7 @@ export type Report = {
   topic_id: number | null;
   group_id?: number | null;
   topic_ids?: number[] | null;
+  report_type?: ReportType;
   params: Record<string, unknown>;
   params_hash: string;
   source_max_collected_at: string | null;
@@ -487,6 +612,13 @@ export type Report = {
   requested_by: string | null;
   error: string | null;
   cached?: boolean;
+  // Convenience mirrors of aggregates.* on V2 responses. Optional because
+  // persisted legacy reports and rolling backend deploys may omit them.
+  bottom_line?: string | null;
+  bluf_bullets?: string[];
+  trends?: string | null;
+  watchlist?: string[];
+  caveats?: string | null;
 };
 
 // Provide exactly one of topic_id | topic_ids | group_id.
@@ -497,6 +629,7 @@ export type SegmentReportRequest = {
   filters: SegmentCondition[];
   date_from?: string | null;
   date_to?: string | null;
+  report_type?: ReportType;
 };
 
 // Dashboard/report scope param — a single topic or a group. A bare
@@ -554,6 +687,27 @@ export type DigestResultDetail = {
   // PR1 — full compute_aggregates() blob, uniform with report.aggregates.
   // NULL on rows written before migration a3f9c1e8d2b4.
   aggregates: ReportAggregates | null;
+  report_type?: ReportType;
+  status?: "success" | "partial" | "failed" | "skipped";
+  error?: string | null;
+  reason?: string | null;
+  provenance?: DigestResultProvenance | null;
+  delivery_status?:
+    | "not_attempted"
+    | "not_configured"
+    | "delivered"
+    | "failed";
+  delivery_error?: string | null;
+  delivered_at?: string | null;
+};
+
+export type DigestResultProvenance = {
+  window?: {
+    date_from?: string | null;
+    date_to?: string | null;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
 };
 
 // Operator-visible LLM prompt — GET /api/settings/prompts. Editable

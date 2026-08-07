@@ -10,7 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ConditionChip,
   SegmentFilterBuilder,
-  defaultCondition,
 } from "@/components/reports/segment-filter-builder";
 import type {
   DigestDefinition,
@@ -31,7 +30,7 @@ export function ScheduledReports({
 }: {
   topicId: number;
   selectedResultId: number | null;
-  onSelectResult: (result: DigestResultDetail) => void;
+  onSelectResult: (result: DigestResultDetail, definition: DigestDefinition) => void;
 }) {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
@@ -149,7 +148,7 @@ function ScheduledReportRow({
 }: {
   definition: DigestDefinition;
   selectedResultId: number | null;
-  onSelectResult: (result: DigestResultDetail) => void;
+  onSelectResult: (result: DigestResultDetail, definition: DigestDefinition) => void;
   onToggleActive: () => void;
   onDelete: () => void;
 }) {
@@ -188,6 +187,11 @@ function ScheduledReportRow({
               </span>
             </span>
             <span className="mt-1 flex flex-wrap gap-1">
+              <span className="border border-border bg-elevated px-1.5 py-0.5 font-mono text-[9px] text-text-tertiary">
+                {definition.report_type === "intelligence_brief"
+                  ? "Intelligence brief"
+                  : "Executive (legacy)"}
+              </span>
               {definition.segment.length === 0 ? (
                 <span className="font-mono text-[10px] text-muted-foreground">
                   (no filters)
@@ -246,7 +250,7 @@ function ScheduledReportRow({
                 <li key={res.id}>
                   <button
                     type="button"
-                    onClick={() => onSelectResult(res)}
+                    onClick={() => onSelectResult(res, definition)}
                     className={cn(
                       "w-full cursor-pointer px-1 py-1 text-left font-mono text-[10px] transition-colors",
                       res.id === selectedResultId
@@ -254,7 +258,7 @@ function ScheduledReportRow({
                         : "text-text-secondary hover:bg-elevated/60",
                     )}
                   >
-                    {res.period_start.slice(0, 10)} · {res.n_mentions} mentions
+                    {res.period_start.slice(0, 10)} · {res.status ?? "success"} · {res.n_mentions} mentions
                     {res.clusters?.length
                       ? ` · ${res.clusters.length} narratives`
                       : ""}
@@ -285,10 +289,10 @@ export function ScheduledReportCreateForm({
   onError: (msg: string) => void;
 }) {
   const [name, setName] = useState("");
+  // An empty saved segment means "all mentions in this topic". Preserve it
+  // exactly: the old fallback silently changed a no-filter report to country=DE.
   const [conditions, setConditions] = useState<SegmentCondition[]>(
-    initialFilters && initialFilters.length > 0
-      ? initialFilters
-      : [defaultCondition()],
+    initialFilters ?? [],
   );
 
   const createMutation = useMutation({
@@ -307,14 +311,11 @@ export function ScheduledReportCreateForm({
       onError("Name is required.");
       return;
     }
-    if (conditions.length === 0) {
-      onError("At least one filter is required.");
-      return;
-    }
     createMutation.mutate({
       name: trimmed,
       topic_id: topicId,
       segment: conditions,
+      report_type: "intelligence_brief",
       active: true,
     });
   }
@@ -364,8 +365,8 @@ export function ScheduledReportCreateForm({
       </div>
 
       <p className="mt-3 font-mono text-[10px] text-text-tertiary">
-        Runs nightly over the previous day&rsquo;s enriched mentions and
-        keeps a daily history.
+        Runs nightly as an intelligence brief. Low-volume days accumulate
+        into the next eligible run, and every attempt stays in history.
       </p>
 
       <div className="mt-3 flex items-center justify-end gap-2">

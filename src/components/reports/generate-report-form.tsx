@@ -5,7 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Play, X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
-import type { SegmentCondition } from "@/lib/types";
+import type { ReportType, SegmentCondition } from "@/lib/types";
+import { DEFAULT_REPORT_TYPE } from "@/lib/report-view";
 import { ALL_ISO2, countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { Button } from "@/components/ui/button";
 import { SegmentFilterBuilder } from "@/components/reports/segment-filter-builder";
@@ -59,6 +60,7 @@ export function GenerateReportForm({
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [customFrom, setCustomFrom] = useState(prefillDateFrom ?? "");
   const [customTo, setCustomTo] = useState(prefillDateTo ?? "");
+  const [reportType, setReportType] = useState<ReportType>(DEFAULT_REPORT_TYPE);
   const [showSchedule, setShowSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleSaved, setScheduleSaved] = useState(false);
@@ -80,6 +82,11 @@ export function GenerateReportForm({
     () => resolveRange({ range, customFrom, customTo }),
     [range, customFrom, customTo],
   );
+  const invalidCustomRange =
+    range === "custom" &&
+    Boolean(previewRange.dateFrom) &&
+    Boolean(previewRange.dateTo) &&
+    previewRange.dateFrom >= previewRange.dateTo;
 
   const scopeBody = isGroup
     ? { group_id: scope.id }
@@ -93,6 +100,7 @@ export function GenerateReportForm({
       effectiveFilters,
       previewRange.dateFrom,
       previewRange.dateTo,
+      reportType,
     ],
     queryFn: () =>
       apiClient.previewReport({
@@ -100,8 +108,10 @@ export function GenerateReportForm({
         filters: effectiveFilters,
         date_from: previewRange.dateFrom || undefined,
         date_to: previewRange.dateTo || undefined,
+        report_type: reportType,
       }),
     staleTime: 60_000,
+    enabled: !invalidCustomRange,
   });
 
   const mutation = useMutation({
@@ -112,6 +122,7 @@ export function GenerateReportForm({
         filters: effectiveFilters,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
+        report_type: reportType,
       });
     },
     onSuccess: (report) => {
@@ -126,6 +137,28 @@ export function GenerateReportForm({
         New report
       </h3>
 
+      <div>
+        <span className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
+          Format
+        </span>
+        <div className="grid grid-cols-2 gap-px bg-border">
+          <ReportTypeButton
+            type="intelligence_brief"
+            selected={reportType === "intelligence_brief"}
+            onSelect={setReportType}
+            label="Intelligence brief"
+            description="Decision-first, structured"
+          />
+          <ReportTypeButton
+            type="executive"
+            selected={reportType === "executive"}
+            onSelect={setReportType}
+            label="Executive"
+            description="Legacy narrative"
+          />
+        </div>
+      </div>
+
       <CountryMultiSelect value={countries} onChange={setCountries} />
 
       <SegmentFilterBuilder
@@ -135,9 +168,9 @@ export function GenerateReportForm({
       />
 
       <div>
-        <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
+        <span className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
           Date range
-        </label>
+        </span>
         <div className="inline-flex flex-wrap items-center gap-0.5 border border-border bg-card p-0.5">
           {RANGES.map((r) => {
             const isActive = r.key === range;
@@ -146,6 +179,7 @@ export function GenerateReportForm({
                 key={r.key}
                 type="button"
                 onClick={() => setRange(r.key)}
+                aria-pressed={isActive}
                 className={cn(
                   "px-2.5 py-1 font-mono text-[11px] leading-none transition-colors",
                   isActive
@@ -166,10 +200,11 @@ export function GenerateReportForm({
         {range === "custom" && (
           <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
+              <label htmlFor="report-date-from" className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
                 From
               </label>
               <input
+                id="report-date-from"
                 type="datetime-local"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
@@ -177,10 +212,11 @@ export function GenerateReportForm({
               />
             </div>
             <div>
-              <label className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
+              <label htmlFor="report-date-to" className="mb-1 block font-mono text-[10px] uppercase text-text-tertiary">
                 To
               </label>
               <input
+                id="report-date-to"
                 type="datetime-local"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
@@ -188,6 +224,11 @@ export function GenerateReportForm({
               />
             </div>
           </div>
+        )}
+        {invalidCustomRange && (
+          <p className="mt-1.5 font-mono text-[10px] text-destructive">
+            End must be later than start.
+          </p>
         )}
       </div>
 
@@ -202,7 +243,11 @@ export function GenerateReportForm({
           type="button"
           size="sm"
           onClick={() => mutation.mutate()}
-          disabled={mutation.isPending || preview.data?.n_mentions === 0}
+          disabled={
+            mutation.isPending ||
+            invalidCustomRange ||
+            preview.data?.n_mentions === 0
+          }
         >
           <Play className="mr-1 size-3" />
           {mutation.isPending ? "Generating…" : "Generate now"}
@@ -261,6 +306,35 @@ export function GenerateReportForm({
         </p>
       )}
     </div>
+  );
+}
+
+function ReportTypeButton({
+  type,
+  selected,
+  onSelect,
+  label,
+  description,
+}: {
+  type: ReportType;
+  selected: boolean;
+  onSelect: (type: ReportType) => void;
+  label: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={() => onSelect(type)}
+      className={cn(
+        "flex min-h-14 flex-col items-start justify-center bg-card px-3 py-2 text-left transition-colors",
+        selected ? "bg-elevated text-foreground" : "text-text-tertiary hover:bg-elevated/60",
+      )}
+    >
+      <span className="font-mono text-[11px]">{label}</span>
+      <span className="mt-0.5 text-[10px] text-text-tertiary">{description}</span>
+    </button>
   );
 }
 
@@ -358,14 +432,14 @@ function PreviewLine({
   return (
     <p className="font-mono text-[11px] text-text-secondary">
       <span className={cn(loading && "opacity-50")}>
-        ≈ <span className="text-foreground">{data.n_mentions.toLocaleString()}</span>{" "}
+        ≈ <span className="text-foreground">{formatNumber(data.n_mentions)}</span>{" "}
         mentions ·{" "}
-        <span className="text-foreground">{data.n_domains.toLocaleString()}</span>{" "}
+        <span className="text-foreground">{formatNumber(data.n_domains)}</span>{" "}
         domains in scope
         {data.n_relevant > data.n_mentions && (
           <span className="text-text-tertiary">
             {" "}
-            (of {data.n_relevant.toLocaleString()} collected)
+            (of {formatNumber(data.n_relevant)} collected)
           </span>
         )}
         {" · "}
@@ -418,7 +492,9 @@ function localInputToUtcIso(value: string): string {
 function describeRange(range: RangeKey): string {
   const preset = RANGES.find((r) => r.key === range);
   if (!preset || preset.hours === null) return "";
-  const to = new Date();
-  const from = new Date(to.getTime() - preset.hours * 60 * 60 * 1000);
-  return `${from.toLocaleDateString()} – ${to.toLocaleDateString()}`;
+  return `Previous ${preset.label}, ending when generated (UTC)`;
+}
+
+function formatNumber(value: number): string {
+  return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }

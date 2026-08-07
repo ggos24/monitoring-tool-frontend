@@ -4,6 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 
 import { apiClient } from "@/lib/api";
+import {
+  formatReportFilter,
+  formatReportWindow,
+  formatUtcDateTime,
+  reportFilters,
+  reportTypeLabel,
+  resolveReportType,
+} from "@/lib/report-view";
 import type { Report } from "@/lib/types";
 import type { ReportScopeSel } from "@/components/reports/scope-selector";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,11 +80,14 @@ export function ReportList({
               </span>
               <StatusBadge status={r.status} cached={r.cached} />
             </div>
-            <div className="mt-1 font-mono text-[11px] text-text-tertiary">
-              {r.n_mentions ?? 0} mentions · {summariseFilters(r.params)}
+            <div className="mt-1 font-mono text-[10px] text-text-secondary">
+              {reportTypeLabel(resolveReportType(r.report_type, r.params, r.aggregates))}
             </div>
             <div className="font-mono text-[10px] text-text-tertiary">
-              {new Date(r.created_at).toLocaleString()}
+              {r.n_mentions ?? 0} mentions · {formatReportWindow(r.params)}
+            </div>
+            <div className="truncate font-mono text-[10px] text-text-tertiary">
+              {summariseFilters(r.params)} · {formatUtcDateTime(r.created_at)}
             </div>
           </Link>
         </li>
@@ -113,10 +124,8 @@ function StatusBadge({
 }
 
 function summariseFilters(params: Record<string, unknown>): string {
-  const filters = Array.isArray(params.filters) ? params.filters : [];
+  const filters = reportFilters(params);
   if (filters.length === 0) return "no filters";
-  return (filters as Array<Record<string, unknown>>)
-    .map((c) => `${c.field}${c.op}${JSON.stringify(c.value)}`)
-    .slice(0, 3)
-    .join(" · ");
+  const visible = filters.slice(0, 2).map(formatReportFilter).join(" · ");
+  return filters.length > 2 ? `${visible} · +${filters.length - 2}` : visible;
 }

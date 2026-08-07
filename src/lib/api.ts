@@ -371,6 +371,9 @@ export const apiClient = {
       `/api/digest-definitions/${digest_definition_id}/results?limit=${limit}`,
     ),
 
+  getDigestResult: (result_id: number) =>
+    api<DigestResultDetail>(`/api/digest-definitions/results/${result_id}`),
+
   latestDigestResult: (digest_definition_id: number) =>
     api<DigestResultDetail>(
       `/api/digest-definitions/${digest_definition_id}/results/latest`,

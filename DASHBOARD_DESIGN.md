@@ -252,6 +252,72 @@ A configuration-style page reachable from the TopBar. Layout follows the Setting
 5. **Other sources** card (small `SOON` badge): "GDELT, Google News and Firehose configuration UI is still coming soon." — RSS is removed from this list.
 6. Footer.
 
+## Page composition (Reports = `/reports`) — Report V2
+
+Reports use the same dark, sharp, information-dense visual system, but the
+reading order is decision-first rather than chart-first. New ad-hoc and
+scheduled definitions request `report_type="intelligence_brief"` by default;
+the legacy executive format remains selectable and renderable.
+
+1. **Context header:** report/run id, topic or group label, exact UTC window,
+   readable filter chips, report type, generated timestamp, source snapshot,
+   cache/model metadata. Scheduled-run URLs carry `digest_result_id` so a run
+   survives refresh and can be shared.
+2. **Deterministic metric grid:** analyzed mentions, narrative count, embedding
+   cluster coverage, and leading-narrative mention share. These values come
+   from stored counts/scores, never generated prose.
+3. **Structured brief:** Bottom line → numbered BLUF bullets → What changed →
+   Watchlist → Caveats. If a persisted report has no structured V2 fields,
+   render its narrative in an explicitly labelled unstructured legacy block.
+4. **Top narratives:** order by deterministic prominence, render five by
+   default, and collapse the remainder behind an explicit count. Each card
+   shows name/claim, mention and reach share, volume, outlets, mean reach,
+   lifecycle vs the prior comparable run, within-window momentum, action
+   status/reason, source-origin countries, and stance only when it is
+   semantically valid for the scope.
+
+   The card has two layers. The **scan layer** is always visible: rank, prose
+   name, claim, lifecycle/momentum/stance/contested badges, action cue, metric
+   strip, source origins. The **detail layer** — narrative prose, contested
+   text, evidence, outlet list — sits behind a per-card toggle that names what
+   is inside (`Detail · 5 evidence`), plus a section-level Expand/Collapse
+   detail. That keeps a five-narrative report near one screen (~300px per card
+   instead of ~950px), so the reader compares narratives first and drills in
+   second.
+
+   The heading is the **prose `name`**, never the `handle`: the handle is a
+   machine slug whose delimiter is not even consistent between model outputs.
+   It renders as a small secondary identifier line. "Contested" stays in the
+   scan layer as a badge even though its text is in the detail layer — that a
+   narrative is disputed is a scanning signal.
+
+   Any card using `content-visibility` MUST also set `contain-intrinsic-size`.
+   Without it, off-screen cards collapse to padding height and the scrollbar
+   jumps around while scrolling the list.
+5. **Evidence:** render persisted `evidence_refs` with outlet, headline/date and
+   a safe external source link. Add quotation marks only for
+   `direct_quote + verified_verbatim=true`; paraphrases/headlines must never
+   look like direct quotations. Legacy extracted text is visibly marked as
+   unverifiable when no source reference was stored.
+6. **Confidence and data quality:** show deterministic High / Moderate / Low
+   data-quality grade, score, rubric reasons and component metrics separately
+   from model synthesis confidence. Explain the current enrichment gate and
+   excluded counts. Selected-scope analysis uses relevant selected mentions as
+   its denominator; corpus enrichment is a separate metric.
+7. **Explore breakdowns:** country/outlet/tier/timeline tables are collapsed by
+   default. Vocabulary is **stance**, never sentiment. Geography is labelled
+   source origin. Cross-target group summaries do not show aggregate stance.
+
+Scheduled run history includes success, partial, failed and skipped attempts.
+Low-volume days accumulate into the next eligible run. The detail header uses
+the effective multi-day window from run provenance when present, and surfaces
+run reason/error plus delivery status instead of presenting every row as a
+successful daily artifact.
+
+Country labels used by report filters/cards come from a checked-in English
+table, not runtime `Intl.DisplayNames`; this makes server and browser markup
+deterministic across ICU/CLDR versions and prevents hydration mismatches.
+
 ## Responsive behavior
 
 - 1024px+: full layout as described.

@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
@@ -10,7 +11,12 @@ import { ReportList } from "@/components/reports/report-list";
 import { GenerateReportForm } from "@/components/reports/generate-report-form";
 import { ScheduledReports } from "@/components/reports/scheduled-reports";
 import { ScopeSelector, type ReportScopeSel } from "@/components/reports/scope-selector";
-import type { DigestResultDetail, SegmentCondition } from "@/lib/types";
+import type {
+  DigestDefinition,
+  DigestResultDetail,
+  SegmentCondition,
+} from "@/lib/types";
+import { apiClient } from "@/lib/api";
 
 // One Reports tab. Scope = a single TOPIC or a GROUP (union of topics).
 // Generate-now → POST /api/reports/segment (ad-hoc, cached); scheduled
@@ -29,6 +35,7 @@ export default function ReportsPage() {
 function ReportsInner() {
   const search = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const topicId = parseId(search.get("topic_id"));
   const groupId = parseId(search.get("group_id"));
@@ -39,31 +46,48 @@ function ReportsInner() {
         ? { kind: "topic", id: topicId }
         : null;
   const reportId = parseInt(search.get("report_id") ?? "", 10) || null;
-
-  // Selected scheduled-run — kept in state (no single-result GET on the
-  // backend; the object comes from the run-history list's query cache).
-  const [selectedRun, setSelectedRun] = useState<DigestResultDetail | null>(
-    null,
+  const digestResultId = parseId(search.get("digest_result_id"));
+  const digestResultQuery = useQuery({
+    queryKey: ["digest-result", digestResultId],
+    queryFn: () => apiClient.getDigestResult(digestResultId as number),
+    enabled: digestResultId !== null,
+  });
+  const digestDefinitionsQuery = useQuery({
+    queryKey: ["digest-definitions", "all"],
+    queryFn: () => apiClient.digestDefinitions(),
+    enabled: digestResultId !== null,
+  });
+  const selectedDefinition = digestDefinitionsQuery.data?.find(
+    (definition) =>
+      definition.id === digestResultQuery.data?.digest_definition_id,
   );
 
   const scopeParam = () =>
     scope ? `${scope.kind === "group" ? "group_id" : "topic_id"}=${scope.id}` : "";
 
   const setScope = (next: ReportScopeSel) => {
-    setSelectedRun(null);
     const key = next.kind === "group" ? "group_id" : "topic_id";
     router.replace(`/reports?${key}=${next.id}`);
   };
 
   const selectReport = (newId: number) => {
     const parts = [scopeParam(), `report_id=${newId}`].filter(Boolean);
-    setSelectedRun(null);
     router.replace(`/reports?${parts.join("&")}`);
   };
 
-  const selectRun = (run: DigestResultDetail) => {
-    setSelectedRun(run);
-    router.replace(`/reports?${scopeParam()}`);
+  const selectRun = (run: DigestResultDetail, definition: DigestDefinition) => {
+    queryClient.setQueryData(["digest-result", run.id], run);
+    queryClient.setQueryData<DigestDefinition[]>(
+      ["digest-definitions", "all"],
+      (current) => {
+        if (!current) return [definition];
+        return current.some((item) => item.id === definition.id)
+          ? current
+          : [...current, definition];
+      },
+    );
+    const parts = [scopeParam(), `digest_result_id=${run.id}`].filter(Boolean);
+    router.replace(`/reports?${parts.join("&")}`);
   };
 
   const prefillFilters = parseFiltersFromSearch(search);
@@ -112,14 +136,36 @@ function ReportsInner() {
               {scope.kind === "topic" && (
                 <ScheduledReports
                   topicId={scope.id}
-                  selectedResultId={selectedRun?.id ?? null}
+                  selectedResultId={digestResultId}
                   onSelectResult={selectRun}
                 />
               )}
             </aside>
             <section className="lg:col-span-8 xl:col-span-9">
-              {selectedRun !== null ? (
-                <DigestResultView result={selectedRun} />
+              {digestResultId !== null &&
+              (digestResultQuery.isLoading || digestDefinitionsQuery.isLoading) ? (
+                <div className="border border-dashed border-border p-12 text-center font-mono text-xs text-text-tertiary">
+                  Loading scheduled run…
+                </div>
+              ) : digestResultId !== null && digestResultQuery.error ? (
+                <div className="border border-destructive/40 bg-destructive/5 p-4 font-mono text-xs text-destructive">
+                  Failed to load scheduled run: {(digestResultQuery.error as Error).message}
+                </div>
+              ) : digestResultId !== null && digestDefinitionsQuery.error ? (
+                <div className="border border-destructive/40 bg-destructive/5 p-4 font-mono text-xs text-destructive">
+                  Failed to load scheduled definition: {(digestDefinitionsQuery.error as Error).message}
+                </div>
+              ) : digestResultId !== null &&
+                digestResultQuery.data &&
+                !selectedDefinition ? (
+                <div className="border border-destructive/40 bg-destructive/5 p-4 font-mono text-xs text-destructive">
+                  Scheduled definition #{digestResultQuery.data.digest_definition_id} is unavailable.
+                </div>
+              ) : digestResultQuery.data && selectedDefinition ? (
+                <DigestResultView
+                  result={digestResultQuery.data}
+                  definition={selectedDefinition}
+                />
               ) : reportId !== null ? (
                 <ReportDetail reportId={reportId} />
               ) : (
