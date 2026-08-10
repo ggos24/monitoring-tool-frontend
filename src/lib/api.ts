@@ -11,6 +11,7 @@ import type {
   JobRun,
   Mention,
   MentionsListResponse,
+  NarrativesResponse,
   Overview,
   PromptTemplateOut,
   Report,
@@ -270,6 +271,27 @@ export const apiClient = {
   overview: (scope: ScopeParam) => {
     const qs = scopeQuery(scope);
     return api<Overview>(`/api/stats/overview?${qs}`);
+  },
+
+  narratives: (params: {
+    scope: ScopeParam;
+    series_key?: string | null;
+    limit_periods?: number;
+    limit_narratives?: number;
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    const qs = scopeQuery(params.scope);
+    if (params.series_key) qs.set("series_key", params.series_key);
+    if (params.limit_periods !== undefined) {
+      qs.set("limit_periods", String(params.limit_periods));
+    }
+    if (params.limit_narratives !== undefined) {
+      qs.set("limit_narratives", String(params.limit_narratives));
+    }
+    if (params.date_from) qs.set("date_from", params.date_from);
+    if (params.date_to) qs.set("date_to", params.date_to);
+    return api<NarrativesResponse>(`/api/narratives?${qs}`);
   },
 
   domainScoring: (domain: string) =>

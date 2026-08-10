@@ -10,7 +10,7 @@ import { DigestResultView, ReportDetail } from "@/components/reports/report-deta
 import { ReportList } from "@/components/reports/report-list";
 import { GenerateReportForm } from "@/components/reports/generate-report-form";
 import { ScheduledReports } from "@/components/reports/scheduled-reports";
-import { ScopeSelector, type ReportScopeSel } from "@/components/reports/scope-selector";
+import { ScopeSelector, type ScopeSelection } from "@/components/dashboard/scope-selector";
 import type {
   DigestDefinition,
   DigestResultDetail,
@@ -39,7 +39,7 @@ function ReportsInner() {
 
   const topicId = parseId(search.get("topic_id"));
   const groupId = parseId(search.get("group_id"));
-  const scope: ReportScopeSel | null =
+  const scope: ScopeSelection | null =
     groupId !== null
       ? { kind: "group", id: groupId }
       : topicId !== null
@@ -65,7 +65,7 @@ function ReportsInner() {
   const scopeParam = () =>
     scope ? `${scope.kind === "group" ? "group_id" : "topic_id"}=${scope.id}` : "";
 
-  const setScope = (next: ReportScopeSel) => {
+  const setScope = (next: ScopeSelection) => {
     const key = next.kind === "group" ? "group_id" : "topic_id";
     router.replace(`/reports?${key}=${next.id}`);
   };

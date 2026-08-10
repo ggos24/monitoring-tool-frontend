@@ -13,7 +13,7 @@ import {
   resolveReportType,
 } from "@/lib/report-view";
 import type { Report } from "@/lib/types";
-import type { ReportScopeSel } from "@/components/reports/scope-selector";
+import type { ScopeSelection } from "@/components/dashboard/scope-selector";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export function ReportList({
   scope,
   selectedId,
 }: {
-  scope: ReportScopeSel;
+  scope: ScopeSelection;
   selectedId: number | null;
 }) {
   const scopeQuery =

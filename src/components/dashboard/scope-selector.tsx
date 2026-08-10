@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, Folder, Hash } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
+import type { ScopeSelection } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -16,9 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export type ReportScopeSel =
-  | { kind: "topic"; id: number }
-  | { kind: "group"; id: number };
+export type { ScopeSelection } from "@/lib/types";
 
 // Combined picker for the Reports tab: groups first (a folder of topics),
 // then individual topics. Selecting either drives the report scope —
@@ -27,8 +26,8 @@ export function ScopeSelector({
   value,
   onChange,
 }: {
-  value: ReportScopeSel | null;
-  onChange: (scope: ReportScopeSel) => void;
+  value: ScopeSelection | null;
+  onChange: (scope: ScopeSelection) => void;
 }) {
   const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
   const groupsQuery = useQuery({

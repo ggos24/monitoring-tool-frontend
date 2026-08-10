@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Settings2 } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
@@ -14,16 +15,13 @@ type NavItem = {
   href: string;
   routable?: boolean;
   info?: boolean;
+  preserveScope?: boolean;
 };
 
-const NAV: NavItem[] = [
+const PRIMARY_NAV: NavItem[] = [
   { label: "Overview", href: "/", routable: true },
-  // "Mentions" is hidden for now — the standalone mentions view isn't in
-  // use yet. Kept here (commented) so it can be restored without rework.
-  // { label: "Mentions", href: "#" },
-  { label: "Sources", href: "/sources", routable: true },
-  { label: "Reports", href: "/reports", routable: true },
-  { label: "Settings", href: "/settings", routable: true },
+  { label: "Reports", href: "/reports", routable: true, preserveScope: true },
+  { label: "Narratives", href: "/narratives", routable: true, preserveScope: true },
 ];
 
 export function TopBar({ scope }: { scope: ScopeParam | null }) {
@@ -47,17 +45,19 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
     nextSyncAt: data?.next_sync_estimate ?? null,
     now,
   });
+  const settingsActive =
+    pathname === "/sources" || pathname.startsWith("/settings");
 
   return (
     <header className="sticky top-0 z-30 h-14 border-b border-border bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5">
+      <div className="mx-auto grid h-full max-w-[1440px] grid-cols-[1fr_auto_1fr] items-center px-4 md:px-5">
         <div className="flex items-center gap-2">
           <div className="size-2 bg-success" aria-hidden />
           <span className="font-mono text-sm text-foreground">u24-pulse</span>
         </div>
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => {
+          {PRIMARY_NAV.map((item) => {
             const isActive = item.routable && pathname === item.href;
             const className = cn(
               "px-3 py-1.5 font-mono text-xs transition-colors",
@@ -73,7 +73,11 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
               </>
             );
             return item.routable ? (
-              <Link key={item.label} href={item.href} className={className}>
+              <Link
+                key={item.label}
+                href={item.preserveScope ? scopedHref(item.href, scope) : item.href}
+                className={className}
+              >
                 {inner}
               </Link>
             ) : (
@@ -84,16 +88,44 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
           })}
         </nav>
 
-        <div className="flex items-center gap-2 font-mono text-[11px] text-text-tertiary">
-          <span
-            className="inline-block size-1.5 animate-pulse bg-success"
-            aria-hidden
-          />
-          <span className="hidden sm:inline">{status}</span>
+        <div className="flex items-center justify-self-end font-mono text-[11px] text-text-tertiary">
+          <div className="flex items-center gap-2 px-2 sm:px-3">
+            <span
+              className="inline-block size-1.5 animate-pulse bg-success"
+              aria-hidden
+            />
+            <span className="hidden lg:inline">{status}</span>
+          </div>
+          <Link
+            href="/settings"
+            aria-current={settingsActive ? "page" : undefined}
+            aria-label="Settings"
+            title="Settings"
+            className={cn(
+              "flex h-8 items-center gap-1.5 border-l border-border px-2.5 transition-colors sm:px-3",
+              settingsActive
+                ? "bg-elevated text-foreground"
+                : "text-text-tertiary hover:text-foreground",
+            )}
+          >
+            <Settings2 className="size-3.5" aria-hidden />
+            <span className="hidden sm:inline">Settings</span>
+          </Link>
         </div>
       </div>
     </header>
   );
+}
+
+function scopedHref(pathname: string, scope: ScopeParam | null) {
+  if (scope === null) return pathname;
+  if (typeof scope === "number") {
+    return { pathname, query: { topic_id: String(scope) } };
+  }
+  if ("group_id" in scope) {
+    return { pathname, query: { group_id: String(scope.group_id) } };
+  }
+  return { pathname, query: { topic_id: String(scope.topic_id) } };
 }
 
 function renderStatus({

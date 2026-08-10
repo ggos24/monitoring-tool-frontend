@@ -1,5 +1,6 @@
 import { Footer } from "@/components/dashboard/footer";
 import { TopBar } from "@/components/dashboard/top-bar";
+import { SettingsNav } from "@/components/settings/settings-nav";
 import { DomainCountryOverride } from "@/components/sources/domain-country-override";
 import { RssFeedsEditor } from "@/components/sources/rss-feeds-editor";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -17,6 +18,8 @@ export default function SourcesPage() {
             Manage source integrations and domain attribution.
           </p>
         </header>
+
+        <SettingsNav active="sources" />
 
         <DomainCountryOverride />
 

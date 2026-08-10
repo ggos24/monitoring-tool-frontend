@@ -73,9 +73,10 @@ The dashboard composes from these primitives (build them as reusable React compo
 ### 1. TopBar
 - Height 56px, sticky at top with backdrop blur on scroll.
 - Left: logo dot (8×8 emerald square) + "u24-pulse" wordmark in monospace.
-- Center: nav links — Overview (`/`), Mentions (stub `#`), Sources (`/sources`), Insights ⓘ (stub `#`), Settings (`/settings`). Active link has `bg-muted` background, others are text-faint with hover to text-secondary. Active state determined by `usePathname()`.
-- Right: live status indicator: pulsing 6×6 emerald square + "Live · last sync 2m ago" in monospace text-faint.
-- Mobile (<780px): hide nav, keep logo + status.
+- Center: the three primary product destinations only — Overview (`/`), Reports (`/reports`), Narratives (`/narratives`) — in that order. Active link has `bg-elevated` background; the other links use tertiary text with a foreground hover. Reports and Narratives preserve the selected topic/group scope in their URLs.
+- Right: live status indicator followed by a separated Settings entry (`/settings`). Settings is active for both `/settings` and the subordinate Sources configuration route (`/sources`). Sources never appears in the primary navigation.
+- Mobile (<780px): hide the center navigation, keep the logo, compact live indicator, and an accessible Settings icon/label on the right.
+- Settings pages use a local rectangular subnavigation with `General` and `Sources`. This keeps operational source configuration discoverable without presenting it as a primary product area.
 
 ### 2. TopicSelector (dropdown)
 - Trigger button: bg-elevated, border-strong, padding 8/12, monospace prefix "topic:" (text-faint), topic name (medium weight), count in parens (text-faint mono), chevron-down icon.
@@ -221,11 +222,12 @@ Vertical stack from top to bottom:
 
 ## Page composition (Sources = `/sources`)
 
-A configuration-style page reachable from the TopBar. Layout follows the Settings page conventions: TopBar + `<main>` with H1 `font-mono uppercase tracking-[0.1em]` + description + stacked `<section>` cards with border-zinc-800.
+A configuration-style page reachable from the local Settings subnavigation, not from the primary TopBar navigation. The TopBar Settings entry remains active on this route. Layout follows the Settings page conventions: TopBar + `<main>` with H1 `font-mono uppercase tracking-[0.1em]` + description + `General / Sources` local navigation + stacked `<section>` cards with the shared border token.
 
 1. TopBar (sticky)
 2. Page header: "Sources" + "Manage domain attribution and source integrations."
-3. **DomainCountryOverride** card:
+3. Local Settings navigation with `Sources` active.
+4. **DomainCountryOverride** card:
    - KickerLabel "Domain country override" + short description.
    - Free-text input (mono 11px, h-8, magnifying-glass prefix) + "Look up" submit button. Enter on the input triggers the same lookup.
    - Input normalization strips `http(s)://`, `www.`, path. Validated against a basic FQDN regex before fetching.
@@ -235,7 +237,7 @@ A configuration-style page reachable from the TopBar. Layout follows the Setting
    - Checkbox "Save as Unknown (force unresolved bucket)" disables the picker and sends `country_iso2: null` to PATCH.
    - Inline hint after the actions: "Manual overrides are stored as `provider=manual_admin` and may be replaced by the next ingestion tick if GDELT also returns attribution for this domain. For a permanent fix, contact engineering to add the domain to `domain_country_overrides.csv`."
    - All admin writes go through `/api/admin/country/[domain]` (Next route handler injecting `X-Admin-Key`). On success, invalidates `["sources"]`, `["countries"]`, `["sources-count"]` query caches so the Overview reflects the new attribution.
-4. **RssFeedsEditor** card (`components/sources/rss-feeds-editor.tsx`):
+5. **RssFeedsEditor** card (`components/sources/rss-feeds-editor.tsx`):
    - KickerLabel "RSS feeds" + short description + `+ New feed` button (top-right, white-on-black).
    - List of feeds (`GET /api/rss-feeds`), ordered `is_active DESC, created_at DESC` — never re-sorted client-side. Per row:
      - **Health dot + label** derived from `is_active` + `last_polled_at` + `last_success_at` + `consecutive_failures`:
@@ -249,8 +251,8 @@ A configuration-style page reachable from the TopBar. Layout follows the Setting
    - Empty state: dashed-border card with "Add first feed" button + 5 publisher suggestion chips (BBC World / Guardian World / AP Top News / DW English / Al Jazeera). Chips click → opens Add form with the suggestion pre-filled.
    - Add form: inline expansion (no modals — design system has zero rounded corners and no shadows; modals stand out as foreign). Client-side URL validation on blur; 409 → "This feed URL already exists"; 422 → FastAPI `detail` extracted via the improved `api<T>` helper.
    - Optimistic updates throughout: create prepends, update replaces in place, delete filters with rollback on error.
-5. **Other sources** card (small `SOON` badge): "GDELT, Google News and Firehose configuration UI is still coming soon." — RSS is removed from this list.
-6. Footer.
+6. **Other sources** card (small `SOON` badge): "GDELT, Google News and Firehose configuration UI is still coming soon." — RSS is removed from this list.
+7. Footer.
 
 ## Page composition (Reports = `/reports`) — Report V2
 
@@ -317,6 +319,41 @@ successful daily artifact.
 Country labels used by report filters/cards come from a checked-in English
 table, not runtime `Intl.DisplayNames`; this makes server and browser markup
 deterministic across ICU/CLDR versions and prevents hydration mismatches.
+
+## Page composition (Narratives = `/narratives`)
+
+Narratives is the historical monitoring layer over comparable report runs.
+Reports remain point-in-time artifacts; Narratives links their persisted
+cluster snapshots into an operator-readable series without rewriting the
+underlying reports.
+
+1. **Context controls:** existing topic/group `ScopeSelector`, comparable
+   series selector, history range, and last-observed timestamp. Scope, series,
+   view, and selected narrative remain in the URL so the state is shareable.
+2. **Change summary:** deterministic counts for newly observed, growing,
+   declining, stable, and not observed narratives. Use `newly observed` rather
+   than claiming objectively new, and `not observed` rather than disappeared.
+3. **Views:** `Evolution` is the default and renders stable narrative lanes
+   across analytical periods. `List` is a sortable operational fallback and
+   the primary mobile presentation. `Landscape` is reserved for a later
+   evidence-backed relation endpoint; do not draw arbitrary similarity edges.
+4. **Evolution encoding:** one row per canonical `narrative_id`; X is the
+   analytical period; point size is mention share; a missing point is an
+   honest gap. Selected and related state must never rely on colour alone.
+5. **Inspector:** canonical/current title, claim, lifecycle and momentum,
+   current deterministic metrics, `What changed`, observation history,
+   verified evidence, relation rationale when available, and links back to
+   originating reports. Corpus quality, identity-match confidence, and
+   relation confidence are separate concepts.
+6. **Payload discipline:** the overview endpoint is slim and excludes
+   centroids, member mention IDs, and full evidence blobs. Detail evidence is
+   limited to the selected/current observation. Historical ordering uses the
+   analytical period, never report creation time.
+
+Empty states are explicit: no runs offers a link to Reports; one run says the
+baseline is captured; a current empty period keeps historical narratives
+visible as `not observed`. Failed or partial periods appear as gaps rather than
+interpolated data.
 
 ## Responsive behavior
 

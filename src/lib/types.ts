@@ -636,6 +636,10 @@ export type SegmentReportRequest = {
 // number is shorthand for {topic_id} (back-compat with existing callers).
 export type ScopeParam = number | { topic_id: number } | { group_id: number };
 
+export type ScopeSelection =
+  | { kind: "topic"; id: number }
+  | { kind: "group"; id: number };
+
 // Pre-flight scope estimate (POST /api/reports/preview) — what a report
 // over the current scope+filters+range would analyze, before running it.
 export type ReportPreview = {
@@ -708,6 +712,105 @@ export type DigestResultProvenance = {
     [key: string]: unknown;
   };
   [key: string]: unknown;
+};
+
+// Historical narrative ledger ------------------------------------------
+
+export type NarrativeSeriesSource = "report" | "digest";
+export type NarrativeSeriesCadence = "day" | "fixed" | "unbounded" | "legacy";
+export type NarrativeIdentitySource = "persisted" | "legacy_fallback";
+export type NarrativeObservationStatus =
+  | "new"
+  | "returning"
+  | "not_observed"
+  | "unknown";
+export type NarrativeObservationDirection =
+  | "new"
+  | "growing"
+  | "declining"
+  | "stable"
+  | "unknown"
+  | "not_observed";
+
+export type NarrativeSeries = {
+  series_key: string;
+  source: NarrativeSeriesSource;
+  label: string;
+  topic_ids: number[];
+  group_id: number | null;
+  report_type: string;
+  filters: Array<Record<string, unknown>>;
+  cadence: NarrativeSeriesCadence;
+  window_seconds: number | null;
+  comparable: boolean;
+  period_count: number;
+  first_period_start: string | null;
+  latest_period_end: string | null;
+};
+
+export type NarrativePeriod = {
+  period_start: string;
+  period_end: string;
+  artifact_type: NarrativeSeriesSource;
+  artifact_id: number;
+  n_mentions: number;
+};
+
+export type NarrativeCountryCount = {
+  country: string;
+  count: number;
+};
+
+export type NarrativeEvidenceRef = {
+  mention_id: number;
+  url: string;
+  domain: string | null;
+  title: string | null;
+  published_at: string | null;
+  text: string;
+  evidence_type: ReportEvidenceRef["evidence_type"];
+  verified_verbatim: boolean;
+};
+
+export type NarrativeObservation = {
+  period_start: string;
+  period_end: string;
+  status: NarrativeObservationStatus;
+  direction: NarrativeObservationDirection;
+  match_score: number | null;
+  share_of_voice: number | null;
+  reach_sov: number | null;
+  prominence: number | null;
+  n_mentions: number | null;
+  n_publishers: number | null;
+  momentum: ClusterMomentumTag | null;
+  mean_source_score: number | null;
+  mean_reach_score: number | null;
+  propaganda_share: number | null;
+  countries: NarrativeCountryCount[];
+  top_domains: string[];
+  evidence_refs: NarrativeEvidenceRef[];
+};
+
+export type NarrativeSummary = {
+  narrative_id: string;
+  identity_source: NarrativeIdentitySource;
+  name: string;
+  claim: string | null;
+  first_observed_at: string;
+  last_observed_at: string;
+  observation_count: number;
+  current: NarrativeObservation | null;
+  observations: NarrativeObservation[];
+};
+
+export type NarrativesResponse = {
+  selected_series_key: string | null;
+  selected_series: NarrativeSeries | null;
+  available_series: NarrativeSeries[];
+  periods: NarrativePeriod[];
+  narratives: NarrativeSummary[];
+  truncated: boolean;
 };
 
 // Operator-visible LLM prompt — GET /api/settings/prompts. Editable

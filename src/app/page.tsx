@@ -9,8 +9,8 @@ import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
 import {
   ScopeSelector,
-  type ReportScopeSel,
-} from "@/components/reports/scope-selector";
+  type ScopeSelection,
+} from "@/components/dashboard/scope-selector";
 import type { ScopeParam } from "@/lib/types";
 import { formatDayLabel } from "@/lib/period";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
@@ -28,7 +28,7 @@ import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 
 export default function Home() {
-  const [scopeSel, setScopeSel] = useState<ReportScopeSel | null>(null);
+  const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
   const [days, setDays] = useState<number>(7);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function Home() {
   const noTopics =
     topicsQuery.isSuccess && (topicsQuery.data?.length ?? 0) === 0;
 
-  const handleSelectScope = (next: ReportScopeSel) => {
+  const handleSelectScope = (next: ScopeSelection) => {
     setScopeSel(next);
     setCountry(null);
     setSelectedDomain(null);

@@ -11,7 +11,7 @@ import { ALL_ISO2, countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { Button } from "@/components/ui/button";
 import { SegmentFilterBuilder } from "@/components/reports/segment-filter-builder";
 import { ScheduledReportCreateForm } from "@/components/reports/scheduled-reports";
-import type { ReportScopeSel } from "@/components/reports/scope-selector";
+import type { ScopeSelection } from "@/components/dashboard/scope-selector";
 import { cn } from "@/lib/utils";
 
 // Preset ranges — match the dashboard PeriodToggle vocabulary so users
@@ -35,7 +35,7 @@ export function GenerateReportForm({
   prefillDateTo,
   onCreated,
 }: {
-  scope: ReportScopeSel;
+  scope: ScopeSelection;
   prefillFilters: SegmentCondition[];
   prefillDateFrom: string | null;
   prefillDateTo: string | null;
