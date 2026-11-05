@@ -8,7 +8,7 @@ import { ChevronDown, Globe, Search } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
-import { dayRange } from "@/lib/period";
+import type { DateWindow } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
 type CountryItem = {
@@ -20,30 +20,26 @@ type CountryItem = {
 
 export function CountryFilter({
   scope,
-  days,
-  selectedDay,
+  win,
   value,
   onChange,
 }: {
   scope: ScopeParam | null;
-  days: number;
-  selectedDay: string | null;
+  win: DateWindow;
   value: string | null;
   onChange: (iso2: string | null) => void;
 }) {
   const enabled = scope !== null;
   const [open, setOpen] = useState(false);
-  const range = selectedDay ? dayRange(selectedDay) : null;
 
+  // Same key as TopGeoCard → one request for both.
   const { data, isLoading, error } = useQuery({
-    queryKey: ["countries", scope, days, range?.from ?? null, range?.to ?? null],
+    queryKey: ["countries", scope, win.from, win.to],
     queryFn: () =>
-      apiClient.countries(
-        scope!,
-        days,
-        100,
-        range ? { date_from: range.from, date_to: range.to } : undefined,
-      ),
+      apiClient.countries(scope!, win.days, 100, {
+        date_from: win.from,
+        date_to: win.to,
+      }),
     enabled,
     staleTime: 60_000,
   });

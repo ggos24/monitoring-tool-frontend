@@ -7,57 +7,64 @@ import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
-import { dayRange, formatDayLabel } from "@/lib/period";
+import type { DateWindow } from "@/lib/period";
+import { CountDelta } from "@/components/dashboard/top-geo-card";
 import type { CountryConfidence, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function SourcesList({
   scope,
-  days,
+  win,
+  compare,
   country,
-  selectedDay,
   source,
   selectedDomain,
   onToggleDomain,
 }: {
   scope: ScopeParam | null;
-  days: number;
+  win: DateWindow;
+  compare: boolean;
   country: string | null;
-  selectedDay: string | null;
   source: "all" | "gn" | "gdelt" | "firehose" | "rss";
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = scope !== null;
   const LIMIT = 25;
-  const range = selectedDay ? dayRange(selectedDay) : null;
+  const PREV_LIMIT = 100;
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: [
-      "sources",
-      scope,
-      days,
-      country,
-      source,
-      LIMIT,
-      range?.from ?? null,
-      range?.to ?? null,
-    ],
+    queryKey: ["sources", scope, country, source, LIMIT, win.from, win.to],
     queryFn: () =>
-      apiClient.topSources(scope!, days, LIMIT, country, {
+      apiClient.topSources(scope!, win.days, LIMIT, country, {
         source: source === "all" ? undefined : source,
-        date_from: range?.from,
-        date_to: range?.to,
+        date_from: win.from,
+        date_to: win.to,
       }),
     enabled,
   });
+
+  // Previous window, wider than the visible top so a domain that slipped
+  // out of the top N still gets a real previous count (not "new").
+  const previous = useQuery({
+    queryKey: ["sources", scope, country, source, PREV_LIMIT, win.prevFrom, win.prevTo],
+    queryFn: () =>
+      apiClient.topSources(scope!, win.days, PREV_LIMIT, country, {
+        source: source === "all" ? undefined : source,
+        date_from: win.prevFrom,
+        date_to: win.prevTo,
+      }),
+    enabled: enabled && compare,
+  });
+  const prevByDomain = previous.data
+    ? new Map(previous.data.map((s) => [s.domain, s.count] as const))
+    : null;
 
   return (
     <div className="flex h-full flex-col bg-card p-5">
       <KickerLabel>Top sources</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        Top {LIMIT} domains by mention count,{" "}
-        {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
+        Top {LIMIT} domains by mention count, {win.label}
       </div>
 
       {!enabled || isLoading ? (
@@ -83,7 +90,7 @@ export function SourcesList({
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 z-10 bg-card">
-              <ColumnHeader />
+              <ColumnHeader showDelta={prevByDomain !== null} />
             </div>
             <ul className="-mx-2">
               {data.map((s) => (
@@ -93,6 +100,8 @@ export function SourcesList({
                   count={s.count}
                   countryIso2={s.country_iso2 ?? null}
                   countryConfidence={s.country_confidence ?? null}
+                  previous={prevByDomain ? (prevByDomain.get(s.domain) ?? 0) : null}
+                  prevLabel={win.prevLabel}
                   isActive={s.domain === selectedDomain}
                   onToggle={onToggleDomain}
                 />
@@ -113,6 +122,8 @@ function SourceRow({
   count,
   countryIso2,
   countryConfidence,
+  previous,
+  prevLabel,
   isActive,
   onToggle,
 }: {
@@ -120,6 +131,8 @@ function SourceRow({
   count: number;
   countryIso2: string | null;
   countryConfidence: CountryConfidence | null;
+  previous: number | null;
+  prevLabel: string;
   isActive: boolean;
   onToggle: (domain: string) => void;
 }) {
@@ -160,8 +173,13 @@ function SourceRow({
             <CountryFlag iso2={countryIso2} confidence={countryConfidence} />
             <span className="truncate">{domain}</span>
           </span>
-          <span className="w-8 shrink-0 text-right font-mono text-xs font-medium text-foreground tabular-nums">
-            {count}
+          <span className="flex shrink-0 items-center gap-3">
+            <span className="w-8 text-right font-mono text-xs font-medium text-foreground tabular-nums">
+              {count}
+            </span>
+            {previous !== null && (
+              <CountDelta current={count} previous={previous} title={prevLabel} />
+            )}
           </span>
         </div>
       </button>
@@ -169,13 +187,16 @@ function SourceRow({
   );
 }
 
-function ColumnHeader() {
+function ColumnHeader({ showDelta }: { showDelta: boolean }) {
   const cls =
     "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground";
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <span className={cls}>Domain</span>
-      <span className={cn(cls, "w-8 text-right")}>Ment.</span>
+      <span className="flex shrink-0 items-baseline gap-3">
+        <span className={cn(cls, "w-8 text-right")}>Ment.</span>
+        {showDelta && <span className={cn(cls, "w-9 text-right")}>Δ</span>}
+      </span>
     </div>
   );
 }

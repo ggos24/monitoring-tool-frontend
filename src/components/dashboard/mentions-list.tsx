@@ -17,7 +17,7 @@ import type {
   ScopeParam,
   StanceLabel,
 } from "@/lib/types";
-import { effectiveRanges } from "@/lib/period";
+import type { DateWindow } from "@/lib/period";
 import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
@@ -63,27 +63,29 @@ const ENRICHED_OPTIONS: { key: EnrichedFilter; label: string }[] = [
 
 export function MentionsList({
   scope,
-  days,
+  win,
+  topicNames,
   domain,
   country,
-  selectedDay,
   source,
   onChangeSource,
   onClearDomain,
 }: {
   scope: ScopeParam | null;
-  days: number;
+  win: DateWindow;
+  /** id → short narrative name, for the per-article chips in group scope. */
+  topicNames: Map<number, string>;
   domain: string | null;
   country: string | null;
-  selectedDay: string | null;
   source: SourceFilter;
   onChangeSource: (v: SourceFilter) => void;
   onClearDomain: () => void;
 }) {
   const enabled = scope !== null;
-  // Same window as the KPIs and charts: the drilled-down day, or the
-  // selected rolling period (open-ended to now).
-  const { curFrom, curTo } = effectiveRanges(days, selectedDay);
+  // Same window as the KPIs and charts (drilled-down day included).
+  const curFrom = win.from;
+  const curTo = win.to;
+  const isGroup = typeof scope === "object" && scope !== null && "group_id" in scope;
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -103,8 +105,8 @@ export function MentionsList({
     scope,
     domain,
     country,
-    days,
-    selectedDay,
+    curFrom,
+    curTo,
     source,
     stance,
     enriched,
@@ -121,7 +123,7 @@ export function MentionsList({
     enriched,
     page,
     curFrom,
-    curTo ?? null,
+    curTo,
   ] as const;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -275,7 +277,16 @@ export function MentionsList({
             )}
           >
             {items.map((m) => (
-              <MentionRow key={m.id} mention={m} listQueryKey={queryKey} />
+              <MentionRow
+                key={m.id}
+                mention={m}
+                listQueryKey={queryKey}
+                narratives={
+                  isGroup
+                    ? (m.topic_ids ?? []).map((id) => topicNames.get(id) ?? `#${id}`)
+                    : []
+                }
+              />
             ))}
           </ul>
         )}
@@ -309,9 +320,12 @@ export function MentionsList({
 function MentionRow({
   mention,
   listQueryKey,
+  narratives,
 }: {
   mention: Mention;
   listQueryKey: readonly unknown[];
+  /** Narrative chips — only filled for "All narratives" (group) scope. */
+  narratives: string[];
 }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -373,6 +387,14 @@ function MentionRow({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {mention.enrichment_basis === "title_only" && (
+            <span
+              title="Paywalled outlet — favorability scored from the headline and standfirst only"
+              className="border border-border px-1 py-px font-mono text-[9px] uppercase leading-none tracking-[0.1em] text-text-tertiary"
+            >
+              title only
+            </span>
+          )}
           <StanceBadge mention={mention} />
           <EnrichButton
             isEnriched={isEnriched}
@@ -395,6 +417,19 @@ function MentionRow({
       >
         {mention.title ?? "(untitled)"}
       </button>
+
+      {narratives.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {narratives.map((name) => (
+            <span
+              key={name}
+              className="border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary"
+            >
+              {name}
+            </span>
+          ))}
+        </div>
+      )}
 
       {previewText && (
         <div

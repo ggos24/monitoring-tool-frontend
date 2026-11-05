@@ -59,3 +59,35 @@ Branch: `claude/campaign-ws5-frontend-5b7b80`. Front-end only; no new API.
   Mentions total, pool absent from picker), Reports (block order, comparison block,
   New report form), Settings (rename-only), and a headless-Chrome print-to-PDF (3 A4 pages,
   no nav/buttons, storylines expanded, one per page).
+
+# Pass 2 (branch `claude/campaign-ws5-pass2`, stacked on pass 1)
+
+Built against the WS-4 contract (`u24-pulse` PR #9, `docs/campaign/WS-4.md`), verified on a
+local mock of that contract — PR #9 was not merged at the time.
+
+- **Window model** (`src/lib/period.ts`): `Period` = preset days | explicit UTC day range;
+  `resolveWindow()` → `DateWindow {from, to, prevFrom, prevTo, days, granularity, label,
+  prevLabel}`. Every panel takes `win` instead of `days`/`selectedDay` and always sends
+  `date_from`/`date_to`. Previous window ends 1 ms before `from` (backend bounds are inclusive).
+  The timeline gets the period window; every other panel gets the day-drilled one.
+- **Period picker:** 24h · 7d · 30d · 90d · Campaign · Custom (two UTC date inputs, ≤ 400 days).
+  Campaign dates come from `NEXT_PUBLIC_CAMPAIGN_START` / `NEXT_PUBLIC_CAMPAIGN_END`
+  (`YYYY-MM-DD`, end optional = today). **Unset → Campaign is disabled.** Set them in Vercel
+  once product confirms the dates.
+- **Timeline:** dashed line for the previous window, aligned by position; tooltip shows both dates.
+- **Favorability panel** (replaces the old Source quality slot): mean −2…+2 with Δ, stacked bar,
+  per-label count/share/Δ pp, unscored count. `useFavorability()` is shared with the KPI.
+- **KPIs:** Total mentions · Share of Tier-1 coverage (narrative total ÷ pool total, same window
+  and country; pool = `role === "pool"`; "—" when no pool) · Favorable share (favorable ÷ scored,
+  Δ in pp) · Sources · Top countries. Daily average dropped.
+- **Δ in sources and countries:** per-row absolute change vs previous window ("+12", "−3", "new");
+  previous sources fetched with limit 100 so a domain that slipped out of the top 25 isn't "new".
+- **Narrative tabs:** All narratives (`Campaign` group, `group_id`, deduped by backend) + one tab per
+  narrative; default = All narratives when the group exists. In group scope each mention shows
+  chips for its `topic_ids`.
+- **Title-only:** `enrichment_basis === "title_only"` → "title only" mark next to the
+  favorability pill.
+- Also fixed: "Generate report" passed UTC times into the form's local datetime inputs.
+
+Not done in pass 2: Campaign preset in the report form; favorability `series` is fetched but not
+charted (no spec for it yet).

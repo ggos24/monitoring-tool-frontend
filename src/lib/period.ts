@@ -12,22 +12,6 @@
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 
-export type PeriodRange = {
-  /** Start of the current window (ISO, UTC). Pass as `date_from`. */
-  from: string;
-  /** Start of the previous equal-length window (ISO, UTC). */
-  prevFrom: string;
-  /** End of the previous window = start of the current one (ISO, UTC). */
-  prevTo: string;
-};
-
-export function periodRange(days: number): PeriodRange {
-  const now = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
-  const from = new Date(now - days * DAY_MS).toISOString();
-  const prevFrom = new Date(now - 2 * days * DAY_MS).toISOString();
-  return { from, prevFrom, prevTo: from };
-}
-
 /** Inclusive UTC [from, to] bounds for a single `YYYY-MM-DD` day. */
 export function dayRange(day: string): { from: string; to: string } {
   return { from: `${day}T00:00:00.000Z`, to: `${day}T23:59:59.999Z` };
@@ -44,29 +28,87 @@ export function formatDayLabel(day: string): string {
   });
 }
 
-export type EffectiveRanges = {
-  /** Current window start (ISO). */
-  curFrom: string;
-  /** Current window end (ISO), or undefined = open to now (period mode). */
-  curTo: string | undefined;
-  /** Previous equal-length window start/end (ISO), for the ±% delta. */
-  prevFrom: string;
-  prevTo: string;
-};
+/** What the operator picked: a rolling preset or an explicit UTC date range. */
+export type Period =
+  | { kind: "preset"; days: number }
+  /** Inclusive UTC calendar days, `YYYY-MM-DD`. `campaign` marks the preset. */
+  | { kind: "range"; from: string; to: string; campaign?: boolean };
 
 /**
- * The window every KPI/panel should query. When `day` is set (drill-down),
- * that single day and the day before it; otherwise the selected rolling
- * period and the one before it. Unifies both modes so callers don't branch.
+ * The resolved window every panel queries, plus the previous equal-length
+ * window for Δ and the dashed timeline overlay. All bounds are ISO strings
+ * (inclusive on the backend), stable for an hour in preset mode so they can
+ * sit in React Query keys.
  */
-export function effectiveRanges(days: number, day: string | null): EffectiveRanges {
+export type DateWindow = {
+  from: string;
+  to: string;
+  prevFrom: string;
+  prevTo: string;
+  /** Window length in days (≥ 1, fractional never). */
+  days: number;
+  granularity: "hour" | "day";
+  /** Short human label: "last 7d", "Nov 1 – Nov 30", "Nov 3". */
+  label: string;
+  /** Label for the previous window: "prev 7d", "prev period", "prev day". */
+  prevLabel: string;
+};
+
+export function resolveWindow(period: Period, day: string | null): DateWindow {
   if (day) {
     const { from, to } = dayRange(day);
-    const prevFrom = new Date(new Date(from).getTime() - DAY_MS).toISOString();
-    return { curFrom: from, curTo: to, prevFrom, prevTo: from };
+    return withPrevious(from, to, 1, "day", formatDayLabel(day), "prev day");
   }
-  const { from, prevFrom, prevTo } = periodRange(days);
-  return { curFrom: from, curTo: undefined, prevFrom, prevTo };
+  if (period.kind === "preset") {
+    const now = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
+    const from = new Date(now - period.days * DAY_MS).toISOString();
+    const to = new Date(now).toISOString();
+    return withPrevious(
+      from,
+      to,
+      period.days,
+      period.days <= 1 ? "hour" : "day",
+      `last ${period.days}d`,
+      `prev ${period.days}d`,
+    );
+  }
+  const from = dayRange(period.from).from;
+  const to = dayRange(period.to).to;
+  const days = Math.max(1, Math.round((new Date(to).getTime() + 1 - new Date(from).getTime()) / DAY_MS));
+  const label =
+    period.from === period.to
+      ? formatDayLabel(period.from)
+      : `${formatDayLabel(period.from)} – ${formatDayLabel(period.to)}`;
+  return withPrevious(
+    from,
+    to,
+    days,
+    days <= 1 ? "hour" : "day",
+    period.campaign ? `campaign · ${label}` : label,
+    days === 1 ? "prev day" : `prev ${days}d`,
+  );
+}
+
+function withPrevious(
+  from: string,
+  to: string,
+  days: number,
+  granularity: "hour" | "day",
+  label: string,
+  prevLabel: string,
+): DateWindow {
+  const fromMs = new Date(from).getTime();
+  const span = new Date(to).getTime() - fromMs;
+  // Backend bounds are inclusive on both ends: stop 1ms short of `from` so
+  // a mention at exactly the boundary is never counted in both windows.
+  const prevTo = new Date(fromMs - 1).toISOString();
+  const prevFrom = new Date(fromMs - 1 - span).toISOString();
+  return { from, to, prevFrom, prevTo, days, granularity, label, prevLabel };
+}
+
+/** Today's UTC calendar day, `YYYY-MM-DD`. */
+export function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export type Trend =
@@ -87,4 +129,11 @@ export function computeTrend(
   return pct > 0
     ? { direction: "up", percentage: pct }
     : { direction: "down", percentage: Math.abs(pct) };
+}
+
+/** Percentage-point change of a share (0–1) vs the previous window. */
+export function formatPpDelta(current: number, previous: number): string {
+  const pp = (current - previous) * 100;
+  if (Math.abs(pp) < 0.05) return "±0 pp";
+  return `${pp > 0 ? "▲" : "▼"} ${Math.abs(pp).toFixed(1)} pp`;
 }

@@ -5,38 +5,50 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
-import { dayRange, formatDayLabel } from "@/lib/period";
+import type { DateWindow } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-// Fills the 4th KPI slot (previously "Topics monitored", which duplicated the
-// scope selector). Shows the top publishing countries for the current scope +
-// period (or a drilled-down day). Shares the ["countries", …] query with
-// CountryFilter, so this card adds no extra request.
+// Top publishing countries for the current scope + window. Shares the
+// ["countries", …] query with CountryFilter, so the current window adds no
+// extra request; with `compare` on, one more call fetches the previous
+// window for the per-country Δ.
 export function TopGeoCard({
   scope,
-  days,
-  selectedDay,
+  win,
+  compare,
 }: {
   scope: ScopeParam | null;
-  days: number;
-  selectedDay: string | null;
+  win: DateWindow;
+  compare: boolean;
 }) {
   const enabled = scope !== null;
-  const range = selectedDay ? dayRange(selectedDay) : null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["countries", scope, days, range?.from ?? null, range?.to ?? null],
+    queryKey: ["countries", scope, win.from, win.to],
     queryFn: () =>
-      apiClient.countries(
-        scope!,
-        days,
-        100,
-        range ? { date_from: range.from, date_to: range.to } : undefined,
-      ),
+      apiClient.countries(scope!, win.days, 100, {
+        date_from: win.from,
+        date_to: win.to,
+      }),
     enabled,
     staleTime: 60_000,
   });
+
+  const previous = useQuery({
+    queryKey: ["countries", scope, win.prevFrom, win.prevTo],
+    queryFn: () =>
+      apiClient.countries(scope!, win.days, 100, {
+        date_from: win.prevFrom,
+        date_to: win.prevTo,
+      }),
+    enabled: enabled && compare,
+    staleTime: 60_000,
+  });
+  const prevByIso = new Map(
+    (previous.data ?? []).map((c) => [c.iso2, c.count] as const),
+  );
 
   // Denominator includes the null/unknown bucket so the shares reflect the
   // true total; the ranking itself excludes unknown-origin mentions.
@@ -79,9 +91,17 @@ export function TopGeoCard({
                 <span className="font-mono text-[11px] tabular-nums text-foreground">
                   {c.count.toLocaleString()}
                 </span>
-                <span className="w-9 text-right font-mono text-[11px] tabular-nums text-text-tertiary">
-                  {pct}%
-                </span>
+                {compare && previous.data ? (
+                  <CountDelta
+                    current={c.count}
+                    previous={prevByIso.get(c.iso2) ?? 0}
+                    title={`vs ${win.prevLabel}`}
+                  />
+                ) : (
+                  <span className="w-9 text-right font-mono text-[11px] tabular-nums text-text-tertiary">
+                    {pct}%
+                  </span>
+                )}
               </div>
             );
           })}
@@ -89,8 +109,41 @@ export function TopGeoCard({
       )}
 
       <div className="mt-3 font-mono text-[11px] text-text-tertiary">
-        by mentions, {selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`}
+        by mentions, {win.label}
       </div>
     </div>
+  );
+}
+
+/** Absolute change in a count vs the previous window: "+12", "−3", "new". */
+export function CountDelta({
+  current,
+  previous,
+  title,
+  className,
+}: {
+  current: number;
+  previous: number;
+  title?: string;
+  className?: string;
+}) {
+  const diff = current - previous;
+  const text =
+    previous === 0 && current > 0
+      ? "new"
+      : diff === 0
+        ? "±0"
+        : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toLocaleString()}`;
+  return (
+    <span
+      title={title ? `${title}: ${previous.toLocaleString()}` : undefined}
+      className={cn(
+        "w-9 text-right font-mono text-[11px] tabular-nums",
+        diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-text-tertiary",
+        className,
+      )}
+    >
+      {text}
+    </span>
   );
 }
