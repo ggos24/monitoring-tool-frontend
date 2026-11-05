@@ -31,7 +31,8 @@ export function SourcesList({
 }) {
   const enabled = scope !== null;
   const LIMIT = 25;
-  const PREV_LIMIT = 100;
+  // /api/stats/sources caps `limit` at 50 (422 above that).
+  const PREV_LIMIT = 50;
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["sources", scope, country, source, LIMIT, win.from, win.to],

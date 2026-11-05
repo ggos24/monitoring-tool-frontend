@@ -91,3 +91,15 @@ local mock of that contract — PR #9 was not merged at the time.
 
 Not done in pass 2: Campaign preset in the report form; favorability `series` is fetched but not
 charted (no spec for it yet).
+
+## Pass 2 against live prod (2026-11-05, after backend PR #9 deploy)
+Read-only. Prod had only the pool (id 12, `role: "pool"`, 0 mentions); no narratives, no
+`Campaign` group. Every Overview call was exercised by temporarily showing the pool as a tab
+(local only, reverted): topics, topic-groups, overview, mentions (current/prev/pool), timeline
+(day, hour, 90d, 309-day custom + prev), favorability (current/prev), sources, sources/count,
+countries — all 200, shapes identical to the mock. `group_id=999` → 404 as specified; 401-day
+range → 422, 400 → 200 (matches the picker's 400-day guard).
+- **Mismatch fixed:** previous-window `/api/stats/sources` used `limit=100`; backend caps it at
+  50 → 422. Now 50.
+- Not observable live yet (0 mentions): `topic_ids` / `enrichment_basis` values. Field names and
+  types checked against `MentionOut` in `app/api/dashboard.py` on backend `main`.
