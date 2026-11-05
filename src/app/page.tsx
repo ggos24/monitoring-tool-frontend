@@ -7,12 +7,10 @@ import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
-import {
-  ScopeSelector,
-  type ScopeSelection,
-} from "@/components/dashboard/scope-selector";
-import type { ScopeParam } from "@/lib/types";
-import { formatDayLabel } from "@/lib/period";
+import { NarrativeTabs } from "@/components/dashboard/narrative-tabs";
+import type { ScopeParam, ScopeSelection } from "@/lib/types";
+import { formatDayLabel, resolveWindow, type Period } from "@/lib/period";
+import { FavorabilityPanel } from "@/components/dashboard/favorability-panel";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { CountryFilter } from "@/components/dashboard/country-filter";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
@@ -28,15 +26,22 @@ import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
-  const [days, setDays] = useState<number>(7);
+  const [period, setPeriod] = useState<Period>({ kind: "preset", days: 7 });
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
   // every panel scopes to that day instead of the rolling period.
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
-  // KPI cards: absolute value + Δ% vs the previous equal-length window.
+  // Δ vs the previous equal-length window on KPIs, sources, countries,
+  // favorability, plus the dashed previous-period line on the timeline.
   const [compare, setCompare] = useState(true);
+
+  // `periodWin` drives the timeline (whole period, so a drilled day stays
+  // in context); `win` drives every other panel (narrowed to the day).
+  // Resolved once per render; preset bounds are hour-snapped, so stable.
+  const periodWin = resolveWindow(period, null);
+  const win = resolveWindow(period, selectedDay);
 
   // The API scope param: single topic or a group union.
   const scope: ScopeParam | null = scopeSel
@@ -45,19 +50,34 @@ export default function Home() {
       : { topic_id: scopeSel.id }
     : null;
 
-  // Auto-select the first topic on load (preserves the old dashboard
-  // behaviour now that the selector no longer self-selects). User can
-  // then switch to any topic or group.
   const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
+  const groupsQuery = useQuery({
+    queryKey: ["topic-groups"],
+    queryFn: apiClient.topicGroups,
+  });
   const narratives = useMemo(
     () => visibleTopics(topicsQuery.data),
     [topicsQuery.data],
   );
+  const poolTopicId =
+    topicsQuery.data?.find((t) => t.role === "pool")?.id ?? null;
+  // "All narratives" = the `Campaign` topic group (set up by WS-3).
+  const allGroup =
+    groupsQuery.data?.find((g) => g.name.toLowerCase() === "campaign") ?? null;
+  const topicNames = useMemo(
+    () => new Map(narratives.map((t) => [t.id, t.name] as const)),
+    [narratives],
+  );
+
+  // Default tab: All narratives when the Campaign group exists, else the
+  // first narrative. Waits for both lists so it doesn't flip after load.
+  const groupsSettled = groupsQuery.isSuccess || groupsQuery.isError;
   useEffect(() => {
-    if (scopeSel === null && narratives.length > 0) {
+    if (scopeSel !== null || !groupsSettled) return;
+    if (allGroup) setScopeSel({ kind: "group", id: allGroup.id });
+    else if (narratives.length > 0)
       setScopeSel({ kind: "topic", id: narratives[0].id });
-    }
-  }, [narratives, scopeSel]);
+  }, [narratives, allGroup, groupsSettled, scopeSel]);
 
   // Distinguish "still loading / about to auto-select" (→ skeletons) from a
   // genuinely empty backend (→ a message, so skeletons don't spin forever).
@@ -79,8 +99,8 @@ export default function Home() {
 
   // Picking a period exits the day drill-down; picking the same day again
   // toggles it off.
-  const handleSelectDays = (d: number) => {
-    setDays(d);
+  const handleSelectPeriod = (next: Period) => {
+    setPeriod(next);
     setSelectedDay(null);
   };
   const handleSelectDay = (day: string) => {
@@ -95,14 +115,19 @@ export default function Home() {
     <>
       <TopBar scope={scope} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <ScopeSelector value={scopeSel} onChange={handleSelectScope} />
+        <div className="mb-6 flex flex-col gap-3">
+          <NarrativeTabs
+            narratives={narratives}
+            allGroup={allGroup}
+            value={scopeSel}
+            onChange={handleSelectScope}
+          />
           <div className="flex flex-wrap items-center gap-2">
+            <PeriodToggle value={period} onChange={handleSelectPeriod} />
             {scope !== null && (
               <CountryFilter
                 scope={scope}
-                days={days}
-                selectedDay={selectedDay}
+                win={win}
                 value={country}
                 onChange={handleSelectCountry}
               />
@@ -119,13 +144,15 @@ export default function Home() {
                 <X className="size-3 text-text-tertiary" />
               </button>
             )}
-            <PeriodToggle value={days} onChange={handleSelectDays} />
-            <GenerateReportLink
-              scope={scope}
-              days={days}
-              country={country}
-              source={source}
-            />
+            <div className="ml-auto flex items-center gap-4">
+              <CompareToggle value={compare} onChange={setCompare} />
+              <GenerateReportLink
+                scope={scope}
+                win={periodWin}
+                country={country}
+                source={source}
+              />
+            </div>
           </div>
         </div>
 
@@ -137,36 +164,44 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div className="mb-2 flex justify-end">
-              <CompareToggle value={compare} onChange={setCompare} />
-            </div>
             <div className="mb-6">
               <KpiGrid
                 compare={compare}
                 scope={scope}
-                days={days}
+                win={win}
                 country={country}
-                selectedDay={selectedDay}
+                poolTopicId={poolTopicId}
               />
             </div>
 
-            <div className="mb-6 border border-border bg-card">
-              <TimelineChart
-                scope={scope}
-                days={days}
-                country={country}
-                selectedDay={selectedDay}
-                onSelectDay={handleSelectDay}
-              />
+            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
+              <div className="bg-card lg:col-span-2">
+                <TimelineChart
+                  scope={scope}
+                  win={periodWin}
+                  compare={compare}
+                  country={country}
+                  selectedDay={selectedDay}
+                  onSelectDay={handleSelectDay}
+                />
+              </div>
+              <div className="bg-card">
+                <FavorabilityPanel
+                  scope={scope}
+                  win={win}
+                  compare={compare}
+                  country={country}
+                />
+              </div>
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
               <div className="bg-card lg:col-span-2">
                 <SourcesList
                   scope={scope}
-                  days={days}
+                  win={win}
+                  compare={compare}
                   country={country}
-                  selectedDay={selectedDay}
                   source={source}
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
@@ -175,10 +210,10 @@ export default function Home() {
               <div className="bg-card lg:col-span-5">
                 <MentionsList
                   scope={scope}
-                  days={days}
+                  win={win}
+                  topicNames={topicNames}
                   domain={selectedDomain}
                   country={country}
-                  selectedDay={selectedDay}
                   source={source}
                   onChangeSource={setSource}
                   onClearDomain={() => setSelectedDomain(null)}

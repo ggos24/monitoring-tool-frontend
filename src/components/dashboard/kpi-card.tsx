@@ -10,10 +10,16 @@ export function KpiCard({
   value,
   subtitle,
   trend,
+  delta,
   trendTitle,
+  title,
   isLoading,
 }: {
   kicker: string;
+  /** Pre-formatted change for share metrics, e.g. "▲ 1.2 pp". */
+  delta?: string;
+  /** Hover explanation for the whole card. */
+  title?: string;
   value: string | number;
   subtitle: string;
   trend?: Trend;
@@ -22,7 +28,7 @@ export function KpiCard({
   isLoading?: boolean;
 }) {
   return (
-    <div className="bg-card p-5">
+    <div className="bg-card p-5" title={title}>
       <KickerLabel>{kicker}</KickerLabel>
       <div className="mt-3 flex items-baseline gap-2">
         {isLoading ? (
@@ -36,6 +42,17 @@ export function KpiCard({
           </span>
         )}
         {trend && !isLoading && <TrendBadge trend={trend} title={trendTitle} />}
+        {delta && !isLoading && (
+          <span
+            className={cn(
+              "font-mono text-[11px] tabular-nums",
+              delta.startsWith("▲") ? "text-success" : delta.startsWith("▼") ? "text-danger" : "text-text-tertiary",
+            )}
+            title={trendTitle}
+          >
+            {delta}
+          </span>
+        )}
       </div>
       <div className="mt-2 font-mono text-[11px] text-text-tertiary">{subtitle}</div>
     </div>

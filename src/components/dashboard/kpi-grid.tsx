@@ -4,70 +4,65 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
-import { computeTrend, effectiveRanges, formatDayLabel } from "@/lib/period";
+import { computeTrend, formatPpDelta, type DateWindow } from "@/lib/period";
+import { FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import { KpiCard } from "./kpi-card";
 import { TopGeoCard } from "./top-geo-card";
+import { favorableShare, scoredTotal, useFavorability } from "./favorability-panel";
 
 export function KpiGrid({
   compare,
   scope,
-  days,
+  win,
   country,
-  selectedDay,
+  poolTopicId,
 }: {
-  /** Show Δ% + the previous window's absolute value under each card. */
+  /** Show Δ + the previous window's value under each card. */
   compare: boolean;
   scope: ScopeParam | null;
-  days: number;
+  win: DateWindow;
   country: string | null;
-  selectedDay: string | null;
+  /** Hidden Tier-1 pool topic — denominator for share of coverage. */
+  poolTopicId: number | null;
 }) {
   const enabled = scope !== null;
-  // Current + previous windows: the selected period and the one before it,
-  // or a single drilled-down day and the day before it.
-  const { curFrom, curTo, prevFrom, prevTo } = effectiveRanges(days, selectedDay);
+  const { from, to, prevFrom, prevTo, prevLabel } = win;
 
-  const currentMentions = useQuery({
-    queryKey: ["mentions-kpi", scope, country, curFrom, curTo],
+  const mentionTotal = (s: ScopeParam, f: string, t: string, on: boolean) => ({
+    queryKey: ["mentions-kpi", s, country, f, t],
     queryFn: () =>
       apiClient.mentions({
-        scope: scope!,
+        scope: s,
         limit: 1,
         country_iso2: country ?? undefined,
-        date_from: curFrom,
-        date_to: curTo,
+        date_from: f,
+        date_to: t,
       }),
-    enabled,
+    enabled: on,
   });
 
-  const previousMentions = useQuery({
-    queryKey: ["mentions-kpi-prev", scope, country, prevFrom, prevTo],
-    queryFn: () =>
-      apiClient.mentions({
-        scope: scope!,
-        limit: 1,
-        country_iso2: country ?? undefined,
-        date_from: prevFrom,
-        date_to: prevTo,
-      }),
-    enabled: enabled && compare,
-  });
+  const currentMentions = useQuery(mentionTotal(scope!, from, to, enabled));
+  const previousMentions = useQuery(mentionTotal(scope!, prevFrom, prevTo, enabled && compare));
 
-  // Distinct-source count is now period-scoped + country-aware (exact, no
-  // "50+" cap) via /stats/sources/count, so it earns a delta like the rest.
+  // Share of Tier-1 coverage = narrative articles ÷ all Tier-1 pool articles
+  // in the same window (and country). Group scope is already deduplicated.
+  const pool = poolTopicId !== null ? { topic_id: poolTopicId } : null;
+  const currentPool = useQuery(mentionTotal(pool!, from, to, enabled && pool !== null));
+  const previousPool = useQuery(
+    mentionTotal(pool!, prevFrom, prevTo, enabled && compare && pool !== null),
+  );
+
+  const currentFav = useFavorability(scope, from, to, country);
+  const previousFav = useFavorability(scope, prevFrom, prevTo, country, compare);
+
   const currentSources = useQuery({
-    queryKey: ["sources-count", scope, country, curFrom, curTo],
+    queryKey: ["sources-count", scope, country, from, to],
     queryFn: () =>
-      apiClient.sourcesCount(scope!, {
-        country_iso2: country,
-        date_from: curFrom,
-        date_to: curTo,
-      }),
+      apiClient.sourcesCount(scope!, { country_iso2: country, date_from: from, date_to: to }),
     enabled,
   });
-
   const previousSources = useQuery({
-    queryKey: ["sources-count-prev", scope, country, prevFrom, prevTo],
+    queryKey: ["sources-count", scope, country, prevFrom, prevTo],
     queryFn: () =>
       apiClient.sourcesCount(scope!, {
         country_iso2: country,
@@ -77,65 +72,69 @@ export function KpiGrid({
     enabled: enabled && compare,
   });
 
-  const totalMentions = currentMentions.data?.total ?? 0;
-  const sourceCount = currentSources.data?.count ?? 0;
-  const effectiveDays = selectedDay ? 1 : days;
-  const dailyAvg =
-    effectiveDays > 0 ? Math.round(totalMentions / effectiveDays) : 0;
+  const trendTitle = `vs ${prevLabel}`;
+  // "· prev 7d 1,234" suffix — the previous window's value, so the Δ
+  // always reads against a visible base.
+  const prevSuffix = (v: string | undefined) => (compare && v !== undefined ? ` · ${prevLabel} ${v}` : "");
 
-  const mentionsTrend = computeTrend(
-    currentMentions.data?.total,
-    previousMentions.data?.total,
-  );
-  const sourcesTrend = computeTrend(
-    currentSources.data?.count,
-    previousSources.data?.count,
-  );
-  const trendTitle = selectedDay ? "vs previous day" : `vs previous ${days}d`;
-  const periodSubtitle = selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`;
-  const prevLabel = selectedDay ? "prev day" : `prev ${days}d`;
-  // "· prev 1,234" suffix — the previous window's absolute value, so the
-  // Δ% always reads against a visible base.
-  const prevSuffix = (n: number | undefined) =>
-    compare && n !== undefined ? ` · ${prevLabel} ${n.toLocaleString()}` : "";
-  const prevMentions = previousMentions.data?.total;
-  const prevDailyAvg =
-    prevMentions !== undefined && effectiveDays > 0
-      ? Math.round(prevMentions / effectiveDays)
-      : undefined;
-
-  // Treat "no scope yet" (initial load, before the first topic auto-selects)
-  // as loading so the whole grid shows skeletons instead of a blank flash.
-  const isMentionsLoading = !enabled || currentMentions.isLoading;
-  const isSourcesLoading = !enabled || currentSources.isLoading;
+  const tier1 = ratio(currentMentions.data?.total, currentPool.data?.total);
+  const tier1Prev = ratio(previousMentions.data?.total, previousPool.data?.total);
+  const fav = favorableShare(currentFav.data?.counts);
+  const favPrev = favorableShare(previousFav.data?.counts);
 
   return (
-    <div className="grid grid-cols-2 gap-px bg-strong md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-px bg-strong md:grid-cols-3 xl:grid-cols-5">
       <KpiCard
         kicker="Total mentions"
-        value={totalMentions.toLocaleString()}
-        subtitle={periodSubtitle + prevSuffix(prevMentions)}
-        trend={compare ? mentionsTrend : undefined}
+        value={(currentMentions.data?.total ?? 0).toLocaleString()}
+        subtitle={win.label + prevSuffix(previousMentions.data?.total.toLocaleString())}
+        trend={compare ? computeTrend(currentMentions.data?.total, previousMentions.data?.total) : undefined}
         trendTitle={trendTitle}
-        isLoading={isMentionsLoading}
+        isLoading={!enabled || currentMentions.isLoading}
       />
       <KpiCard
-        kicker="Daily average"
-        value={dailyAvg.toLocaleString()}
-        subtitle={"per day" + prevSuffix(prevDailyAvg)}
-        trend={compare ? mentionsTrend : undefined}
+        kicker="Share of Tier-1 coverage"
+        value={pool === null ? "—" : tier1 === null ? "—" : formatShare(tier1)}
+        subtitle={
+          pool === null
+            ? "Tier-1 pool not configured"
+            : `of ${(currentPool.data?.total ?? 0).toLocaleString()} Tier-1 articles` +
+              prevSuffix(tier1Prev === null ? undefined : formatShare(tier1Prev))
+        }
+        delta={compare && tier1 !== null && tier1Prev !== null ? formatPpDelta(tier1, tier1Prev) : undefined}
         trendTitle={trendTitle}
-        isLoading={isMentionsLoading}
+        isLoading={!enabled || (pool !== null && (currentMentions.isLoading || currentPool.isLoading))}
+      />
+      <KpiCard
+        kicker="Favorable share"
+        title={FAVORABILITY_TOOLTIP}
+        value={fav === null ? "—" : formatShare(fav)}
+        subtitle={
+          `of ${scoredTotal(currentFav.data?.counts).toLocaleString()} scored` +
+          prevSuffix(favPrev === null ? undefined : formatShare(favPrev))
+        }
+        delta={compare && fav !== null && favPrev !== null ? formatPpDelta(fav, favPrev) : undefined}
+        trendTitle={trendTitle}
+        isLoading={!enabled || currentFav.isLoading}
       />
       <KpiCard
         kicker="Sources"
-        value={sourceCount.toLocaleString()}
-        subtitle={"distinct domains" + prevSuffix(previousSources.data?.count)}
-        trend={compare ? sourcesTrend : undefined}
+        value={(currentSources.data?.count ?? 0).toLocaleString()}
+        subtitle={"distinct domains" + prevSuffix(previousSources.data?.count.toLocaleString())}
+        trend={compare ? computeTrend(currentSources.data?.count, previousSources.data?.count) : undefined}
         trendTitle={trendTitle}
-        isLoading={isSourcesLoading}
+        isLoading={!enabled || currentSources.isLoading}
       />
-      <TopGeoCard scope={scope} days={days} selectedDay={selectedDay} />
+      <TopGeoCard scope={scope} win={win} compare={compare} />
     </div>
   );
+}
+
+function ratio(num: number | undefined, den: number | undefined): number | null {
+  if (num === undefined || den === undefined || den === 0) return null;
+  return num / den;
+}
+
+function formatShare(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
 }
