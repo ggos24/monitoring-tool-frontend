@@ -21,7 +21,6 @@ type NavItem = {
 const PRIMARY_NAV: NavItem[] = [
   { label: "Overview", href: "/", routable: true },
   { label: "Reports", href: "/reports", routable: true, preserveScope: true },
-  { label: "Narratives", href: "/narratives", routable: true, preserveScope: true },
 ];
 
 export function TopBar({ scope }: { scope: ScopeParam | null }) {

@@ -8,6 +8,7 @@ import type {
   DomainScoringDetail,
   EnrichmentSettings,
   EnrichmentSettingsPatch,
+  FavorabilityStats,
   JobRun,
   Mention,
   MentionsListResponse,
@@ -192,12 +193,37 @@ export const apiClient = {
     days = 7,
     granularity: "hour" | "day" = "day",
     country_iso2?: string | null,
+    range?: { date_from: string; date_to: string },
   ) => {
     const qs = scopeQuery(scope);
     qs.set("days", String(days));
     qs.set("granularity", granularity);
     if (country_iso2) qs.set("country_iso2", country_iso2);
+    // Explicit range overrides `days` (one point per day/hour it touches).
+    if (range) {
+      qs.set("date_from", range.date_from);
+      qs.set("date_to", range.date_to);
+    }
     return api<TimelinePoint[]>(`/api/stats/timeline?${qs}`);
+  },
+
+  favorability: (
+    scope: ScopeParam,
+    opts: {
+      date_from: string;
+      date_to: string;
+      country_iso2?: string | null;
+      source?: "gn" | "gdelt" | "firehose" | "rss";
+      source_domain?: string | null;
+    },
+  ) => {
+    const qs = scopeQuery(scope);
+    qs.set("date_from", opts.date_from);
+    qs.set("date_to", opts.date_to);
+    if (opts.country_iso2) qs.set("country_iso2", opts.country_iso2);
+    if (opts.source) qs.set("source", opts.source);
+    if (opts.source_domain) qs.set("source_domain", opts.source_domain);
+    return api<FavorabilityStats>(`/api/stats/favorability?${qs}`);
   },
 
   topSources: (

@@ -2,15 +2,16 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-type SettingsSection = "general" | "sources";
+type SettingsSection = "general" | "sources" | "advanced";
 
 const SETTINGS_SECTIONS: Array<{
   id: SettingsSection;
   label: string;
   href: string;
 }> = [
-  { id: "general", label: "General", href: "/settings" },
+  { id: "general", label: "Narratives", href: "/settings" },
   { id: "sources", label: "Sources", href: "/sources" },
+  { id: "advanced", label: "Advanced", href: "/settings/advanced" },
 ];
 
 export function SettingsNav({ active }: { active: SettingsSection }) {

@@ -51,6 +51,8 @@ export type Topic = {
   topic_ast: TopicAst | null;
   is_active: boolean;
   mentions_count: number;
+  // "pool" = hidden Tier-1 denominator topic. Not sent by older backends.
+  role?: "narrative" | "pool" | string | null;
 };
 
 // Response shape for POST /api/topics and PATCH /api/topics/{id}/ast.
@@ -109,6 +111,13 @@ export type Mention = {
   relevance_score: number | null;
   relevance_reason: string | null;
   claim_card: ClaimCard | null;
+  // Campaign API (WS-4). Absent on older backends.
+  // Narratives in the requested scope that contain this article — with a
+  // group_id scope there can be several (the article is listed once).
+  topic_ids?: number[];
+  // What the favorability score rests on. "title_only" = paywalled
+  // outlet scored from headline/standfirst; null = not enriched yet.
+  enrichment_basis?: "full_text" | "title_only" | null;
 };
 
 export type MentionsListResponse = {
@@ -841,3 +850,26 @@ export const FRAMING_LABELS = [
   "other",
 ] as const;
 export type FramingLabel = (typeof FRAMING_LABELS)[number];
+
+// GET /api/stats/favorability (WS-4). supportive→favorable,
+// critical→unfavorable; `unscored` = not enriched yet.
+export type FavorabilityCounts = {
+  favorable: number;
+  neutral: number;
+  unfavorable: number;
+  mixed: number;
+  unscored: number;
+};
+
+export type FavorabilityStats = {
+  counts: FavorabilityCounts;
+  /** Mean of the −2…+2 score over scored articles; null when none. */
+  mean_score: number | null;
+  series: {
+    date: string;
+    favorable: number;
+    neutral: number;
+    unfavorable: number;
+    mixed: number;
+  }[];
+};

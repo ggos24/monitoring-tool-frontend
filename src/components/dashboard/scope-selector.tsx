@@ -5,6 +5,7 @@ import { ChevronDown, Folder, Hash } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeSelection } from "@/lib/types";
+import { visibleTopics } from "@/lib/topics";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -38,14 +39,14 @@ export function ScopeSelector({
   if (topicsQuery.isLoading) {
     return <Skeleton className="h-9 w-72 bg-elevated" />;
   }
-  const topics = topicsQuery.data ?? [];
+  const topics = visibleTopics(topicsQuery.data);
   const groups = groupsQuery.data ?? [];
 
   const selectedLabel = (() => {
     if (!value) return null;
     if (value.kind === "group") {
       const g = groups.find((x) => x.id === value.id);
-      return g ? { icon: "group" as const, text: g.name, meta: `${g.topic_ids.length} topics` } : null;
+      return g ? { icon: "group" as const, text: g.name, meta: `${g.topic_ids.length} narratives` } : null;
     }
     const t = topics.find((x) => x.id === value.id);
     return t ? { icon: "topic" as const, text: t.name, meta: String(t.mentions_count) } : null;
@@ -60,7 +61,7 @@ export function ScopeSelector({
           "hover:border-strong aria-expanded:border-strong",
         )}
       >
-        <span className="text-muted-foreground">scope:</span>
+        <span className="text-muted-foreground">narrative:</span>
         {selectedLabel ? (
           <>
             {selectedLabel.icon === "group" ? (
@@ -72,7 +73,7 @@ export function ScopeSelector({
             <span className="text-muted-foreground">({selectedLabel.meta})</span>
           </>
         ) : (
-          <span className="text-text-tertiary">Select topic or group</span>
+          <span className="text-text-tertiary">Select narrative</span>
         )}
         <ChevronDown className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
@@ -113,7 +114,7 @@ export function ScopeSelector({
 
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-            Topics
+            Narratives
           </DropdownMenuLabel>
           {topics.map((t) => (
             <DropdownMenuItem

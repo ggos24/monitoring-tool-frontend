@@ -3,51 +3,54 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 
-import type { QualityFilter, SourceFilter } from "@/components/dashboard/mentions-list";
+import type { SourceFilter } from "@/components/dashboard/mentions-list";
 import type { ScopeParam } from "@/lib/types";
+import type { DateWindow } from "@/lib/period";
 
 // Forwards the dashboard's current scope + filter state to the Reports
 // page via URL query params (topic_id OR group_id). The /reports page
 // parses these and seeds the GenerateReportForm.
 //
-// Date range is derived from `days` against now() — same convention
-// the rest of the dashboard uses for its rolling window.
+// Date range = the dashboard's current window (preset, custom or Campaign).
 export function GenerateReportLink({
   scope,
-  days,
+  win,
   country,
   source,
-  quality,
 }: {
   scope: ScopeParam | null;
-  days: number;
+  win: DateWindow;
   country: string | null;
   source: SourceFilter;
-  quality: QualityFilter;
 }) {
   if (scope === null) return null;
 
-  const dateTo = new Date();
-  const dateFrom = new Date(dateTo.getTime() - days * 24 * 60 * 60 * 1000);
+  // The report form's datetime-local inputs are in the browser's zone.
+  const dateFrom = new Date(win.from);
+  const dateTo = new Date(win.to);
 
   const params = new URLSearchParams();
   if (typeof scope === "number") params.set("topic_id", String(scope));
   else if ("group_id" in scope) params.set("group_id", String(scope.group_id));
   else params.set("topic_id", String(scope.topic_id));
-  params.set("date_from", dateFrom.toISOString().slice(0, 16));
-  params.set("date_to", dateTo.toISOString().slice(0, 16));
+  params.set("date_from", toLocalInput(dateFrom));
+  params.set("date_to", toLocalInput(dateTo));
   if (country) params.set("country_iso2", country);
   if (source !== "all") params.set("source", source);
-  if (quality !== "all") params.set("score_band", quality);
 
   return (
     <Link
       href={`/reports?${params.toString()}`}
       className="flex items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-xs text-text-secondary hover:bg-muted transition-colors"
-      title="Generate a narrative report from the current filters"
+      title="Generate a report from the current filters"
     >
       <FileText className="size-3" />
       <span>Generate report</span>
     </Link>
   );
+}
+
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

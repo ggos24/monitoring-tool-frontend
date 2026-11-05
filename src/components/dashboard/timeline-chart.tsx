@@ -3,8 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
-  AreaChart,
   CartesianGrid,
+  ComposedChart,
+  Line,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -15,7 +16,7 @@ import {
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
-import { formatDayLabel } from "@/lib/period";
+import { formatDayLabel, type DateWindow } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { theme } from "@/lib/theme";
@@ -28,33 +29,61 @@ const TICK_STYLE = {
 
 export function TimelineChart({
   scope,
-  days,
+  win,
+  compare,
   country,
   selectedDay,
   onSelectDay,
 }: {
   scope: ScopeParam | null;
-  days: number;
+  /** The period window — NOT narrowed by the day drill-down. */
+  win: DateWindow;
+  /** Overlay the previous equal-length window as a dashed line. */
+  compare: boolean;
   country: string | null;
   selectedDay: string | null;
   onSelectDay: (day: string) => void;
 }) {
   const enabled = scope !== null;
-  const granularity: "hour" | "day" = days <= 1 ? "hour" : "day";
+  const granularity = win.granularity;
   const canDrill = granularity === "day";
 
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["timeline", scope, days, granularity, country],
-    queryFn: () => apiClient.timeline(scope!, days, granularity, country),
+  const current = useQuery({
+    queryKey: ["timeline", scope, granularity, country, win.from, win.to],
+    queryFn: () =>
+      apiClient.timeline(scope!, win.days, granularity, country, {
+        date_from: win.from,
+        date_to: win.to,
+      }),
     enabled,
   });
+  const previous = useQuery({
+    queryKey: ["timeline", scope, granularity, country, win.prevFrom, win.prevTo],
+    queryFn: () =>
+      apiClient.timeline(scope!, win.days, granularity, country, {
+        date_from: win.prevFrom,
+        date_to: win.prevTo,
+      }),
+    enabled: enabled && compare,
+  });
+  const { isLoading, error, refetch } = current;
 
+  // Previous window is aligned by position (day 1 ↔ day 1), so the dashed
+  // line reads as "same point last period". Its own date goes in the tooltip.
+  const data = current.data?.map((point, i) => {
+    const prev = compare ? previous.data?.[i] : undefined;
+    return { ...point, prev: prev?.count ?? null, prevDate: prev?.date ?? null };
+  });
+  const showPrev = compare && !!previous.data;
+
+  const unit = granularity === "hour" ? "Hourly" : "Daily";
   const subtitle =
-    granularity === "hour"
-      ? `Hourly mention count, last ${days * 24} hours (UTC)`
-      : selectedDay
-        ? `Daily mention count, last ${days} days · showing ${formatDayLabel(selectedDay)}`
-        : `Daily mention count, last ${days} days · click a day to filter`;
+    `${unit} mention count, ${win.label}` +
+    (selectedDay && canDrill
+      ? ` · showing ${formatDayLabel(selectedDay)}`
+      : canDrill
+        ? " · click a day to filter"
+        : " (UTC)");
 
   // Anchor the "no data yet" marker to the earliest day that actually has
   // mentions — NOT the topic-creation date, since collectors backfill
@@ -83,7 +112,21 @@ export function TimelineChart({
   return (
     <div className="bg-card p-5">
       <KickerLabel>Mentions over time</KickerLabel>
-      <div className="mt-1 mb-4 text-xs text-text-secondary">{subtitle}</div>
+      <div className="mt-1 mb-4 flex flex-wrap items-baseline justify-between gap-2 text-xs text-text-secondary">
+        <span>{subtitle}</span>
+        {showPrev && (
+          <span className="flex items-center gap-3 font-mono text-[10px] text-text-tertiary">
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="inline-block h-px w-4 bg-success" />
+              this period
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden className="inline-block w-4 border-t border-dashed border-text-tertiary" />
+              {win.prevLabel}
+            </span>
+          </span>
+        )}
+      </div>
 
       {/* Recharts makes its <svg> surface focusable for keyboard a11y, so a
           click draws the browser focus ring around the whole chart. We convey
@@ -97,7 +140,7 @@ export function TimelineChart({
           <EmptyState message="No data in selected period." />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
+            <ComposedChart
               data={data}
               margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
               onClick={handleChartClick}
@@ -136,7 +179,7 @@ export function TimelineChart({
                 allowDecimals={false}
               />
               <Tooltip
-                content={<TimelineTooltip granularity={granularity} />}
+                content={<TimelineTooltip granularity={granularity} showPrev={showPrev} />}
                 cursor={{ stroke: theme.borderStrong, strokeDasharray: "3 3" }}
               />
               <Area
@@ -154,6 +197,18 @@ export function TimelineChart({
                 activeDot={{ r: 5, fill: theme.accentSuccess, stroke: "none" }}
                 isAnimationActive={false}
               />
+              {showPrev && (
+                <Line
+                  type="monotone"
+                  dataKey="prev"
+                  stroke={theme.textTertiary}
+                  strokeWidth={1.25}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  activeDot={false}
+                  isAnimationActive={false}
+                />
+              )}
               {showSelected && selectedDay && (
                 <ReferenceLine
                   x={selectedDay}
@@ -173,7 +228,7 @@ export function TimelineChart({
                   )}
                 />
               )}
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </div>
@@ -228,19 +283,30 @@ function TimelineTooltip({
   payload,
   label,
   granularity,
+  showPrev,
 }: {
   active?: boolean;
-  payload?: Array<{ value: number }>;
+  payload?: Array<{
+    value: number;
+    payload: { count: number; prev: number | null; prevDate: string | null };
+  }>;
   label?: string;
   granularity: "hour" | "day";
+  showPrev: boolean;
 }) {
   if (!active || !payload || payload.length === 0) return null;
+  const point = payload[0].payload;
   return (
     <div className="border border-border bg-overlay px-2.5 py-1.5 font-mono text-[11px] leading-tight">
       <div className="text-text-tertiary">{formatTooltipLabel(label ?? "", granularity)}</div>
       <div className="mt-0.5 text-foreground">
-        {payload[0].value} mention{payload[0].value === 1 ? "" : "s"}
+        {point.count} mention{point.count === 1 ? "" : "s"}
       </div>
+      {showPrev && point.prev !== null && point.prevDate && (
+        <div className="mt-0.5 text-text-tertiary">
+          {formatTooltipLabel(point.prevDate, granularity)}: {point.prev}
+        </div>
+      )}
     </div>
   );
 }

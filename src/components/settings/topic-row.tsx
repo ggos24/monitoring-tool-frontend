@@ -10,15 +10,25 @@ import type { Topic, TopicPatch } from "@/lib/types";
 
 type Status = "saved" | "error" | null;
 
-export function TopicRow({ topic }: { topic: Topic }) {
+// Narrative row. Only the NAME is editable: PATCHing `query` on an
+// AST-backed topic silently breaks its compiled GDELT query, so the old
+// free-text query field is gone. `advanced` adds the active toggle and
+// the AST editor link (Settings → Advanced).
+export function TopicRow({
+  topic,
+  advanced = false,
+}: {
+  topic: Topic;
+  advanced?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
-  const [draft, setDraft] = useState({ name: topic.name, query: topic.query });
+  const [draft, setDraft] = useState(topic.name);
   const [status, setStatus] = useState<Status>(null);
 
   useEffect(() => {
-    setDraft({ name: topic.name, query: topic.query });
-  }, [topic.id, topic.name, topic.query]);
+    setDraft(topic.name);
+  }, [topic.id, topic.name]);
 
   useEffect(() => {
     if (status === null) return;
@@ -38,18 +48,15 @@ export function TopicRow({ topic }: { topic: Topic }) {
     },
   });
 
-  const dirty = draft.name !== topic.name || draft.query !== topic.query;
+  const dirty = draft.trim() !== "" && draft !== topic.name;
 
   function toggleActive() {
     mutation.mutate({ is_active: !topic.is_active });
   }
 
   function handleSave() {
-    const patch: TopicPatch = {};
-    if (draft.name !== topic.name) patch.name = draft.name;
-    if (draft.query !== topic.query) patch.query = draft.query;
-    if (Object.keys(patch).length === 0) return;
-    mutation.mutate(patch, {
+    if (!dirty) return;
+    mutation.mutate({ name: draft.trim() }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ["topics"] });
         queryClient.invalidateQueries({ queryKey: ["overview"] });
@@ -60,7 +67,7 @@ export function TopicRow({ topic }: { topic: Topic }) {
   }
 
   function handleCancel() {
-    setDraft({ name: topic.name, query: topic.query });
+    setDraft(topic.name);
     setExpanded(false);
   }
 
@@ -76,13 +83,16 @@ export function TopicRow({ topic }: { topic: Topic }) {
             )}
           />
           <span className="text-sm text-foreground">{topic.name}</span>
-          <span className="truncate font-mono text-[11px] text-text-tertiary">
-            query: {topic.query}
-          </span>
+          {topic.role === "pool" && (
+            <span className="border border-border px-1 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+              pool
+            </span>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
           {status && <StatusFlash kind={status} />}
+          {advanced && (
           <button
             type="button"
             onClick={toggleActive}
@@ -97,39 +107,31 @@ export function TopicRow({ topic }: { topic: Topic }) {
           >
             {topic.is_active ? "Active" : "Inactive"}
           </button>
-          {!expanded &&
-            (topic.topic_ast ? (
-              <Link
-                href={`/settings/topics/${topic.id}/ast`}
-                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
-              >
-                Edit AST
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setExpanded(true)}
-                className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
-              >
-                Edit
-              </button>
-            ))}
+          )}
+          {advanced && topic.topic_ast && (
+            <Link
+              href={`/settings/topics/${topic.id}/ast`}
+              className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
+            >
+              Edit AST
+            </Link>
+          )}
+          {!advanced && !expanded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="cursor-pointer border border-border bg-card px-2 py-1 font-mono text-[11px] text-text-tertiary hover:border-strong hover:text-foreground"
+            >
+              Rename
+            </button>
+          )}
         </div>
       </div>
 
       {expanded && (
         <div className="mb-3 border-l-2 border-border bg-card px-4 py-4">
           <div className="space-y-3">
-            <Field
-              label="Name"
-              value={draft.name}
-              onChange={(v) => setDraft((d) => ({ ...d, name: v }))}
-            />
-            <Field
-              label="Query"
-              value={draft.query}
-              onChange={(v) => setDraft((d) => ({ ...d, query: v }))}
-            />
+            <Field label="Name" value={draft} onChange={setDraft} />
           </div>
           <div className="mt-4 flex items-center justify-end gap-2">
             <button

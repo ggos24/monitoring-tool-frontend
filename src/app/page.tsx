@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
-import {
-  ScopeSelector,
-  type ScopeSelection,
-} from "@/components/dashboard/scope-selector";
-import type { ScopeParam } from "@/lib/types";
-import { formatDayLabel } from "@/lib/period";
+import { NarrativeTabs } from "@/components/dashboard/narrative-tabs";
+import type { ScopeParam, ScopeSelection } from "@/lib/types";
+import { formatDayLabel, resolveWindow, type Period } from "@/lib/period";
+import { FavorabilityPanel } from "@/components/dashboard/favorability-panel";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { CountryFilter } from "@/components/dashboard/country-filter";
 import { KpiGrid } from "@/components/dashboard/kpi-grid";
@@ -20,28 +18,30 @@ import { TimelineChart } from "@/components/dashboard/timeline-chart";
 import { SourcesList } from "@/components/dashboard/sources-list";
 import {
   MentionsList,
-  type QualityFilter,
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
-import { SourceQualityBreakdown } from "@/components/dashboard/source-quality-breakdown";
-import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
+import { visibleTopics } from "@/lib/topics";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
-  const [days, setDays] = useState<number>(7);
+  const [period, setPeriod] = useState<Period>({ kind: "preset", days: 7 });
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
   // every panel scopes to that day instead of the rolling period.
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
-  const [quality, setQuality] = useState<QualityFilter>("all");
-  // Shared panel order (Decision 34 follow-up): Top sources sort mode also
-  // orders the Mentions list, so "priority" reads coherently across both.
-  const [sourceSort, setSourceSort] = useState<"mentions" | "priority">(
-    "mentions",
-  );
+  // Δ vs the previous equal-length window on KPIs, sources, countries,
+  // favorability, plus the dashed previous-period line on the timeline.
+  const [compare, setCompare] = useState(true);
+
+  // `periodWin` drives the timeline (whole period, so a drilled day stays
+  // in context); `win` drives every other panel (narrowed to the day).
+  // Resolved once per render; preset bounds are hour-snapped, so stable.
+  const periodWin = resolveWindow(period, null);
+  const win = resolveWindow(period, selectedDay);
 
   // The API scope param: single topic or a group union.
   const scope: ScopeParam | null = scopeSel
@@ -50,20 +50,39 @@ export default function Home() {
       : { topic_id: scopeSel.id }
     : null;
 
-  // Auto-select the first topic on load (preserves the old dashboard
-  // behaviour now that the selector no longer self-selects). User can
-  // then switch to any topic or group.
   const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
+  const groupsQuery = useQuery({
+    queryKey: ["topic-groups"],
+    queryFn: apiClient.topicGroups,
+  });
+  const narratives = useMemo(
+    () => visibleTopics(topicsQuery.data),
+    [topicsQuery.data],
+  );
+  const poolTopicId =
+    topicsQuery.data?.find((t) => t.role === "pool")?.id ?? null;
+  // "All narratives" = the `Campaign` topic group (set up by WS-3).
+  const allGroup =
+    groupsQuery.data?.find((g) => g.name.toLowerCase() === "campaign") ?? null;
+  const topicNames = useMemo(
+    () => new Map(narratives.map((t) => [t.id, t.name] as const)),
+    [narratives],
+  );
+
+  // Default tab: All narratives when the Campaign group exists, else the
+  // first narrative. Waits for both lists so it doesn't flip after load.
+  const groupsSettled = groupsQuery.isSuccess || groupsQuery.isError;
   useEffect(() => {
-    if (scopeSel === null && topicsQuery.data && topicsQuery.data.length > 0) {
-      setScopeSel({ kind: "topic", id: topicsQuery.data[0].id });
-    }
-  }, [topicsQuery.data, scopeSel]);
+    if (scopeSel !== null || !groupsSettled) return;
+    if (allGroup) setScopeSel({ kind: "group", id: allGroup.id });
+    else if (narratives.length > 0)
+      setScopeSel({ kind: "topic", id: narratives[0].id });
+  }, [narratives, allGroup, groupsSettled, scopeSel]);
 
   // Distinguish "still loading / about to auto-select" (→ skeletons) from a
   // genuinely empty backend (→ a message, so skeletons don't spin forever).
   const noTopics =
-    topicsQuery.isSuccess && (topicsQuery.data?.length ?? 0) === 0;
+    topicsQuery.isSuccess && narratives.length === 0;
 
   const handleSelectScope = (next: ScopeSelection) => {
     setScopeSel(next);
@@ -71,7 +90,6 @@ export default function Home() {
     setSelectedDomain(null);
     setSelectedDay(null);
     setSource("all");
-    setQuality("all");
   };
 
   const handleSelectCountry = (iso2: string | null) => {
@@ -81,8 +99,8 @@ export default function Home() {
 
   // Picking a period exits the day drill-down; picking the same day again
   // toggles it off.
-  const handleSelectDays = (d: number) => {
-    setDays(d);
+  const handleSelectPeriod = (next: Period) => {
+    setPeriod(next);
     setSelectedDay(null);
   };
   const handleSelectDay = (day: string) => {
@@ -97,14 +115,19 @@ export default function Home() {
     <>
       <TopBar scope={scope} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <ScopeSelector value={scopeSel} onChange={handleSelectScope} />
+        <div className="mb-6 flex flex-col gap-3">
+          <NarrativeTabs
+            narratives={narratives}
+            allGroup={allGroup}
+            value={scopeSel}
+            onChange={handleSelectScope}
+          />
           <div className="flex flex-wrap items-center gap-2">
+            <PeriodToggle value={period} onChange={handleSelectPeriod} />
             {scope !== null && (
               <CountryFilter
                 scope={scope}
-                days={days}
-                selectedDay={selectedDay}
+                win={win}
                 value={country}
                 onChange={handleSelectCountry}
               />
@@ -121,31 +144,33 @@ export default function Home() {
                 <X className="size-3 text-text-tertiary" />
               </button>
             )}
-            <PeriodToggle value={days} onChange={handleSelectDays} />
-            <GenerateReportLink
-              scope={scope}
-              days={days}
-              country={country}
-              source={source}
-              quality={quality}
-            />
+            <div className="ml-auto flex items-center gap-4">
+              <CompareToggle value={compare} onChange={setCompare} />
+              <GenerateReportLink
+                scope={scope}
+                win={periodWin}
+                country={country}
+                source={source}
+              />
+            </div>
           </div>
         </div>
 
         {noTopics ? (
           <div className="mb-6 border border-border bg-card px-5 py-16 text-center">
             <p className="font-mono text-xs text-text-tertiary">
-              No topics yet. Add one in Settings to start monitoring.
+              No narratives yet. Add one in Settings to start monitoring.
             </p>
           </div>
         ) : (
           <>
             <div className="mb-6">
               <KpiGrid
+                compare={compare}
                 scope={scope}
-                days={days}
+                win={win}
                 country={country}
-                selectedDay={selectedDay}
+                poolTopicId={poolTopicId}
               />
             </div>
 
@@ -153,18 +178,19 @@ export default function Home() {
               <div className="bg-card lg:col-span-2">
                 <TimelineChart
                   scope={scope}
-                  days={days}
+                  win={periodWin}
+                  compare={compare}
                   country={country}
                   selectedDay={selectedDay}
                   onSelectDay={handleSelectDay}
                 />
               </div>
               <div className="bg-card">
-                <SourceQualityBreakdown
+                <FavorabilityPanel
                   scope={scope}
-                  days={days}
+                  win={win}
+                  compare={compare}
                   country={country}
-                  selectedDay={selectedDay}
                 />
               </div>
             </div>
@@ -173,13 +199,10 @@ export default function Home() {
               <div className="bg-card lg:col-span-2">
                 <SourcesList
                   scope={scope}
-                  days={days}
+                  win={win}
+                  compare={compare}
                   country={country}
-                  selectedDay={selectedDay}
                   source={source}
-                  quality={quality}
-                  sort={sourceSort}
-                  onChangeSort={setSourceSort}
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
                 />
@@ -187,24 +210,49 @@ export default function Home() {
               <div className="bg-card lg:col-span-5">
                 <MentionsList
                   scope={scope}
+                  win={win}
+                  topicNames={topicNames}
                   domain={selectedDomain}
                   country={country}
-                  selectedDay={selectedDay}
                   source={source}
-                  quality={quality}
-                  sort={sourceSort}
                   onChangeSource={setSource}
-                  onChangeQuality={setQuality}
                   onClearDomain={() => setSelectedDomain(null)}
                 />
               </div>
             </div>
           </>
         )}
-
-        <ResearchAssistant />
       </main>
       <Footer />
     </>
+  );
+}
+
+function CompareToggle({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => onChange(!value)}
+      className="inline-flex items-center gap-2 font-mono text-[11px] text-text-tertiary transition-colors hover:text-foreground"
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors",
+          value ? "justify-end bg-elevated" : "justify-start",
+        )}
+      >
+        <span className={cn("size-2", value ? "bg-foreground" : "bg-text-tertiary")} />
+      </span>
+      Compare to previous period
+    </button>
   );
 }

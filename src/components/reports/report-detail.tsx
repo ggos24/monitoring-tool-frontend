@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -11,6 +12,7 @@ import {
   ChevronUp,
   ExternalLink,
   Loader2,
+  Printer,
   TrendingDown,
   TrendingUp,
   Zap,
@@ -18,6 +20,7 @@ import {
 
 import { apiClient } from "@/lib/api";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
+import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import {
   clusterHandle,
   clusterMomentumTag,
@@ -48,6 +51,7 @@ import type {
   ReportClusterSummary,
   ReportEvidenceRef,
   ReportType,
+  ScopeParam,
   StanceByCountryEntry,
   StanceLabel,
 } from "@/lib/types";
@@ -128,9 +132,12 @@ export function ReportDetail({ reportId }: { reportId: number }) {
             : null,
         ]}
         quality={data.aggregates?.data_quality}
+        actions={<DownloadPdfButton />}
       />
       <ReportBody
         key={data.id}
+        comparisonScope={reportScopeParam(data)}
+        params={data.params}
         reportType={reportType}
         narrative={data.narrative}
         clusters={data.clusters ?? []}
@@ -244,6 +251,8 @@ function ScheduledRunNotice({ result }: { result: DigestResultDetail }) {
 }
 
 export function ReportBody({
+  comparisonScope = null,
+  params = null,
   reportType,
   narrative,
   clusters,
@@ -251,6 +260,9 @@ export function ReportBody({
   briefConvenience,
   errorNote,
 }: {
+  /** Topic/group the report covers — enables the vs-previous-period block. */
+  comparisonScope?: ScopeParam | null;
+  params?: Record<string, unknown> | null;
   reportType: ReportType;
   narrative: string | null;
   clusters: ReportClusterSummary[];
@@ -269,10 +281,10 @@ export function ReportBody({
         </div>
       )}
 
-      <MetricGrid clusters={clusters} aggregates={aggregates} />
-
+      {/* Decision-first order: bottom line → storylines → change vs the
+          previous period → everything else collapsed under Details. */}
       {sections.hasStructuredContent ? (
-        <StructuredBrief sections={sections} />
+        <BottomLine sections={sections} />
       ) : (
         <LegacyNarrative narrative={narrative} reportType={reportType} />
       )}
@@ -283,14 +295,22 @@ export function ReportBody({
         departed={aggregates?.departed_narratives ?? []}
       />
 
-      <DataQualityPanel aggregates={aggregates} />
+      <PeriodComparison
+        scope={comparisonScope}
+        params={params}
+        aggregates={aggregates}
+      />
 
+      <details className="border border-border bg-card print:hidden">
+        <summary className="cursor-pointer px-4 py-3 font-mono text-[11px] uppercase tracking-[0.1em] text-text-secondary hover:bg-elevated">
+          Details — methodology, data quality, breakdowns
+        </summary>
+        <div className="flex flex-col gap-7 border-t border-border p-4">
+          <MetricGrid clusters={clusters} aggregates={aggregates} />
+          {sections.hasStructuredContent && <BriefExtras sections={sections} />}
+          <DataQualityPanel aggregates={aggregates} />
       {(isGroup || aggregates) && (
-        <details className="border border-border bg-card">
-          <summary className="cursor-pointer px-4 py-3 font-mono text-[11px] uppercase tracking-[0.1em] text-text-secondary hover:bg-elevated">
-            Explore deterministic breakdowns
-          </summary>
-          <div className="flex flex-col gap-7 border-t border-border p-4">
+          <div className="flex flex-col gap-7">
             {isGroup && aggregates?.per_topic && aggregates.per_topic.length > 0 && (
               <PerTopicPanel rows={aggregates.per_topic} />
             )}
@@ -303,7 +323,7 @@ export function ReportBody({
               <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {!isGroup && (
                   <StanceWeightedPanel
-                    label="Publisher-weighted stance"
+                    label="Publisher-weighted favorability"
                     values={aggregates.publisher_weighted_stance}
                   />
                 )}
@@ -328,8 +348,9 @@ export function ReportBody({
                 <TimelinePanel timeline={aggregates.recency_timeline} />
               )}
           </div>
-        </details>
       )}
+        </div>
+      </details>
     </>
   );
 }
@@ -343,6 +364,7 @@ function ContextHeader({
   createdAt,
   meta,
   quality,
+  actions,
 }: {
   eyebrow: string;
   scopeLabel: string;
@@ -352,6 +374,7 @@ function ContextHeader({
   createdAt: string;
   meta: Array<string | null | undefined>;
   quality?: ReportAggregates["data_quality"];
+  actions?: React.ReactNode;
 }) {
   const filters = reportFilters(params);
   return (
@@ -376,6 +399,7 @@ function ContextHeader({
             <span className="border border-strong bg-elevated px-2 py-1 font-mono text-[10px] text-foreground">
               {reportTypeLabel(reportType)}
             </span>
+            {actions}
           </div>
           <time
             dateTime={createdAt}
@@ -436,7 +460,7 @@ function MetricGrid({
         note="Selected scope after report filters"
       />
       <MetricCard
-        label="Narratives"
+        label="Storylines"
         value={formatNumber(clusters.length)}
         note="Deterministic embedding clusters"
       />
@@ -446,7 +470,7 @@ function MetricGrid({
         note={`${formatNumber(clustered)} of ${formatNumber(analyzed)} analyzed`}
       />
       <MetricCard
-        label="Leading narrative share"
+        label="Leading storyline share"
         value={
           leadShare == null ? "—" : formatPercent(Math.max(0, leadShare) * 100)
         }
@@ -478,39 +502,46 @@ function MetricCard({
   );
 }
 
-function StructuredBrief({ sections }: { sections: BriefSections }) {
+function BottomLine({ sections }: { sections: BriefSections }) {
   return (
-    <section aria-labelledby="brief-heading" className="flex flex-col gap-5">
-      <div>
-        <h2
-          id="brief-heading"
-          className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary"
-        >
-          Bottom line
-        </h2>
-        <div className="border-l-2 border-foreground bg-card px-5 py-4">
-          {sections.bottomLine ? (
-            <p className="text-base leading-relaxed text-foreground">
-              {sections.bottomLine}
-            </p>
-          ) : (
-            <p className="text-sm text-text-tertiary">No bottom line was produced.</p>
-          )}
-          {sections.bullets.length > 0 && (
-            <ul className="mt-4 space-y-2 text-sm leading-relaxed text-text-secondary">
-              {sections.bullets.map((bullet, index) => (
-                <li key={index} className="flex gap-2">
-                  <span aria-hidden className="font-mono text-text-tertiary">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span>{bullet}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    <section aria-labelledby="brief-heading">
+      <h2
+        id="brief-heading"
+        className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary"
+      >
+        Bottom line
+      </h2>
+      <div className="border-l-2 border-foreground bg-card px-5 py-4">
+        {sections.bottomLine ? (
+          <p className="text-base leading-relaxed text-foreground">
+            {sections.bottomLine}
+          </p>
+        ) : (
+          <p className="text-sm text-text-tertiary">No bottom line was produced.</p>
+        )}
+        {sections.bullets.length > 0 && (
+          <ul className="mt-4 space-y-2 text-sm leading-relaxed text-text-secondary">
+            {sections.bullets.map((bullet, index) => (
+              <li key={index} className="flex gap-2">
+                <span aria-hidden className="font-mono text-text-tertiary">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+    </section>
+  );
+}
 
+function BriefExtras({ sections }: { sections: BriefSections }) {
+  if (!sections.trends && sections.watchlist.length === 0 && !sections.caveats) {
+    return null;
+  }
+  return (
+    <section className="flex flex-col gap-5">
       {(sections.trends || sections.watchlist.length > 0) && (
         <div className="grid grid-cols-1 gap-px bg-border md:grid-cols-2">
           <BriefTextBlock label="What changed" text={sections.trends} />
@@ -618,7 +649,7 @@ function NarrativesSection({
   // default so the section reads as a scannable list of narratives. The scan
   // layer — heading, claim, action, metrics, origins — is always visible.
   const [openBodies, setOpenBodies] = useState<Set<string>>(new Set());
-  const ranked = rankNarratives(clusters);
+  const ranked = useMemo(() => rankNarratives(clusters), [clusters]);
   const visible = showAll ? ranked : ranked.slice(0, DEFAULT_VISIBLE_NARRATIVES);
   const hiddenCount = Math.max(ranked.length - DEFAULT_VISIBLE_NARRATIVES, 0);
   const visibleKeys = visible.map(narrativeKey);
@@ -632,6 +663,31 @@ function NarrativesSection({
       else next.add(key);
       return next;
     });
+
+  // PDF export: expand every storyline (all of them, bodies open) before
+  // the print snapshot, then restore the on-screen state afterwards.
+  useEffect(() => {
+    let saved: { showAll: boolean; open: Set<string> } | null = null;
+    const before = () => {
+      saved = { showAll, open: openBodies };
+      flushSync(() => {
+        setShowAll(true);
+        setOpenBodies(new Set(ranked.map(narrativeKey)));
+      });
+    };
+    const after = () => {
+      if (!saved) return;
+      setShowAll(saved.showAll);
+      setOpenBodies(saved.open);
+      saved = null;
+    };
+    window.addEventListener("beforeprint", before);
+    window.addEventListener("afterprint", after);
+    return () => {
+      window.removeEventListener("beforeprint", before);
+      window.removeEventListener("afterprint", after);
+    };
+  }, [showAll, openBodies, ranked]);
 
   const toggleAllBodies = () =>
     setOpenBodies((current) => {
@@ -652,13 +708,13 @@ function NarrativesSection({
             id="narratives-heading"
             className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary"
           >
-            Top narratives
+            Storylines
           </h2>
           <p className="mt-1 text-xs text-text-tertiary">
-            Ordered by deterministic prominence: volume adjusted by audience reach.
+            Recurring angles inside the coverage, ordered by prominence.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
           {visible.length > 0 && (
             <button
               type="button"
@@ -739,8 +795,6 @@ function NarrativeCard({
     .slice(0, 5);
   const share =
     cluster.share_of_voice == null ? null : Math.max(0, cluster.share_of_voice) * 100;
-  const reachShare =
-    cluster.reach_sov == null ? null : Math.max(0, cluster.reach_sov) * 100;
   const topDomains = cluster.top_domains ?? [];
   const evidenceRefs = cluster.evidence_refs ?? [];
   const handle = clusterHandle(cluster);
@@ -759,7 +813,7 @@ function NarrativeCard({
     // without it, off-screen cards collapse to padding height, which makes the
     // scrollbar jump while scrolling and hides them from in-page search. The
     // `auto` keyword reuses each card's real height once it has rendered.
-    <article className="border border-border bg-card p-4 [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
+    <article className="storyline-card border border-border bg-card p-4 [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -798,22 +852,10 @@ function NarrativeCard({
 
       <DecisionCue cluster={cluster} />
 
-      <dl className="mt-4 grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
+      <dl className="mt-4 grid grid-cols-3 gap-px bg-border">
         <NarrativeMetric label="Mention share" value={share == null ? "—" : formatPercent(share)} />
-        <NarrativeMetric
-          label="Reach share"
-          value={reachShare == null ? "—" : formatPercent(reachShare)}
-        />
         <NarrativeMetric label="Mentions" value={formatNumber(cluster.n_mentions)} />
         <NarrativeMetric label="Outlets" value={formatNumber(cluster.n_publishers)} />
-        <NarrativeMetric
-          label="Mean reach"
-          value={
-            cluster.mean_reach_score == null
-              ? "—"
-              : `${Math.round(cluster.mean_reach_score)}/100`
-          }
-        />
       </dl>
 
       {countries.length > 0 && (
@@ -840,7 +882,7 @@ function NarrativeCard({
             aria-expanded={open}
             aria-controls={bodyId}
             onClick={onToggle}
-            className="mt-3 flex w-full items-center gap-1 border-t border-border pt-2 font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary hover:text-foreground"
+            className="mt-3 flex w-full items-center gap-1 border-t border-border pt-2 font-mono print:hidden text-[10px] uppercase tracking-[0.1em] text-text-tertiary hover:text-foreground"
           >
             {open ? (
               <>
@@ -1406,7 +1448,7 @@ function StanceByCountryPanel({ rows }: { rows: StanceByCountryEntry[] }) {
   return (
     <section>
       <h2 className="mb-1 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">
-        Stance by source country
+        Favorability by source country
       </h2>
       <p className="mb-3 text-[11px] text-text-tertiary">
         Source origin, not audience location. Showing {visible.length} of {rows.length} countries.
@@ -1418,7 +1460,7 @@ function StanceByCountryPanel({ rows }: { rows: StanceByCountryEntry[] }) {
               <th scope="col" className="px-3 py-2 text-left font-normal">Country</th>
               <th scope="col" className="px-2 py-2 text-right font-normal">Mentions</th>
               <th scope="col" className="px-2 py-2 text-right font-normal">Outlets</th>
-              <th scope="col" className="px-2 py-2 text-left font-normal">Stance mix</th>
+              <th scope="col" className="px-2 py-2 text-left font-normal">Favorability mix</th>
               <th scope="col" className="px-3 py-2 text-right font-normal">Dominant</th>
             </tr>
           </thead>
@@ -1450,7 +1492,7 @@ function PerMediaStancePanel({ rows }: { rows: PerMediaStanceEntry[] }) {
   return (
     <section>
       <h2 className="mb-1 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">
-        Stance by outlet
+        Favorability by outlet
       </h2>
       <p className="mb-3 text-[11px] text-text-tertiary">
         Showing {visible.length} of {rows.length} outlets by mention volume.
@@ -1462,7 +1504,7 @@ function PerMediaStancePanel({ rows }: { rows: PerMediaStanceEntry[] }) {
               <th scope="col" className="px-3 py-2 text-left font-normal">Outlet</th>
               <th scope="col" className="px-2 py-2 text-right font-normal">Mentions</th>
               <th scope="col" className="px-2 py-2 text-left font-normal">Tier</th>
-              <th scope="col" className="px-2 py-2 text-left font-normal">Stance mix</th>
+              <th scope="col" className="px-2 py-2 text-left font-normal">Favorability mix</th>
               <th scope="col" className="px-3 py-2 text-right font-normal">Dominant</th>
             </tr>
           </thead>
@@ -1489,9 +1531,9 @@ function PerMediaStancePanel({ rows }: { rows: PerMediaStanceEntry[] }) {
 function StanceMiniBar({ values }: { values: Record<StanceLabel, number> }) {
   const total = Object.values(values).reduce((sum, count) => sum + count, 0);
   const label = (Object.keys(values) as StanceLabel[])
-    .map((stance) => `${stance} ${total ? Math.round((values[stance] / total) * 100) : 0}%`)
+    .map((stance) => `${FAVORABILITY_LABEL[stance]} ${total ? Math.round((values[stance] / total) * 100) : 0}%`)
     .join(", ");
-  if (total === 0) return <div className="h-2 w-full bg-muted" aria-label="No stance data" />;
+  if (total === 0) return <div className="h-2 w-full bg-muted" aria-label="No favorability data" />;
   return (
     <div className="flex h-2 min-w-16 w-full" role="img" aria-label={label}>
       <div className="bg-success/60" style={{ width: `${(values.supportive / total) * 100}%` }} />
@@ -1514,7 +1556,7 @@ function StanceWeightedPanel({
     <div className="border border-border bg-card p-4">
       <h3 className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">{label}</h3>
       {total === 0 ? (
-        <p className="text-xs text-text-tertiary">No stance attribution in segment.</p>
+        <p className="text-xs text-text-tertiary">No favorability scores in segment.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {(Object.keys(values) as StanceLabel[]).map((stance) => (
@@ -1530,8 +1572,8 @@ function StanceBar({ stance, fraction }: { stance: StanceLabel; fraction: number
   const pct = Math.round(fraction * 100);
   return (
     <div className="flex items-center gap-2 font-mono text-xs">
-      <span className="w-20 capitalize text-text-secondary">{stance}</span>
-      <div className="h-2 flex-1 bg-muted" role="img" aria-label={`${stance}: ${pct}%`}>
+      <span className="w-20 text-text-secondary">{FAVORABILITY_LABEL[stance]}</span>
+      <div className="h-2 flex-1 bg-muted" role="img" aria-label={`${FAVORABILITY_LABEL[stance]}: ${pct}%`}>
         <div className={cn("h-2", STANCE_COLORS[stance])} style={{ width: `${pct}%` }} />
       </div>
       <span className="w-10 text-right text-text-tertiary">{pct}%</span>
@@ -1560,7 +1602,7 @@ function TierBreakdownPanel({
             <tr>
               <th scope="col" className="py-1 text-left font-normal">Tier</th>
               <th scope="col" className="py-1 text-right font-normal">Mentions</th>
-              {showStance && <th scope="col" className="py-1 text-right font-normal">Dominant stance</th>}
+              {showStance && <th scope="col" className="py-1 text-right font-normal">Dominant favorability</th>}
             </tr>
           </thead>
           <tbody>
@@ -1609,8 +1651,11 @@ function TimelinePanel({
 
 function StanceBadge({ stance }: { stance: StanceLabel }) {
   return (
-    <span className={cn("inline-block px-1.5 py-0.5 font-mono text-[10px] capitalize", STANCE_COLORS[stance])}>
-      {stance}
+    <span
+      title={FAVORABILITY_TOOLTIP}
+      className={cn("inline-block px-1.5 py-0.5 font-mono text-[10px]", STANCE_COLORS[stance])}
+    >
+      {FAVORABILITY_LABEL[stance]}
     </span>
   );
 }
@@ -1735,4 +1780,128 @@ function formatPercent(value: number): string {
   const safe = Math.max(0, Math.min(100, value));
   const rounded = Math.round(safe * 10) / 10;
   return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
+}
+
+function DownloadPdfButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => window.print()}
+      className="flex items-center gap-1 border border-border bg-card px-2 py-1 font-mono text-[10px] text-text-secondary hover:border-strong hover:text-foreground print:hidden"
+    >
+      <Printer className="size-3" /> Download PDF
+    </button>
+  );
+}
+
+function reportScopeParam(report: Report): ScopeParam | null {
+  if (report.group_id) return { group_id: report.group_id };
+  if (report.topic_id) return { topic_id: report.topic_id };
+  return null;
+}
+
+/**
+ * Coverage & favorability vs the previous equal-length window. Coverage =
+ * mention totals from /api/mentions (same scope, same window length).
+ * Favorability shows the current mix from the report itself; its
+ * previous-period counterpart arrives with /api/stats/favorability.
+ * Hidden when neither side has data. Wording is deliberately "change in
+ * coverage" — this is not a measure of campaign effect.
+ */
+function PeriodComparison({
+  scope,
+  params,
+  aggregates,
+}: {
+  scope: ScopeParam | null;
+  params: Record<string, unknown> | null;
+  aggregates: ReportAggregates | null;
+}) {
+  const from = typeof params?.date_from === "string" ? params.date_from : null;
+  const to = typeof params?.date_to === "string" ? params.date_to : null;
+  const fromMs = from ? new Date(from).getTime() : NaN;
+  const toMs = to ? new Date(to).getTime() : NaN;
+  const valid = scope !== null && Number.isFinite(fromMs) && Number.isFinite(toMs) && toMs > fromMs;
+  const prevFrom = valid ? new Date(fromMs - (toMs - fromMs)).toISOString() : "";
+
+  const current = useQuery({
+    queryKey: ["report-compare", scope, from, to],
+    queryFn: () =>
+      apiClient.mentions({ scope: scope!, limit: 1, date_from: from!, date_to: to! }),
+    enabled: valid,
+  });
+  const previous = useQuery({
+    queryKey: ["report-compare", scope, prevFrom, from],
+    queryFn: () =>
+      apiClient.mentions({ scope: scope!, limit: 1, date_from: prevFrom, date_to: from! }),
+    enabled: valid,
+  });
+
+  const fav = aggregates?.sentiment_distribution;
+  const favTotal = fav ? Object.values(fav).reduce((sum, n) => sum + n, 0) : 0;
+  const cur = current.data?.total;
+  const prev = previous.data?.total;
+  const hasCoverage = cur !== undefined && prev !== undefined;
+  if (!hasCoverage && favTotal === 0) return null;
+
+  const delta =
+    hasCoverage && prev > 0 ? ((cur - prev) / prev) * 100 : null;
+
+  return (
+    <section aria-labelledby="compare-heading">
+      <h2
+        id="compare-heading"
+        className="mb-1 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary"
+      >
+        Coverage &amp; favorability vs previous period
+      </h2>
+      <p className="mb-3 text-xs text-text-tertiary">
+        Change in coverage between this window and the equal-length window
+        before it — not a measure of campaign effect.
+      </p>
+      <div className="grid grid-cols-1 gap-px bg-border md:grid-cols-2">
+        {hasCoverage && (
+          <div className="bg-card p-4">
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+              Coverage (mentions)
+            </div>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-[26px] font-medium tabular-nums text-foreground">
+                {formatNumber(cur)}
+              </span>
+              {delta !== null && (
+                <span
+                  className={cn(
+                    "font-mono text-[11px] tabular-nums",
+                    delta > 0 ? "text-success" : delta < 0 ? "text-danger" : "text-text-tertiary",
+                  )}
+                >
+                  {delta > 0 ? "▲" : delta < 0 ? "▼" : "±"} {Math.abs(delta).toFixed(1)}%
+                </span>
+              )}
+            </div>
+            <p className="mt-1 font-mono text-[11px] text-text-tertiary">
+              previous period {formatNumber(prev)}
+            </p>
+          </div>
+        )}
+        {fav && favTotal > 0 && (
+          <div className="bg-card p-4" title={FAVORABILITY_TOOLTIP}>
+            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+              Favorability (this period)
+            </div>
+            <div className="mt-3 flex flex-col gap-2">
+              {(["supportive", "neutral", "critical", "mixed"] as StanceLabel[]).map((stance) => (
+                <StanceBar key={stance} stance={stance} fraction={(fav[stance] ?? 0) / favTotal} />
+              ))}
+            </div>
+            <p className="mt-2 font-mono text-[10px] text-text-tertiary">
+              {formatNumber(favTotal)} scored articles · previous-period
+              favorability coming soon
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
 }
