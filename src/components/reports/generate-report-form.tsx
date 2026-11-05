@@ -2,15 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Play, X } from "lucide-react";
+import { Play, X } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
-import type { ReportType, SegmentCondition } from "@/lib/types";
+import type { SegmentCondition } from "@/lib/types";
 import { DEFAULT_REPORT_TYPE } from "@/lib/report-view";
-import { ALL_ISO2, countryName, iso2ToFlagEmoji } from "@/lib/country";
+import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { Button } from "@/components/ui/button";
-import { SegmentFilterBuilder } from "@/components/reports/segment-filter-builder";
-import { ScheduledReportCreateForm } from "@/components/reports/scheduled-reports";
 import type { ScopeSelection } from "@/components/dashboard/scope-selector";
 import { cn } from "@/lib/utils";
 
@@ -34,46 +32,56 @@ export function GenerateReportForm({
   prefillDateFrom,
   prefillDateTo,
   onCreated,
+  onCancel,
 }: {
   scope: ScopeSelection;
   prefillFilters: SegmentCondition[];
   prefillDateFrom: string | null;
   prefillDateTo: string | null;
   onCreated: (reportId: number) => void;
+  onCancel?: () => void;
 }) {
-  // Split prefilled conditions: country → the dedicated multi-select,
-  // everything else → the generic builder (one source of truth per field).
+  // Campaign simplification: scope + period + Generate. Filters carried
+  // over from the Overview link (country) stay as removable chips; there
+  // is no free-form segment builder anymore.
   const [countries, setCountries] = useState<string[]>(() =>
     prefillFilters
       .filter((c) => c.field === "country")
       .flatMap((c) => (Array.isArray(c.value) ? c.value : [c.value]))
       .map((v) => String(v).toUpperCase()),
   );
-  const [filters, setFilters] = useState(
-    prefillFilters.filter((c) => c.field !== "country"),
-  );
   // If the user landed here with explicit dates in the URL (from the
-  // dashboard's "Generate report from current filters" link), default
-  // to custom + seed the inputs. Otherwise default to a sensible 7d.
+  // dashboard's "Generate report" link), default to custom + seed the
+  // inputs. Otherwise default to a sensible 7d.
   const initialRange: RangeKey =
     prefillDateFrom || prefillDateTo ? "custom" : "7d";
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [customFrom, setCustomFrom] = useState(prefillDateFrom ?? "");
   const [customTo, setCustomTo] = useState(prefillDateTo ?? "");
-  const [reportType, setReportType] = useState<ReportType>(DEFAULT_REPORT_TYPE);
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [scheduleError, setScheduleError] = useState<string | null>(null);
-  const [scheduleSaved, setScheduleSaved] = useState(false);
+  const [scopeMode, setScopeMode] = useState<"narrative" | "all">(
+    scope.kind === "group" ? "all" : "narrative",
+  );
   const queryClient = useQueryClient();
-  const isGroup = scope.kind === "group";
 
-  // Merge the dedicated country control back into one segment list.
+  // "All narratives" = the `Campaign` topic group (every narrative topic,
+  // pool excluded). Falls back to the page's own group scope if one is
+  // selected; disabled when neither exists.
+  const groupsQuery = useQuery({
+    queryKey: ["topic-groups"],
+    queryFn: apiClient.topicGroups,
+  });
+  const allGroupId =
+    scope.kind === "group"
+      ? scope.id
+      : (groupsQuery.data?.find((g) => g.name.toLowerCase() === "campaign")
+          ?.id ?? null);
+
   const effectiveFilters: SegmentCondition[] = useMemo(
     () =>
       countries.length > 0
-        ? [...filters, { field: "country", op: "in", value: countries }]
-        : filters,
-    [filters, countries],
+        ? [{ field: "country", op: "in", value: countries }]
+        : [],
+    [countries],
   );
 
   // Resolved window — memoized so `new Date()` doesn't churn the preview
@@ -88,9 +96,12 @@ export function GenerateReportForm({
     Boolean(previewRange.dateTo) &&
     previewRange.dateFrom >= previewRange.dateTo;
 
-  const scopeBody = isGroup
-    ? { group_id: scope.id }
-    : { topic_id: scope.id };
+  const scopeBody =
+    scopeMode === "all" && allGroupId !== null
+      ? { group_id: allGroupId }
+      : scope.kind === "group"
+        ? { group_id: scope.id }
+        : { topic_id: scope.id };
 
   // Live pre-flight scope estimate (no LLM) — refetches as the form changes.
   const preview = useQuery({
@@ -100,7 +111,7 @@ export function GenerateReportForm({
       effectiveFilters,
       previewRange.dateFrom,
       previewRange.dateTo,
-      reportType,
+      DEFAULT_REPORT_TYPE,
     ],
     queryFn: () =>
       apiClient.previewReport({
@@ -108,7 +119,7 @@ export function GenerateReportForm({
         filters: effectiveFilters,
         date_from: previewRange.dateFrom || undefined,
         date_to: previewRange.dateTo || undefined,
-        report_type: reportType,
+        report_type: DEFAULT_REPORT_TYPE,
       }),
     staleTime: 60_000,
     enabled: !invalidCustomRange,
@@ -122,7 +133,7 @@ export function GenerateReportForm({
         filters: effectiveFilters,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
-        report_type: reportType,
+        report_type: DEFAULT_REPORT_TYPE,
       });
     },
     onSuccess: (report) => {
@@ -133,43 +144,74 @@ export function GenerateReportForm({
 
   return (
     <div className="flex flex-col gap-4 border border-border bg-card p-4">
-      <h3 className="font-mono text-xs uppercase text-text-tertiary">
-        New report
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="font-mono text-xs uppercase text-text-tertiary">
+          New report
+        </h3>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close"
+            className="text-text-tertiary hover:text-foreground"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+      </div>
 
       <div>
         <span className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
-          Format
+          Scope
         </span>
         <div className="grid grid-cols-2 gap-px bg-border">
-          <ReportTypeButton
-            type="intelligence_brief"
-            selected={reportType === "intelligence_brief"}
-            onSelect={setReportType}
-            label="Intelligence brief"
-            description="Decision-first, structured"
+          <ScopeButton
+            selected={scopeMode === "narrative"}
+            disabled={scope.kind === "group"}
+            onSelect={() => setScopeMode("narrative")}
+            label="This narrative"
           />
-          <ReportTypeButton
-            type="executive"
-            selected={reportType === "executive"}
-            onSelect={setReportType}
-            label="Executive"
-            description="Legacy narrative"
+          <ScopeButton
+            selected={scopeMode === "all"}
+            disabled={allGroupId === null}
+            onSelect={() => setScopeMode("all")}
+            label="All narratives"
+            title={
+              allGroupId === null
+                ? "Needs the “Campaign” topic group (all narratives)"
+                : undefined
+            }
           />
         </div>
       </div>
 
-      <CountryMultiSelect value={countries} onChange={setCountries} />
-
-      <SegmentFilterBuilder
-        conditions={filters}
-        onChange={setFilters}
-        excludeFields={["country"]}
-      />
+      {countries.length > 0 && (
+        <div>
+          <span className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
+            Countries
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {countries.map((iso) => (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => setCountries(countries.filter((v) => v !== iso))}
+                className="flex items-center gap-1 border border-border bg-muted px-2 py-1 font-mono text-[11px] hover:border-destructive"
+                title={`${countryName(iso)} — click to remove`}
+              >
+                <span>
+                  {iso2ToFlagEmoji(iso)} {iso}
+                </span>
+                <X className="size-3 text-text-tertiary" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <span className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
-          Date range
+          Period
         </span>
         <div className="inline-flex flex-wrap items-center gap-0.5 border border-border bg-card p-0.5">
           {RANGES.map((r) => {
@@ -238,7 +280,7 @@ export function GenerateReportForm({
         data={preview.data}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div>
         <Button
           type="button"
           size="sm"
@@ -250,55 +292,9 @@ export function GenerateReportForm({
           }
         >
           <Play className="mr-1 size-3" />
-          {mutation.isPending ? "Generating…" : "Generate now"}
+          {mutation.isPending ? "Generating…" : "Generate"}
         </Button>
-        {!isGroup && (
-          <button
-            type="button"
-            onClick={() => {
-              setShowSchedule((v) => !v);
-              setScheduleSaved(false);
-              setScheduleError(null);
-            }}
-            className="flex cursor-pointer items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-[11px] text-text-secondary hover:border-strong hover:text-foreground"
-            title="Save these filters as a nightly scheduled report"
-          >
-            <CalendarClock className="size-3" />
-            Save as scheduled
-          </button>
-        )}
       </div>
-      {isGroup && (
-        <p className="font-mono text-[10px] text-text-tertiary">
-          Group report — unions all member topics and dedupes shared
-          articles. Scheduled digests are per-topic for now.
-        </p>
-      )}
-
-      {scheduleSaved && (
-        <p className="font-mono text-[11px] text-emerald-400">
-          Scheduled report saved — it runs nightly and appears below.
-        </p>
-      )}
-      {scheduleError && (
-        <p className="font-mono text-xs text-destructive">{scheduleError}</p>
-      )}
-
-      {showSchedule && !isGroup && (
-        <ScheduledReportCreateForm
-          topicId={scope.id}
-          initialFilters={effectiveFilters}
-          onClose={() => setShowSchedule(false)}
-          onSaved={() => {
-            setShowSchedule(false);
-            setScheduleSaved(true);
-            queryClient.invalidateQueries({
-              queryKey: ["digest-definitions"],
-            });
-          }}
-          onError={(msg) => setScheduleError(msg || null)}
-        />
-      )}
 
       {mutation.error && (
         <p className="font-mono text-xs text-destructive">
@@ -309,90 +305,34 @@ export function GenerateReportForm({
   );
 }
 
-function ReportTypeButton({
-  type,
+function ScopeButton({
   selected,
+  disabled,
   onSelect,
   label,
-  description,
+  title,
 }: {
-  type: ReportType;
   selected: boolean;
-  onSelect: (type: ReportType) => void;
+  disabled?: boolean;
+  onSelect: () => void;
   label: string;
-  description: string;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       aria-pressed={selected}
-      onClick={() => onSelect(type)}
+      disabled={disabled}
+      onClick={onSelect}
+      title={title}
       className={cn(
-        "flex min-h-14 flex-col items-start justify-center bg-card px-3 py-2 text-left transition-colors",
+        "bg-card px-3 py-2 text-left font-mono text-[11px] transition-colors",
         selected ? "bg-elevated text-foreground" : "text-text-tertiary hover:bg-elevated/60",
+        "disabled:cursor-not-allowed disabled:opacity-50",
       )}
     >
-      <span className="font-mono text-[11px]">{label}</span>
-      <span className="mt-0.5 text-[10px] text-text-tertiary">{description}</span>
+      {label}
     </button>
-  );
-}
-
-// ---- country multi-select ----
-
-function CountryMultiSelect({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const remaining = ALL_ISO2.filter((iso) => !value.includes(iso));
-  return (
-    <div>
-      <label className="mb-1 block font-mono text-[11px] uppercase text-text-tertiary">
-        Countries{" "}
-        <span className="normal-case text-text-tertiary/70">
-          (source-origin; empty = all)
-        </span>
-      </label>
-      {value.length > 0 && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {value.map((iso) => (
-            <button
-              key={iso}
-              type="button"
-              onClick={() => onChange(value.filter((v) => v !== iso))}
-              className="flex items-center gap-1 border border-border bg-muted px-2 py-1 font-mono text-[11px] hover:border-destructive"
-              title={`${countryName(iso)} — click to remove`}
-            >
-              <span>
-                {iso2ToFlagEmoji(iso)} {iso}
-              </span>
-              <X className="size-3 text-text-tertiary" />
-            </button>
-          ))}
-        </div>
-      )}
-      <select
-        value=""
-        onChange={(e) => {
-          if (e.target.value) onChange([...value, e.target.value]);
-        }}
-        className={cn(
-          "h-8 w-full border border-border bg-card px-2",
-          "font-mono text-[11px] text-foreground",
-          "outline-none transition-colors hover:border-strong focus:border-strong",
-        )}
-      >
-        <option value="">+ add country…</option>
-        {remaining.map((iso) => (
-          <option key={iso} value={iso} className="bg-card">
-            {iso2ToFlagEmoji(iso)} {iso} · {countryName(iso)}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
 

@@ -135,3 +135,47 @@
     @apply font-sans;
   }
 }
+
+/* PDF export (Reports → Download PDF = window.print()). Paper is white,
+   so the dark tokens flip to an ink-on-paper ladder for print only —
+   the screen UI stays dark. Nav, buttons and the report list are hidden
+   via `print:hidden`; each storyline starts on its own page. */
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  :root,
+  .dark {
+    --background: #ffffff;
+    --card: #ffffff;
+    --bg-elevated: #f4f4f5;
+    --bg-overlay: #f4f4f5;
+    --muted: #f4f4f5;
+    --border: #d4d4d8;
+    --border-strong: #a1a1aa;
+    --foreground: #09090b;
+    --card-foreground: #09090b;
+    --text-secondary: #27272a;
+    --text-tertiary: #52525b;
+    --muted-foreground: #71717a;
+    --primary: #09090b;
+    --primary-foreground: #ffffff;
+    --accent-success: #047857;
+    --accent-warning: #b45309;
+    --accent-danger: #b91c1c;
+    --destructive: #b91c1c;
+  }
+  html,
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .storyline-card {
+    break-inside: avoid;
+    content-visibility: visible;
+  }
+  .storyline-card + .storyline-card {
+    break-before: page;
+  }
+}

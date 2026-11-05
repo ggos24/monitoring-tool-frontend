@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
@@ -20,12 +20,11 @@ import { TimelineChart } from "@/components/dashboard/timeline-chart";
 import { SourcesList } from "@/components/dashboard/sources-list";
 import {
   MentionsList,
-  type QualityFilter,
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
-import { SourceQualityBreakdown } from "@/components/dashboard/source-quality-breakdown";
-import { ResearchAssistant } from "@/components/dashboard/research-assistant";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
+import { visibleTopics } from "@/lib/topics";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
@@ -36,12 +35,8 @@ export default function Home() {
   // every panel scopes to that day instead of the rolling period.
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [source, setSource] = useState<SourceFilter>("all");
-  const [quality, setQuality] = useState<QualityFilter>("all");
-  // Shared panel order (Decision 34 follow-up): Top sources sort mode also
-  // orders the Mentions list, so "priority" reads coherently across both.
-  const [sourceSort, setSourceSort] = useState<"mentions" | "priority">(
-    "mentions",
-  );
+  // KPI cards: absolute value + Δ% vs the previous equal-length window.
+  const [compare, setCompare] = useState(true);
 
   // The API scope param: single topic or a group union.
   const scope: ScopeParam | null = scopeSel
@@ -54,16 +49,20 @@ export default function Home() {
   // behaviour now that the selector no longer self-selects). User can
   // then switch to any topic or group.
   const topicsQuery = useQuery({ queryKey: ["topics"], queryFn: apiClient.topics });
+  const narratives = useMemo(
+    () => visibleTopics(topicsQuery.data),
+    [topicsQuery.data],
+  );
   useEffect(() => {
-    if (scopeSel === null && topicsQuery.data && topicsQuery.data.length > 0) {
-      setScopeSel({ kind: "topic", id: topicsQuery.data[0].id });
+    if (scopeSel === null && narratives.length > 0) {
+      setScopeSel({ kind: "topic", id: narratives[0].id });
     }
-  }, [topicsQuery.data, scopeSel]);
+  }, [narratives, scopeSel]);
 
   // Distinguish "still loading / about to auto-select" (→ skeletons) from a
   // genuinely empty backend (→ a message, so skeletons don't spin forever).
   const noTopics =
-    topicsQuery.isSuccess && (topicsQuery.data?.length ?? 0) === 0;
+    topicsQuery.isSuccess && narratives.length === 0;
 
   const handleSelectScope = (next: ScopeSelection) => {
     setScopeSel(next);
@@ -71,7 +70,6 @@ export default function Home() {
     setSelectedDomain(null);
     setSelectedDay(null);
     setSource("all");
-    setQuality("all");
   };
 
   const handleSelectCountry = (iso2: string | null) => {
@@ -127,7 +125,6 @@ export default function Home() {
               days={days}
               country={country}
               source={source}
-              quality={quality}
             />
           </div>
         </div>
@@ -135,13 +132,17 @@ export default function Home() {
         {noTopics ? (
           <div className="mb-6 border border-border bg-card px-5 py-16 text-center">
             <p className="font-mono text-xs text-text-tertiary">
-              No topics yet. Add one in Settings to start monitoring.
+              No narratives yet. Add one in Settings to start monitoring.
             </p>
           </div>
         ) : (
           <>
+            <div className="mb-2 flex justify-end">
+              <CompareToggle value={compare} onChange={setCompare} />
+            </div>
             <div className="mb-6">
               <KpiGrid
+                compare={compare}
                 scope={scope}
                 days={days}
                 country={country}
@@ -149,24 +150,14 @@ export default function Home() {
               />
             </div>
 
-            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
-              <div className="bg-card lg:col-span-2">
-                <TimelineChart
-                  scope={scope}
-                  days={days}
-                  country={country}
-                  selectedDay={selectedDay}
-                  onSelectDay={handleSelectDay}
-                />
-              </div>
-              <div className="bg-card">
-                <SourceQualityBreakdown
-                  scope={scope}
-                  days={days}
-                  country={country}
-                  selectedDay={selectedDay}
-                />
-              </div>
+            <div className="mb-6 border border-border bg-card">
+              <TimelineChart
+                scope={scope}
+                days={days}
+                country={country}
+                selectedDay={selectedDay}
+                onSelectDay={handleSelectDay}
+              />
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
@@ -177,9 +168,6 @@ export default function Home() {
                   country={country}
                   selectedDay={selectedDay}
                   source={source}
-                  quality={quality}
-                  sort={sourceSort}
-                  onChangeSort={setSourceSort}
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
                 />
@@ -187,24 +175,49 @@ export default function Home() {
               <div className="bg-card lg:col-span-5">
                 <MentionsList
                   scope={scope}
+                  days={days}
                   domain={selectedDomain}
                   country={country}
                   selectedDay={selectedDay}
                   source={source}
-                  quality={quality}
-                  sort={sourceSort}
                   onChangeSource={setSource}
-                  onChangeQuality={setQuality}
                   onClearDomain={() => setSelectedDomain(null)}
                 />
               </div>
             </div>
           </>
         )}
-
-        <ResearchAssistant />
       </main>
       <Footer />
     </>
+  );
+}
+
+function CompareToggle({
+  value,
+  onChange,
+}: {
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      onClick={() => onChange(!value)}
+      className="inline-flex items-center gap-2 font-mono text-[11px] text-text-tertiary transition-colors hover:text-foreground"
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors",
+          value ? "justify-end bg-elevated" : "justify-start",
+        )}
+      >
+        <span className={cn("size-2", value ? "bg-foreground" : "bg-text-tertiary")} />
+      </span>
+      Compare to previous period
+    </button>
   );
 }

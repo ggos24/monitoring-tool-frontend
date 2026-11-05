@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FileText } from "lucide-react";
 
-import type { QualityFilter, SourceFilter } from "@/components/dashboard/mentions-list";
+import type { SourceFilter } from "@/components/dashboard/mentions-list";
 import type { ScopeParam } from "@/lib/types";
 
 // Forwards the dashboard's current scope + filter state to the Reports
@@ -17,13 +17,11 @@ export function GenerateReportLink({
   days,
   country,
   source,
-  quality,
 }: {
   scope: ScopeParam | null;
   days: number;
   country: string | null;
   source: SourceFilter;
-  quality: QualityFilter;
 }) {
   if (scope === null) return null;
 
@@ -38,13 +36,12 @@ export function GenerateReportLink({
   params.set("date_to", dateTo.toISOString().slice(0, 16));
   if (country) params.set("country_iso2", country);
   if (source !== "all") params.set("source", source);
-  if (quality !== "all") params.set("score_band", quality);
 
   return (
     <Link
       href={`/reports?${params.toString()}`}
       className="flex items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-xs text-text-secondary hover:bg-muted transition-colors"
-      title="Generate a narrative report from the current filters"
+      title="Generate a report from the current filters"
     >
       <FileText className="size-3" />
       <span>Generate report</span>

@@ -17,7 +17,8 @@ import type {
   ScopeParam,
   StanceLabel,
 } from "@/lib/types";
-import { dayRange } from "@/lib/period";
+import { effectiveRanges } from "@/lib/period";
+import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,18 +33,10 @@ type StanceFilter = "all" | StanceLabel;
 // analyzed without scrolling past a day of pending rows.
 type EnrichedFilter = "all" | "enriched" | "pending";
 export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
-export type QualityFilter =
-  | "all"
-  | "trusted"
-  | "suspect"
-  | "unvetted"
-  | "contested"
-  | "propaganda";
-
 const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "supportive", label: "Supportive" },
-  { key: "critical", label: "Critical" },
+  { key: "supportive", label: "Favorable" },
+  { key: "critical", label: "Unfavorable" },
   { key: "neutral", label: "Neutral" },
   { key: "mixed", label: "Mixed" },
 ];
@@ -68,47 +61,29 @@ const ENRICHED_OPTIONS: { key: EnrichedFilter; label: string }[] = [
   { key: "pending", label: "Pending" },
 ];
 
-const QUALITY_OPTIONS: { key: QualityFilter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "trusted", label: "Trusted" },
-  { key: "suspect", label: "Suspect" },
-  // Unvetted (trust=2 only) is a subset of Suspect (1-2) — the "needs
-  // vetting" review queue: big-but-unverified outlets (Decision 33).
-  { key: "unvetted", label: "Unvetted" },
-  // Contested (Decision 34) — domains where independent sources disagree
-  // (e.g. EUvsDisinfo citations vs Wikipedia RSP): the editorial-review
-  // queue. Resolved by CURRENT entity verdict, not mention snapshots.
-  { key: "contested", label: "Contested" },
-  { key: "propaganda", label: "Propaganda" },
-];
-
 export function MentionsList({
   scope,
+  days,
   domain,
   country,
   selectedDay,
   source,
-  quality,
-  sort,
   onChangeSource,
-  onChangeQuality,
   onClearDomain,
 }: {
   scope: ScopeParam | null;
+  days: number;
   domain: string | null;
   country: string | null;
   selectedDay: string | null;
   source: SourceFilter;
-  quality: QualityFilter;
-  // Shared with the Top sources panel: "priority" orders mentions by
-  // source standing (trust band → reach → recency) instead of recency.
-  sort: "mentions" | "priority";
   onChangeSource: (v: SourceFilter) => void;
-  onChangeQuality: (v: QualityFilter) => void;
   onClearDomain: () => void;
 }) {
   const enabled = scope !== null;
-  const range = selectedDay ? dayRange(selectedDay) : null;
+  // Same window as the KPIs and charts: the drilled-down day, or the
+  // selected rolling period (open-ended to now).
+  const { curFrom, curTo } = effectiveRanges(days, selectedDay);
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -128,12 +103,11 @@ export function MentionsList({
     scope,
     domain,
     country,
+    days,
     selectedDay,
     source,
-    quality,
     stance,
     enriched,
-    sort,
   ]);
 
   const queryKey = [
@@ -143,13 +117,11 @@ export function MentionsList({
     domain,
     country,
     source,
-    quality,
     stance,
     enriched,
-    sort,
     page,
-    range?.from ?? null,
-    range?.to ?? null,
+    curFrom,
+    curTo ?? null,
   ] as const;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
@@ -163,12 +135,10 @@ export function MentionsList({
         source_domain: domain || undefined,
         country_iso2: country || undefined,
         source: source === "all" ? undefined : source,
-        score_band: quality === "all" ? undefined : quality,
         stance_label: stance === "all" ? undefined : stance,
         enriched: enriched === "all" ? undefined : enriched === "enriched",
-        sort: sort === "priority" ? "priority" : undefined,
-        date_from: range?.from,
-        date_to: range?.to,
+        date_from: curFrom,
+        date_to: curTo,
       }),
     enabled,
     placeholderData: keepPreviousData,
@@ -176,7 +146,6 @@ export function MentionsList({
 
   const hasActiveFilters =
     source !== "all" ||
-    quality !== "all" ||
     stance !== "all" ||
     enriched !== "all" ||
     domain !== null ||
@@ -184,7 +153,6 @@ export function MentionsList({
 
   const resetFilters = () => {
     onChangeSource("all");
-    onChangeQuality("all");
     setStance("all");
     setEnriched("all");
     setSearch("");
@@ -201,14 +169,7 @@ export function MentionsList({
   return (
     <div className="bg-card p-5">
       <div className="flex items-center justify-between">
-        <div className="flex items-baseline gap-3">
-          <KickerLabel>Mentions</KickerLabel>
-          {sort === "priority" && (
-            <span className="font-mono text-[10px] text-text-tertiary">
-              sorted by source priority
-            </span>
-          )}
-        </div>
+        <KickerLabel>Mentions</KickerLabel>
         <div className="font-mono text-[11px] text-text-tertiary tabular-nums">
           {total > 0 && `${total.toLocaleString()} total`}
         </div>
@@ -268,13 +229,8 @@ export function MentionsList({
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <ToggleGroup
-          label="Quality"
-          value={quality}
-          onChange={onChangeQuality}
-          options={QUALITY_OPTIONS}
-        />
-        <ToggleGroup
-          label="Stance"
+          label="Favorability"
+          title={FAVORABILITY_TOOLTIP}
           value={stance}
           onChange={setStance}
           options={STANCE_OPTIONS}
@@ -466,10 +422,10 @@ const STANCE_PILL: Record<
   StanceLabel,
   { variant: PillVariant; label: string }
 > = {
-  supportive: { variant: "positive", label: "Supportive" },
-  critical: { variant: "negative", label: "Critical" },
-  neutral: { variant: "neutral", label: "Neutral" },
-  mixed: { variant: "mixed", label: "Mixed" },
+  supportive: { variant: "positive", label: FAVORABILITY_LABEL.supportive },
+  critical: { variant: "negative", label: FAVORABILITY_LABEL.critical },
+  neutral: { variant: "neutral", label: FAVORABILITY_LABEL.neutral },
+  mixed: { variant: "mixed", label: FAVORABILITY_LABEL.mixed },
 };
 
 function StanceBadge({ mention }: { mention: Mention }) {
@@ -483,7 +439,7 @@ function StanceBadge({ mention }: { mention: Mention }) {
       : "no confidence score";
   const framing = mention.framing_label ?? null;
   const tip =
-    `${label} stance toward topic · ${confidence}` +
+    `${label} — ${FAVORABILITY_TOOLTIP} · ${confidence}` +
     (framing ? ` · framing: ${framing}` : "");
   const card = mention.claim_card;
 
@@ -626,17 +582,19 @@ function EnrichButton({
 
 function ToggleGroup<T extends string>({
   label,
+  title,
   value,
   onChange,
   options,
 }: {
   label: string;
+  title?: string;
   value: T;
   onChange: (v: T) => void;
   options: { key: T; label: string }[];
 }) {
   return (
-    <div className="inline-flex items-center gap-2">
+    <div className="inline-flex items-center gap-2" title={title}>
       <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-text-tertiary">
         {label}
       </span>

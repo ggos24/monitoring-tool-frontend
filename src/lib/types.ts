@@ -51,6 +51,8 @@ export type Topic = {
   topic_ast: TopicAst | null;
   is_active: boolean;
   mentions_count: number;
+  // "pool" = hidden Tier-1 denominator topic. Not sent by older backends.
+  role?: "narrative" | "pool" | string | null;
 };
 
 // Response shape for POST /api/topics and PATCH /api/topics/{id}/ast.

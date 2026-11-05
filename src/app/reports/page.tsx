@@ -1,19 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import { Plus } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
 import { DigestResultView, ReportDetail } from "@/components/reports/report-detail";
 import { ReportList } from "@/components/reports/report-list";
 import { GenerateReportForm } from "@/components/reports/generate-report-form";
-import { ScheduledReports } from "@/components/reports/scheduled-reports";
 import { ScopeSelector, type ScopeSelection } from "@/components/dashboard/scope-selector";
 import type {
-  DigestDefinition,
-  DigestResultDetail,
   SegmentCondition,
 } from "@/lib/types";
 import { apiClient } from "@/lib/api";
@@ -35,7 +33,6 @@ export default function ReportsPage() {
 function ReportsInner() {
   const search = useSearchParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
   const topicId = parseId(search.get("topic_id"));
   const groupId = parseId(search.get("group_id"));
@@ -72,30 +69,22 @@ function ReportsInner() {
 
   const selectReport = (newId: number) => {
     const parts = [scopeParam(), `report_id=${newId}`].filter(Boolean);
-    router.replace(`/reports?${parts.join("&")}`);
-  };
-
-  const selectRun = (run: DigestResultDetail, definition: DigestDefinition) => {
-    queryClient.setQueryData(["digest-result", run.id], run);
-    queryClient.setQueryData<DigestDefinition[]>(
-      ["digest-definitions", "all"],
-      (current) => {
-        if (!current) return [definition];
-        return current.some((item) => item.id === definition.id)
-          ? current
-          : [...current, definition];
-      },
-    );
-    const parts = [scopeParam(), `digest_result_id=${run.id}`].filter(Boolean);
+    setShowForm(false);
     router.replace(`/reports?${parts.join("&")}`);
   };
 
   const prefillFilters = parseFiltersFromSearch(search);
   const prefillFrom = search.get("date_from");
   const prefillTo = search.get("date_to");
+  // The form sits behind "New report"; arriving from the Overview's
+  // "Generate report" link (dates in the URL) opens it straight away.
+  const [showForm, setShowForm] = useState(
+    Boolean(prefillFrom || prefillTo),
+  );
 
   return (
     <>
+      <div className="contents print:hidden">
       <TopBar
         scope={
           scope === null
@@ -105,43 +94,46 @@ function ReportsInner() {
               : { topic_id: scope.id }
         }
       />
+      </div>
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
           <ScopeSelector value={scope} onChange={setScope} />
-          <h1 className="font-mono text-xs uppercase text-text-tertiary">
-            Reports
-          </h1>
+          {scope !== null && !showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-1 border border-strong bg-foreground px-3 py-1.5 font-mono text-xs text-primary-foreground hover:bg-text-secondary"
+            >
+              <Plus className="size-3" /> New report
+            </button>
+          )}
         </div>
 
         {scope === null ? (
           <div className="border border-dashed border-border p-12 text-center text-sm text-text-tertiary">
-            Select a topic or group to view or generate reports.
+            Select a narrative to view or generate reports.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <aside className="lg:col-span-4 xl:col-span-3 flex flex-col gap-6">
-              <GenerateReportForm
-                scope={scope}
-                prefillFilters={prefillFilters}
-                prefillDateFrom={prefillFrom}
-                prefillDateTo={prefillTo}
-                onCreated={selectReport}
-              />
+            <aside className="lg:col-span-4 xl:col-span-3 flex flex-col gap-6 print:hidden">
+              {showForm && (
+                <GenerateReportForm
+                  scope={scope}
+                  prefillFilters={prefillFilters}
+                  prefillDateFrom={prefillFrom}
+                  prefillDateTo={prefillTo}
+                  onCreated={selectReport}
+                  onCancel={() => setShowForm(false)}
+                />
+              )}
               <section>
                 <h2 className="mb-3 font-mono text-xs uppercase text-text-tertiary">
                   Recent
                 </h2>
                 <ReportList scope={scope} selectedId={reportId} />
               </section>
-              {scope.kind === "topic" && (
-                <ScheduledReports
-                  topicId={scope.id}
-                  selectedResultId={digestResultId}
-                  onSelectResult={selectRun}
-                />
-              )}
             </aside>
-            <section className="lg:col-span-8 xl:col-span-9">
+            <section className="lg:col-span-8 xl:col-span-9 print:col-span-12">
               {digestResultId !== null &&
               (digestResultQuery.isLoading || digestDefinitionsQuery.isLoading) ? (
                 <div className="border border-dashed border-border p-12 text-center font-mono text-xs text-text-tertiary">
@@ -170,14 +162,16 @@ function ReportsInner() {
                 <ReportDetail reportId={reportId} />
               ) : (
                 <div className="border border-dashed border-border p-12 text-center text-sm text-text-tertiary">
-                  Pick a report, a scheduled run, or generate a new one.
+                  Pick a report or create a new one.
                 </div>
               )}
             </section>
           </div>
         )}
       </main>
-      <Footer />
+      <div className="print:hidden">
+        <Footer />
+      </div>
     </>
   );
 }
@@ -193,17 +187,6 @@ function parseFiltersFromSearch(search: URLSearchParams): SegmentCondition[] {
   const country = search.get("country_iso2");
   if (country) {
     out.push({ field: "country", op: "=", value: country });
-  }
-  const stance = search.get("stance_label");
-  if (stance) {
-    out.push({ field: "stance_label", op: "=", value: stance });
-  }
-  const quality = search.get("score_band");
-  if (quality === "trusted") {
-    out.push({ field: "source_score", op: ">=", value: 3 });
-    out.push({ field: "is_propaganda", op: "=", value: false });
-  } else if (quality === "propaganda") {
-    out.push({ field: "is_propaganda", op: "=", value: true });
   }
   return out;
 }

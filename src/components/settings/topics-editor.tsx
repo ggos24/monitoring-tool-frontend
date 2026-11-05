@@ -6,9 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { visibleTopics } from "@/lib/topics";
 import { TopicRow } from "./topic-row";
 
-export function TopicsEditor() {
+export function TopicsEditor({ advanced = false }: { advanced?: boolean }) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["topics"],
     queryFn: apiClient.topics,
@@ -18,18 +19,21 @@ export function TopicsEditor() {
     <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <KickerLabel>Topics</KickerLabel>
+          <KickerLabel>{advanced ? "Narrative definitions" : "Narratives"}</KickerLabel>
           <p className="mt-1 text-xs text-text-tertiary">
-            Edit name, search query, or toggle active. Backend re-sync runs
-            on the next collection cycle.
+            {advanced
+              ? "Toggle collection and edit the matcher AST. The Tier-1 pool is listed here only."
+              : "Campaign narratives tracked across Tier-1 outlets. Only the name is editable here."}
           </p>
         </div>
+        {advanced && (
         <Link
           href="/settings/topics/new"
           className="cursor-pointer border border-strong bg-foreground px-3 py-1 font-mono text-[11px] text-primary-foreground hover:bg-text-secondary"
         >
           + New topic
         </Link>
+        )}
       </div>
 
       <div className="mt-4">
@@ -41,7 +45,7 @@ export function TopicsEditor() {
           </div>
         ) : error ? (
           <div className="flex items-center gap-3 font-mono text-[11px] text-text-tertiary">
-            <span>Failed to load topics</span>
+            <span>Failed to load narratives</span>
             <button
               type="button"
               onClick={() => refetch()}
@@ -52,12 +56,12 @@ export function TopicsEditor() {
           </div>
         ) : !data || data.length === 0 ? (
           <div className="font-mono text-[11px] text-text-tertiary">
-            No topics configured yet. Use &ldquo;+ New topic&rdquo; to create one.
+            No narratives configured yet.
           </div>
         ) : (
           <ul>
-            {data.map((topic) => (
-              <TopicRow key={topic.id} topic={topic} />
+            {(advanced ? data : visibleTopics(data)).map((topic) => (
+              <TopicRow key={topic.id} topic={topic} advanced={advanced} />
             ))}
           </ul>
         )}

@@ -9,11 +9,14 @@ import { KpiCard } from "./kpi-card";
 import { TopGeoCard } from "./top-geo-card";
 
 export function KpiGrid({
+  compare,
   scope,
   days,
   country,
   selectedDay,
 }: {
+  /** Show Δ% + the previous window's absolute value under each card. */
+  compare: boolean;
   scope: ScopeParam | null;
   days: number;
   country: string | null;
@@ -47,7 +50,7 @@ export function KpiGrid({
         date_from: prevFrom,
         date_to: prevTo,
       }),
-    enabled,
+    enabled: enabled && compare,
   });
 
   // Distinct-source count is now period-scoped + country-aware (exact, no
@@ -71,7 +74,7 @@ export function KpiGrid({
         date_from: prevFrom,
         date_to: prevTo,
       }),
-    enabled,
+    enabled: enabled && compare,
   });
 
   const totalMentions = currentMentions.data?.total ?? 0;
@@ -90,6 +93,16 @@ export function KpiGrid({
   );
   const trendTitle = selectedDay ? "vs previous day" : `vs previous ${days}d`;
   const periodSubtitle = selectedDay ? formatDayLabel(selectedDay) : `last ${days}d`;
+  const prevLabel = selectedDay ? "prev day" : `prev ${days}d`;
+  // "· prev 1,234" suffix — the previous window's absolute value, so the
+  // Δ% always reads against a visible base.
+  const prevSuffix = (n: number | undefined) =>
+    compare && n !== undefined ? ` · ${prevLabel} ${n.toLocaleString()}` : "";
+  const prevMentions = previousMentions.data?.total;
+  const prevDailyAvg =
+    prevMentions !== undefined && effectiveDays > 0
+      ? Math.round(prevMentions / effectiveDays)
+      : undefined;
 
   // Treat "no scope yet" (initial load, before the first topic auto-selects)
   // as loading so the whole grid shows skeletons instead of a blank flash.
@@ -101,24 +114,24 @@ export function KpiGrid({
       <KpiCard
         kicker="Total mentions"
         value={totalMentions.toLocaleString()}
-        subtitle={periodSubtitle}
-        trend={mentionsTrend}
+        subtitle={periodSubtitle + prevSuffix(prevMentions)}
+        trend={compare ? mentionsTrend : undefined}
         trendTitle={trendTitle}
         isLoading={isMentionsLoading}
       />
       <KpiCard
         kicker="Daily average"
         value={dailyAvg.toLocaleString()}
-        subtitle="per day"
-        trend={mentionsTrend}
+        subtitle={"per day" + prevSuffix(prevDailyAvg)}
+        trend={compare ? mentionsTrend : undefined}
         trendTitle={trendTitle}
         isLoading={isMentionsLoading}
       />
       <KpiCard
         kicker="Sources"
         value={sourceCount.toLocaleString()}
-        subtitle="distinct domains"
-        trend={sourcesTrend}
+        subtitle={"distinct domains" + prevSuffix(previousSources.data?.count)}
+        trend={compare ? sourcesTrend : undefined}
         trendTitle={trendTitle}
         isLoading={isSourcesLoading}
       />

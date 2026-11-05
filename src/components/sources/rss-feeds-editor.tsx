@@ -9,7 +9,6 @@ import { ApiError, apiClient } from "@/lib/api";
 import type { RssFeed, RssFeedPatch } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DomainScoreBadge } from "@/components/dashboard/domain-score-badge";
 import { cn } from "@/lib/utils";
 
 const SUGGESTIONS: { url: string; name: string }[] = [
@@ -681,11 +680,6 @@ function PublisherTrust({ feed }: { feed: RssFeed }) {
       <span className="font-mono text-[10px] text-text-tertiary">
         {feed.publisher_domain_normalized}
       </span>
-      <DomainScoreBadge
-        score={feed.publisher_score}
-        isPropaganda={feed.publisher_is_propaganda}
-        domain={feed.publisher_domain_normalized}
-      />
     </span>
   );
 }
