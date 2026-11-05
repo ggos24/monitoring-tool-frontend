@@ -48,3 +48,14 @@ Branch: `claude/campaign-ws5-frontend-5b7b80`. Front-end only; no new API.
 ## Not touched
 - `sentiment-breakdown.tsx` (coming-soon, unused) and `segment-filter-builder.tsx`
   (still used by the scheduled-digest create form under Advanced).
+
+## Verification (2026-11-05)
+- `npx tsc --noEmit` (+ `--noUnusedLocals`), `npm run build`, `npm test` — clean. The repo
+  has no ESLint config, so there is no separate lint step.
+- Prod had **zero topics/reports** during verification (old topics deleted per plan; the API
+  was also returning 500s for ~4 min). Visual checks ran against a local fixture server
+  that mimics the API shapes (3 narratives + a `role: "pool"` topic, a `Campaign` group,
+  one intelligence-brief report). Checked: Overview (KPIs with Δ + prev, 7d→30d changes the
+  Mentions total, pool absent from picker), Reports (block order, comparison block,
+  New report form), Settings (rename-only), and a headless-Chrome print-to-PDF (3 A4 pages,
+  no nav/buttons, storylines expanded, one per page).
