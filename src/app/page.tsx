@@ -178,7 +178,13 @@ export default function Home() {
                 scope={scope}
                 win={win}
                 country={country}
+                // Deploy-order fallback only (backend without /api/campaign):
+                // generic endpoints mix GDELT DOC + GN + RSS, so say so.
                 fallback={
+                  <>
+                  <div className="border border-b-0 border-warning/40 bg-card px-5 py-2 font-mono text-[11px] text-warning">
+                    All sources, not GKG — campaign headline unavailable on this backend.
+                  </div>
                   <KpiGrid
                     compare={compare}
                     scope={scope}
@@ -186,6 +192,7 @@ export default function Home() {
                     country={country}
                     poolTopicId={poolTopicId}
                   />
+                  </>
                 }
               />
               <CoverageNote />

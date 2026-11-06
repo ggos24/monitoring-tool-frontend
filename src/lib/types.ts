@@ -939,10 +939,13 @@ export type Pickup = {
   outlet: string | null;
   published_at: string;
   signals: PickupSignal[];
+  /** UNITED24 URLs the article links to (GKG PAGE_LINKS); may be empty. */
+  u24_links?: string[];
 };
 /** GET /api/campaign/pickups — same shape as headline's `u` block. */
 export type PickupsResponse = {
   articles: number;
+  /** Raw signal labels → count (not the derived text/link/both). */
   by_signal: Partial<Record<PickupSignal, number>>;
   items: Pickup[];
   truncated: boolean;

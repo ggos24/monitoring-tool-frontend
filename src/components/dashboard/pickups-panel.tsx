@@ -11,11 +11,18 @@ import { isNotFound } from "./campaign-data";
 
 const LIMIT = 50;
 
-const SIGNAL_LABEL: Record<PickupSignal, { text: string; title: string }> = {
-  doc_text: { text: "text", title: "UNITED24 named in the article text (GDELT DOC)" },
-  gkg_title: { text: "headline", title: "UNITED24 in the headline (GDELT GKG)" },
-  gkg_link: { text: "link", title: "Article links to a UNITED24 page or account (GDELT GKG)" },
+const RAW_SIGNAL: Record<PickupSignal, string> = {
+  doc_text: "named in the text (GDELT DOC)",
+  gkg_title: "named in the headline (GDELT GKG)",
+  gkg_link: "links to UNITED24 (GDELT GKG)",
 };
+
+/** text = doc_text or gkg_title; link = gkg_link; both = one of each. */
+function pickupKind(signals: PickupSignal[]): "text" | "link" | "both" | null {
+  const text = signals.includes("doc_text") || signals.includes("gkg_title");
+  const link = signals.includes("gkg_link");
+  return text && link ? "both" : text ? "text" : link ? "link" : null;
+}
 
 /**
  * UNITED24 pickups in Tier-1 media (axis U). Deliberately a list of
@@ -77,17 +84,7 @@ export function PickupsPanel({ win }: { win: DateWindow }) {
                   {p.outlet ?? "—"} · {p.published_at.slice(0, 10)}
                 </div>
               </div>
-              <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                {p.signals.map((s) => (
-                  <span
-                    key={s}
-                    title={SIGNAL_LABEL[s]?.title ?? s}
-                    className="border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary"
-                  >
-                    {SIGNAL_LABEL[s]?.text ?? s}
-                  </span>
-                ))}
-              </span>
+              <PickupKind signals={p.signals} links={p.u24_links ?? []} />
             </li>
           ))}
         </ul>
@@ -98,5 +95,22 @@ export function PickupsPanel({ win }: { win: DateWindow }) {
         </div>
       )}
     </div>
+  );
+}
+
+function PickupKind({ signals, links }: { signals: PickupSignal[]; links: string[] }) {
+  const kind = pickupKind(signals);
+  if (!kind) return null;
+  const title = [
+    ...signals.map((s) => RAW_SIGNAL[s] ?? s),
+    ...links.map((l) => `→ ${l}`),
+  ].join("\n");
+  return (
+    <span
+      title={title}
+      className="shrink-0 border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary"
+    >
+      {kind === "both" ? "text + link" : kind}
+    </span>
   );
 }
