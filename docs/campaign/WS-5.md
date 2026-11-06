@@ -106,30 +106,35 @@ range → 422, 400 → 200 (matches the picker's 400-day guard).
 
 # GKG follow-up (branch `claude/campaign-ws5-gkg`, PLAN §9)
 
-Built on mocks. The endpoints below are a **proposal to WS-4** — rename freely; the frontend
-adapts in `src/lib/api.ts` + `src/lib/types.ts` only.
+Merged contract from the coordinator (2026-11-06), built against backend PR #17
+(`app/api/campaign.py`, router prefix `/api/campaign`). Fields marked *WS-4 adding* are typed
+optional in `src/lib/types.ts`; their names are my best guess and are isolated there.
 
-```
-GET /api/coverage
-→ {"network_size": 95, "selector_version": "v1" | null,
-   "visible":     [{"domain": "bbc.co.uk", "name": "BBC"}, ...],   # GKG sees these (~48)
-   "not_visible": [{"domain": "reuters.com", "name": "Reuters"}, ...]}
+| Endpoint | Used by | Notes |
+|---|---|---|
+| `GET /api/campaign/coverage` → `CoverageBlock {available, source, counts{visible,sparse,invisible}, outlets{…}}` + *`selector_version`*, *`measured_from/_to`* | footnote, KPI grid | hidden on 404 or `available=false` |
+| `GET /api/campaign/headline?topic_id\|group_id&date_from&date_to&selector_version&`*`country_iso2`*`&u_limit=0` | KPI grid | one call per window; `selector_version` passed verbatim from coverage |
+| `GET /api/campaign/pickups?date_from&date_to&limit` → same shape as headline `u` (`{articles, by_signal, items[{mention_id, topic_id, url\|null, title, outlet, published_at, signals[]}], truncated}`) | pickups panel | *WS-4 adding*; 404 → hidden, 422/other → error text |
+| `GET /api/mentions` / `/api/stats/sources` with `source=gn\|rss&exclude_gkg=true` | live panel | *WS-4 adding* `exclude_gkg` |
 
-GET /api/pickups?date_from&date_to[&limit=50]          # axis U, campaign-wide
-→ {"total": 7,
-   "items": [{"url", "title", "source_domain", "published_at",
-              "signal": "text" | "link" | "both"}]}     # text = DOC mention, link = GKG PAGE_LINKS
-```
+- **KPI grid** (`campaign-kpi-grid.tsx`): Tier-1 articles · Share of Tier-1 coverage (`pool_share`) ·
+  Favorable share · Outlets · Top countries (only when *`headline.countries`* is present).
+  - Favorable share shows **n/a** unless scored articles are the majority (enrichment is off,
+    so most rows are unscored).
+  - `mixed_selector_versions=true` in either window → error message instead of numbers.
+  - *`last_ingested_at`* (assumed name): `null` or before the window with 0 articles →
+    "Live data not ingested yet"; inside the window → numbers plus "ingested through …".
+  - 404 → falls back to the old generic-endpoint grid (pre-#17 backends).
+- **Footnote**: "Figures cover N fully and M partially of T Tier-1 outlets that GDELT
+  indexes." (default wording) + measurement window when present; expands to the three outlet
+  lists. Selector id only in the tooltip. The "agencies are in the live GN panel" sentence is
+  dropped while GN is off and RSS is inactive.
+- **Live GN/RSS panel**: `exclude_gkg=true`, error state, "Live source not active" when 0,
+  never compares.
+- **Pickups**: list with `text` / `headline` / `link` labels per signal; a `null` url renders
+  the title without a link.
+- **Campaign defaults**: Overview opens on the Campaign preset when its dates are configured
+  (default; else 7d). Top sources never shows Δ while the source filter is GN or RSS.
 
-- **Coverage footnote** under the KPI grid: "Figures cover the N of 95 Tier-1 outlets that GDELT
-  indexes.", expandable (selector version in its tooltip — an opaque id such as `gkg-v1+n3.f627fbf35edbf8c5`) to both outlet lists. Hidden if `/api/coverage` 404s.
-- **Live: Google News & RSS** panel: count + top 8 outlets per collector for the current window,
-  via the existing `source=gn|rss` filter on `/api/mentions` and `/api/stats/sources`. Never shows
-  Δ or a previous period (no baseline), regardless of the compare switch. Assumes WS-4 keeps the
-  headline endpoints GKG-only and still serves GN/RSS rows through `source=`.
-- **UNITED24 pickups** panel: list of article titles with domain, date and a mention/link/both
-  label; total for the window; no % trend. Independent of the narrative tab. Hidden if
-  `/api/pickups` errors (older backend).
-
-Open: whether link-only pickups count (editor question in PLAN §9) — the label shows the signal
-either way; filtering is a one-line change once decided.
+Example rows (coverage CSV): `bbc.com` is the canonical BBC domain; `reuters.com` is
+**sparse** (partially visible), not invisible.

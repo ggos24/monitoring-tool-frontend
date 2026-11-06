@@ -1,7 +1,8 @@
 import type {
   CountryAttribution,
   CountryCount,
-  Coverage,
+  CampaignCoverage,
+  CampaignHeadline,
   DigestDefinition,
   DigestDefinitionCreate,
   DigestDefinitionPatch,
@@ -153,6 +154,8 @@ type MentionsParams = {
   // "recent" (default) — chronological; "priority" — order by source
   // standing (trust band, then reach), coupled to Top sources sort.
   sort?: "recent" | "priority";
+  // Campaign live panel: only rows outside the GKG selection (GN/RSS).
+  exclude_gkg?: boolean;
 };
 
 export const apiClient = {
@@ -187,6 +190,7 @@ export const apiClient = {
     if (params.score_band) qs.set("score_band", params.score_band);
     if (params.country_iso2) qs.set("country_iso2", params.country_iso2);
     if (params.sort && params.sort !== "recent") qs.set("sort", params.sort);
+    if (params.exclude_gkg) qs.set("exclude_gkg", "true");
     return api<MentionsListResponse>(`/api/mentions?${qs}`);
   },
 
@@ -241,11 +245,13 @@ export const apiClient = {
       sort?: "mentions" | "priority";
       date_from?: string;
       date_to?: string;
+      exclude_gkg?: boolean;
     },
   ) => {
     const qs = scopeQuery(scope);
     qs.set("days", String(days));
     qs.set("limit", String(limit));
+    if (extra?.exclude_gkg) qs.set("exclude_gkg", "true");
     if (country_iso2) qs.set("country_iso2", country_iso2);
     if (extra?.source) qs.set("source", extra.source);
     if (extra?.score_band) qs.set("score_band", extra.score_band);
@@ -294,15 +300,36 @@ export const apiClient = {
     return api<CountryCount[]>(`/api/stats/countries?${qs}`);
   },
 
-  // PROPOSED (PLAN §9, mock-only until WS-4): GKG coverage + UNITED24 pickups.
-  coverage: () => api<Coverage>("/api/coverage"),
+  // Campaign GKG measurement (PLAN §9, backend PR #17).
+  campaignCoverage: () => api<CampaignCoverage>("/api/campaign/coverage"),
 
-  pickups: (opts: { date_from: string; date_to: string; limit?: number }) => {
+  campaignHeadline: (
+    scope: ScopeParam,
+    opts: {
+      date_from: string;
+      date_to: string;
+      selector_version?: string | null;
+      country_iso2?: string | null;
+    },
+  ) => {
+    const qs = scopeQuery(scope);
+    qs.set("date_from", opts.date_from);
+    qs.set("date_to", opts.date_to);
+    // Pass the coverage selector verbatim so both windows are measured by
+    // the same selector (otherwise mixed_selector_versions can flip on).
+    if (opts.selector_version) qs.set("selector_version", opts.selector_version);
+    if (opts.country_iso2) qs.set("country_iso2", opts.country_iso2);
+    // KPI grid doesn't render the item list — skip it.
+    qs.set("u_limit", "0");
+    return api<CampaignHeadline>(`/api/campaign/headline?${qs}`);
+  },
+
+  campaignPickups: (opts: { date_from: string; date_to: string; limit?: number }) => {
     const qs = new URLSearchParams();
     qs.set("date_from", opts.date_from);
     qs.set("date_to", opts.date_to);
     if (opts.limit !== undefined) qs.set("limit", String(opts.limit));
-    return api<PickupsResponse>(`/api/pickups?${qs}`);
+    return api<PickupsResponse>(`/api/campaign/pickups?${qs}`);
   },
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),

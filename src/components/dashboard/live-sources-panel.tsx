@@ -14,9 +14,10 @@ const SOURCES = [
 ] as const;
 
 /**
- * Google News + RSS, kept apart from the GKG headline figures (PLAN §9).
- * These collectors only run live — there is no pre-campaign baseline — so
- * the panel never shows Δ or a previous period, whatever the compare switch.
+ * Google News + RSS, kept apart from the GKG headline figures (PLAN §9):
+ * `exclude_gkg` leaves out rows the GKG selection already counts. These
+ * collectors only run live — no pre-campaign baseline — so the panel never
+ * shows Δ or a previous period, whatever the compare switch.
  */
 export function LiveSourcesPanel({
   scope,
@@ -59,7 +60,7 @@ function SourceColumn({
 }) {
   const enabled = scope !== null;
   const total = useQuery({
-    queryKey: ["mentions-kpi", scope, country, source, win.from, win.to],
+    queryKey: ["live-total", scope, country, source, win.from, win.to],
     queryFn: () =>
       apiClient.mentions({
         scope: scope!,
@@ -68,24 +69,31 @@ function SourceColumn({
         country_iso2: country ?? undefined,
         date_from: win.from,
         date_to: win.to,
+        exclude_gkg: true,
       }),
     enabled,
   });
   const outlets = useQuery({
-    queryKey: ["sources", scope, country, source, 8, win.from, win.to],
+    queryKey: ["live-sources", scope, country, source, win.from, win.to],
     queryFn: () =>
       apiClient.topSources(scope!, win.days, 8, country, {
         source,
         date_from: win.from,
         date_to: win.to,
+        exclude_gkg: true,
       }),
     enabled,
   });
+  const error = total.error ?? outlets.error;
 
   return (
     <div className="bg-card p-4">
       <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">{label}</div>
-      {!enabled || total.isLoading ? (
+      {error ? (
+        <div role="alert" className="mt-2 font-mono text-[11px] text-danger">
+          Failed to load: {(error as Error).message}
+        </div>
+      ) : !enabled || total.isLoading ? (
         <Skeleton className="mt-2 h-7 w-20" />
       ) : (
         <div className="mt-2 text-[22px] font-medium leading-none tabular-nums text-foreground">
@@ -93,14 +101,14 @@ function SourceColumn({
         </div>
       )}
       <div className="mt-1 font-mono text-[11px] text-text-tertiary">articles, {win.label}</div>
-      {total.data?.total === 0 && (
+      {!error && total.data?.total === 0 && (
         // Expected while a collector is paused or idle (GN was switched off
         // after the 2026-11-05 junk harvest) — say so rather than look broken.
         <p className="mt-3 font-mono text-[11px] text-text-tertiary">
-          Nothing collected in this period — the collector may be paused.
+          Live source not active — nothing collected in this period.
         </p>
       )}
-      {outlets.data && outlets.data.length > 0 && (
+      {!error && (total.data?.total ?? 0) > 0 && outlets.data && outlets.data.length > 0 && (
         <ul className="mt-3 space-y-1">
           {outlets.data.map((o) => (
             <li key={o.domain} className="flex justify-between gap-3 font-mono text-[11px]">

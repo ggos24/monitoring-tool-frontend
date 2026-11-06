@@ -22,6 +22,8 @@ import {
 } from "@/components/dashboard/mentions-list";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 import { CoverageNote } from "@/components/dashboard/coverage-note";
+import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
+import { campaignPeriod } from "@/lib/campaign";
 import { LiveSourcesPanel } from "@/components/dashboard/live-sources-panel";
 import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
@@ -29,7 +31,10 @@ import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
-  const [period, setPeriod] = useState<Period>({ kind: "preset", days: 7 });
+  // Campaign window by default when its dates are configured; else 7d.
+  const [period, setPeriod] = useState<Period>(
+    () => campaignPeriod() ?? { kind: "preset", days: 7 },
+  );
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
@@ -168,12 +173,20 @@ export default function Home() {
         ) : (
           <>
             <div className="mb-6">
-              <KpiGrid
+              <CampaignKpiGrid
                 compare={compare}
                 scope={scope}
                 win={win}
                 country={country}
-                poolTopicId={poolTopicId}
+                fallback={
+                  <KpiGrid
+                    compare={compare}
+                    scope={scope}
+                    win={win}
+                    country={country}
+                    poolTopicId={poolTopicId}
+                  />
+                }
               />
               <CoverageNote />
             </div>
@@ -204,7 +217,8 @@ export default function Home() {
                 <SourcesList
                   scope={scope}
                   win={win}
-                  compare={compare}
+                  // GN/RSS have no pre-campaign history: never show Δ for them.
+                  compare={compare && source !== "gn" && source !== "rss"}
                   country={country}
                   source={source}
                   selectedDomain={selectedDomain}

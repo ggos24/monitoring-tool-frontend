@@ -874,30 +874,76 @@ export type FavorabilityStats = {
   }[];
 };
 
-// ---- GKG measurement (PLAN §9) — PROPOSED contract, mock-only until
-// WS-4 ships it. See docs/campaign/WS-5.md "GKG follow-up".
+// ---- Campaign GKG measurement (PLAN §9) — /api/campaign/* -----------------
+// Shapes from backend PR #17 (app/api/campaign.py). Fields marked
+// "WS-4 adding" are agreed but not in #17 yet: optional, names may change.
 
-/** GET /api/coverage — which Tier-1 outlets the GKG selection can see. */
-export type CoverageOutlet = { domain: string; name: string };
-export type Coverage = {
-  /** Size of the Tier-1 network (≈95). */
-  network_size: number;
-  /** Outlets GDELT GKG indexes — the headline figures cover only these. */
-  visible: CoverageOutlet[];
-  /** Outlets GDELT never sees (agencies, FT, WSJ, …). Live GN panel only. */
-  not_visible: CoverageOutlet[];
-  /** Opaque build id, e.g. "gkg-v1+n3.f627fbf35edbf8c5" — display only. */
-  selector_version: string | null;
+export type CoverageLevel = "visible" | "sparse" | "invisible";
+export type CoverageOutlet = {
+  domain: string | null;
+  name: string | null;
+  category: string | null;
+  country_iso2: string | null;
+};
+/** GET /api/campaign/coverage — GDELT visibility of the Tier-1 network. */
+export type CampaignCoverage = {
+  available: boolean;
+  source: string | null;
+  counts: Partial<Record<CoverageLevel, number>>;
+  outlets: Partial<Record<CoverageLevel, CoverageOutlet[]>>;
+  /** WS-4 adding. Opaque id (e.g. "gkg-v1+n3.f627…"); pass verbatim. */
+  selector_version?: string | null;
+  /** WS-4 adding. Period the visibility was measured over. */
+  measured_from?: string | null;
+  measured_to?: string | null;
 };
 
-/** GET /api/pickups — UNITED24 pickups in Tier-1 media (axis U). */
-export type PickupSignal = "text" | "link" | "both";
+export type CampaignFavorability = {
+  favorable: number;
+  neutral: number;
+  unfavorable: number;
+  mixed: number;
+  unscored: number;
+  mean_score: number | null;
+};
+
+/** GET /api/campaign/headline — GKG v1 axis A/B figures for ONE window. */
+export type CampaignHeadline = {
+  basis: "gkg_v1";
+  topic_ids: number[];
+  window_start: string | null;
+  window_end: string | null;
+  headline: {
+    articles: number;
+    outlets: number;
+    by_axis: Record<string, number>;
+    pool_articles: number | null;
+    pool_share: number | null;
+    favorability: CampaignFavorability;
+    selector_versions: Record<string, number>;
+    mixed_selector_versions: boolean;
+    /** WS-4 adding. */
+    countries?: { iso2: string | null; count: number }[];
+  };
+  /** WS-4 adding. Newest GKG file ingested; null = nothing ingested yet. */
+  last_ingested_at?: string | null;
+};
+
+/** U-axis provenance: GKG page link, GKG title match, DOC text mention. */
+export type PickupSignal = "gkg_link" | "gkg_title" | "doc_text";
 export type Pickup = {
-  url: string;
+  mention_id: number;
+  topic_id: number;
+  url: string | null;
   title: string | null;
-  source_domain: string;
+  outlet: string | null;
   published_at: string;
-  /** text = DOC text mention; link = GKG PAGE_LINKS to UNITED24. */
-  signal: PickupSignal;
+  signals: PickupSignal[];
 };
-export type PickupsResponse = { items: Pickup[]; total: number };
+/** GET /api/campaign/pickups — same shape as headline's `u` block. */
+export type PickupsResponse = {
+  articles: number;
+  by_signal: Partial<Record<PickupSignal, number>>;
+  items: Pickup[];
+  truncated: boolean;
+};
