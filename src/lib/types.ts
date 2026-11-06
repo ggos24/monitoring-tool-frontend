@@ -873,3 +873,30 @@ export type FavorabilityStats = {
     mixed: number;
   }[];
 };
+
+// ---- GKG measurement (PLAN §9) — PROPOSED contract, mock-only until
+// WS-4 ships it. See docs/campaign/WS-5.md "GKG follow-up".
+
+/** GET /api/coverage — which Tier-1 outlets the GKG selection can see. */
+export type CoverageOutlet = { domain: string; name: string };
+export type Coverage = {
+  /** Size of the Tier-1 network (≈95). */
+  network_size: number;
+  /** Outlets GDELT GKG indexes — the headline figures cover only these. */
+  visible: CoverageOutlet[];
+  /** Outlets GDELT never sees (agencies, FT, WSJ, …). Live GN panel only. */
+  not_visible: CoverageOutlet[];
+  selector_version: string | null;
+};
+
+/** GET /api/pickups — UNITED24 pickups in Tier-1 media (axis U). */
+export type PickupSignal = "text" | "link" | "both";
+export type Pickup = {
+  url: string;
+  title: string | null;
+  source_domain: string;
+  published_at: string;
+  /** text = DOC text mention; link = GKG PAGE_LINKS to UNITED24. */
+  signal: PickupSignal;
+};
+export type PickupsResponse = { items: Pickup[]; total: number };

@@ -21,6 +21,9 @@ import {
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
+import { CoverageNote } from "@/components/dashboard/coverage-note";
+import { LiveSourcesPanel } from "@/components/dashboard/live-sources-panel";
+import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
 import { cn } from "@/lib/utils";
 
@@ -172,6 +175,7 @@ export default function Home() {
                 country={country}
                 poolTopicId={poolTopicId}
               />
+              <CoverageNote />
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
@@ -218,6 +222,17 @@ export default function Home() {
                   onChangeSource={setSource}
                   onClearDomain={() => setSelectedDomain(null)}
                 />
+              </div>
+            </div>
+
+            {/* Outside the GKG headline figures (PLAN §9): live-only
+                collectors, and the campaign-wide UNITED24 pickup list. */}
+            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
+              <div className="bg-card lg:col-span-3">
+                <LiveSourcesPanel scope={scope} win={win} country={country} />
+              </div>
+              <div className="bg-card lg:col-span-4">
+                <PickupsPanel win={win} />
               </div>
             </div>
           </>

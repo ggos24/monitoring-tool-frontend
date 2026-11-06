@@ -103,3 +103,33 @@ range → 422, 400 → 200 (matches the picker's 400-day guard).
   50 → 422. Now 50.
 - Not observable live yet (0 mentions): `topic_ids` / `enrichment_basis` values. Field names and
   types checked against `MentionOut` in `app/api/dashboard.py` on backend `main`.
+
+# GKG follow-up (branch `claude/campaign-ws5-gkg`, PLAN §9)
+
+Built on mocks. The endpoints below are a **proposal to WS-4** — rename freely; the frontend
+adapts in `src/lib/api.ts` + `src/lib/types.ts` only.
+
+```
+GET /api/coverage
+→ {"network_size": 95, "selector_version": "v1" | null,
+   "visible":     [{"domain": "bbc.co.uk", "name": "BBC"}, ...],   # GKG sees these (~48)
+   "not_visible": [{"domain": "reuters.com", "name": "Reuters"}, ...]}
+
+GET /api/pickups?date_from&date_to[&limit=50]          # axis U, campaign-wide
+→ {"total": 7,
+   "items": [{"url", "title", "source_domain", "published_at",
+              "signal": "text" | "link" | "both"}]}     # text = DOC mention, link = GKG PAGE_LINKS
+```
+
+- **Coverage footnote** under the KPI grid: "Figures cover the N of 95 Tier-1 outlets that GDELT
+  indexes (selector v1) …", expandable to both outlet lists. Hidden if `/api/coverage` 404s.
+- **Live: Google News & RSS** panel: count + top 8 outlets per collector for the current window,
+  via the existing `source=gn|rss` filter on `/api/mentions` and `/api/stats/sources`. Never shows
+  Δ or a previous period (no baseline), regardless of the compare switch. Assumes WS-4 keeps the
+  headline endpoints GKG-only and still serves GN/RSS rows through `source=`.
+- **UNITED24 pickups** panel: list of article titles with domain, date and a mention/link/both
+  label; total for the window; no % trend. Independent of the narrative tab. Hidden if
+  `/api/pickups` errors (older backend).
+
+Open: whether link-only pickups count (editor question in PLAN §9) — the label shows the signal
+either way; filtering is a one-line change once decided.

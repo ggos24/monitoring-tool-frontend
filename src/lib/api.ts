@@ -1,6 +1,7 @@
 import type {
   CountryAttribution,
   CountryCount,
+  Coverage,
   DigestDefinition,
   DigestDefinitionCreate,
   DigestDefinitionPatch,
@@ -14,6 +15,7 @@ import type {
   MentionsListResponse,
   NarrativesResponse,
   Overview,
+  PickupsResponse,
   PromptTemplateOut,
   Report,
   ReportPreview,
@@ -290,6 +292,17 @@ export const apiClient = {
     if (opts?.date_from) qs.set("date_from", opts.date_from);
     if (opts?.date_to) qs.set("date_to", opts.date_to);
     return api<CountryCount[]>(`/api/stats/countries?${qs}`);
+  },
+
+  // PROPOSED (PLAN §9, mock-only until WS-4): GKG coverage + UNITED24 pickups.
+  coverage: () => api<Coverage>("/api/coverage"),
+
+  pickups: (opts: { date_from: string; date_to: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    qs.set("date_from", opts.date_from);
+    qs.set("date_to", opts.date_to);
+    if (opts.limit !== undefined) qs.set("limit", String(opts.limit));
+    return api<PickupsResponse>(`/api/pickups?${qs}`);
   },
 
   jobRuns: (limit = 20) => api<JobRun[]>(`/api/jobs/runs?limit=${limit}`),
