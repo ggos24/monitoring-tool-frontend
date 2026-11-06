@@ -774,3 +774,80 @@ export type FavorabilityStats = {
     mixed: number;
   }[];
 };
+
+// ---- Campaign GKG measurement (PLAN §9) — /api/campaign/* -----------------
+// Shapes from backend PR #17 (app/api/campaign.py). Fields marked
+// "WS-4 adding" are agreed but not in #17 yet: optional, names may change.
+
+export type CoverageLevel = "visible" | "sparse" | "invisible";
+export type CoverageOutlet = {
+  domain: string | null;
+  name: string | null;
+  category: string | null;
+  country_iso2: string | null;
+};
+/** GET /api/campaign/coverage — GDELT visibility of the Tier-1 network. */
+export type CampaignCoverage = {
+  available: boolean;
+  source: string | null;
+  counts: Partial<Record<CoverageLevel, number>>;
+  outlets: Partial<Record<CoverageLevel, CoverageOutlet[]>>;
+  /** WS-4 adding. Opaque id (e.g. "gkg-v1+n3.f627…"); pass verbatim. */
+  selector_version?: string | null;
+  /** WS-4 adding. Period the visibility was measured over. */
+  measured_from?: string | null;
+  measured_to?: string | null;
+};
+
+export type CampaignFavorability = {
+  favorable: number;
+  neutral: number;
+  unfavorable: number;
+  mixed: number;
+  unscored: number;
+  mean_score: number | null;
+};
+
+/** GET /api/campaign/headline — GKG v1 axis A/B figures for ONE window. */
+export type CampaignHeadline = {
+  basis: "gkg_v1";
+  topic_ids: number[];
+  window_start: string | null;
+  window_end: string | null;
+  headline: {
+    articles: number;
+    outlets: number;
+    by_axis: Record<string, number>;
+    pool_articles: number | null;
+    pool_share: number | null;
+    favorability: CampaignFavorability;
+    selector_versions: Record<string, number>;
+    mixed_selector_versions: boolean;
+    /** WS-4 adding. */
+    countries?: { iso2: string | null; count: number }[];
+  };
+  /** WS-4 adding. Newest GKG file ingested; null = nothing ingested yet. */
+  last_ingested_at?: string | null;
+};
+
+/** U-axis provenance: GKG page link, GKG title match, DOC text mention. */
+export type PickupSignal = "gkg_link" | "gkg_title" | "doc_text";
+export type Pickup = {
+  mention_id: number;
+  topic_id: number;
+  url: string | null;
+  title: string | null;
+  outlet: string | null;
+  published_at: string;
+  signals: PickupSignal[];
+  /** UNITED24 URLs the article links to (GKG PAGE_LINKS); may be empty. */
+  u24_links?: string[];
+};
+/** GET /api/campaign/pickups — same shape as headline's `u` block. */
+export type PickupsResponse = {
+  articles: number;
+  /** Raw signal labels → count (not the derived text/link/both). */
+  by_signal: Partial<Record<PickupSignal, number>>;
+  items: Pickup[];
+  truncated: boolean;
+};

@@ -103,3 +103,40 @@ range → 422, 400 → 200 (matches the picker's 400-day guard).
   50 → 422. Now 50.
 - Not observable live yet (0 mentions): `topic_ids` / `enrichment_basis` values. Field names and
   types checked against `MentionOut` in `app/api/dashboard.py` on backend `main`.
+
+# GKG follow-up (branch `claude/campaign-ws5-gkg`, PLAN §9)
+
+Merged contract from the coordinator (2026-11-06), built against backend PR #17
+(`app/api/campaign.py`, router prefix `/api/campaign`). Fields marked *WS-4 adding* are typed
+optional in `src/lib/types.ts`; their names are my best guess and are isolated there.
+
+| Endpoint | Used by | Notes |
+|---|---|---|
+| `GET /api/campaign/coverage` → `CoverageBlock {available, source, counts{visible,sparse,invisible}, outlets{…}}` + *`selector_version`*, *`measured_from/_to`* | footnote, KPI grid | hidden on 404 or `available=false` |
+| `GET /api/campaign/headline?topic_id\|group_id&date_from&date_to&selector_version&`*`country_iso2`*`&u_limit=0` | KPI grid | one call per window; `selector_version` passed verbatim from coverage |
+| `GET /api/campaign/pickups?date_from&date_to&limit` → same shape as headline `u` (`{articles, by_signal, items[{mention_id, topic_id, url\|null, title, outlet, published_at, signals[]}], truncated}`) | pickups panel | *WS-4 adding*; 404 → hidden, 422/other → error text |
+| `GET /api/mentions` / `/api/stats/sources` with `source=gn\|rss&exclude_gkg=true` | live panel | *WS-4 adding* `exclude_gkg` |
+
+- **KPI grid** (`campaign-kpi-grid.tsx`): Tier-1 articles · Share of Tier-1 coverage (`pool_share`) ·
+  Favorable share · Outlets · Top countries (only when *`headline.countries`* is present).
+  - Favorable share shows **n/a** unless scored articles are the majority (enrichment is off,
+    so most rows are unscored).
+  - `mixed_selector_versions=true` in either window → error message instead of numbers.
+  - *`last_ingested_at`* (assumed name): `null` or before the window with 0 articles →
+    "Live data not ingested yet"; inside the window → numbers plus "ingested through …".
+  - 404 → falls back to the old generic-endpoint grid, labelled "All sources, not GKG" —
+    deploy-order fallback only (pre-#17 backends).
+- **Footnote**: "Figures cover N fully and M partially of T Tier-1 outlets that GDELT
+  indexes." (default wording) + measurement window when present; expands to the three outlet
+  lists. Selector id only in the tooltip. The "agencies are in the live GN panel" sentence is
+  dropped while GN is off and RSS is inactive.
+- **Live GN/RSS panel**: `exclude_gkg=true`, error state, "Live source not active" when 0,
+  never compares.
+- **Pickups**: one derived label per article — `text` (doc_text or gkg_title), `link`
+  (gkg_link) or `text + link`; raw signals and `u24_links` in the tooltip. A `null` url renders
+  the title without a link. Names confirmed by the coordinator 2026-11-06.
+- **Campaign defaults**: Overview opens on the Campaign preset when its dates are configured
+  (default; else 7d). Top sources never shows Δ while the source filter is GN or RSS.
+
+Example rows (coverage CSV): `bbc.com` is the canonical BBC domain; `reuters.com` is
+**sparse** (partially visible), not invisible.

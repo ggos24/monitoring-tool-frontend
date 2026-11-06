@@ -21,12 +21,20 @@ import {
   type SourceFilter,
 } from "@/components/dashboard/mentions-list";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
+import { CoverageNote } from "@/components/dashboard/coverage-note";
+import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
+import { campaignPeriod } from "@/lib/campaign";
+import { LiveSourcesPanel } from "@/components/dashboard/live-sources-panel";
+import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
-  const [period, setPeriod] = useState<Period>({ kind: "preset", days: 7 });
+  // Campaign window by default when its dates are configured; else 7d.
+  const [period, setPeriod] = useState<Period>(
+    () => campaignPeriod() ?? { kind: "preset", days: 7 },
+  );
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
@@ -165,13 +173,29 @@ export default function Home() {
         ) : (
           <>
             <div className="mb-6">
-              <KpiGrid
+              <CampaignKpiGrid
                 compare={compare}
                 scope={scope}
                 win={win}
                 country={country}
-                poolTopicId={poolTopicId}
+                // Deploy-order fallback only (backend without /api/campaign):
+                // generic endpoints mix GDELT DOC + GN + RSS, so say so.
+                fallback={
+                  <>
+                  <div className="border border-b-0 border-warning/40 bg-card px-5 py-2 font-mono text-[11px] text-warning">
+                    All sources, not GKG — campaign headline unavailable on this backend.
+                  </div>
+                  <KpiGrid
+                    compare={compare}
+                    scope={scope}
+                    win={win}
+                    country={country}
+                    poolTopicId={poolTopicId}
+                  />
+                  </>
+                }
               />
+              <CoverageNote />
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
@@ -200,7 +224,8 @@ export default function Home() {
                 <SourcesList
                   scope={scope}
                   win={win}
-                  compare={compare}
+                  // GN/RSS have no pre-campaign history: never show Δ for them.
+                  compare={compare && source !== "gn" && source !== "rss"}
                   country={country}
                   source={source}
                   selectedDomain={selectedDomain}
@@ -218,6 +243,17 @@ export default function Home() {
                   onChangeSource={setSource}
                   onClearDomain={() => setSelectedDomain(null)}
                 />
+              </div>
+            </div>
+
+            {/* Outside the GKG headline figures (PLAN §9): live-only
+                collectors, and the campaign-wide UNITED24 pickup list. */}
+            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
+              <div className="bg-card lg:col-span-3">
+                <LiveSourcesPanel scope={scope} win={win} country={country} />
+              </div>
+              <div className="bg-card lg:col-span-4">
+                <PickupsPanel win={win} />
               </div>
             </div>
           </>
