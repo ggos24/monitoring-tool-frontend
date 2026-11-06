@@ -886,6 +886,7 @@ export type Coverage = {
   visible: CoverageOutlet[];
   /** Outlets GDELT never sees (agencies, FT, WSJ, …). Live GN panel only. */
   not_visible: CoverageOutlet[];
+  /** Opaque build id, e.g. "gkg-v1+n3.f627fbf35edbf8c5" — display only. */
   selector_version: string | null;
 };
 

@@ -122,7 +122,7 @@ GET /api/pickups?date_from&date_to[&limit=50]          # axis U, campaign-wide
 ```
 
 - **Coverage footnote** under the KPI grid: "Figures cover the N of 95 Tier-1 outlets that GDELT
-  indexes (selector v1) …", expandable to both outlet lists. Hidden if `/api/coverage` 404s.
+  indexes.", expandable (selector version in its tooltip — an opaque id such as `gkg-v1+n3.f627fbf35edbf8c5`) to both outlet lists. Hidden if `/api/coverage` 404s.
 - **Live: Google News & RSS** panel: count + top 8 outlets per collector for the current window,
   via the existing `source=gn|rss` filter on `/api/mentions` and `/api/stats/sources`. Never shows
   Δ or a previous period (no baseline), regardless of the compare switch. Assumes WS-4 keeps the

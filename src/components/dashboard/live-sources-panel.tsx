@@ -93,6 +93,13 @@ function SourceColumn({
         </div>
       )}
       <div className="mt-1 font-mono text-[11px] text-text-tertiary">articles, {win.label}</div>
+      {total.data?.total === 0 && (
+        // Expected while a collector is paused or idle (GN was switched off
+        // after the 2026-11-05 junk harvest) — say so rather than look broken.
+        <p className="mt-3 font-mono text-[11px] text-text-tertiary">
+          Nothing collected in this period — the collector may be paused.
+        </p>
+      )}
       {outlets.data && outlets.data.length > 0 && (
         <ul className="mt-3 space-y-1">
           {outlets.data.map((o) => (

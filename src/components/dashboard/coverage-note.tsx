@@ -27,14 +27,16 @@ export function CoverageNote() {
       <button
         type="button"
         aria-expanded={open}
+        // Selector version is an opaque build id (e.g. "gkg-v1+n3.f627…"):
+        // useful for audits, too long for the sentence itself.
+        title={data.selector_version ? `GKG selector: ${data.selector_version}` : undefined}
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 text-left hover:text-foreground"
       >
         <span aria-hidden>*</span>
         <span>
           Figures cover the {data.visible.length} of {data.network_size} Tier-1
-          outlets that GDELT indexes
-          {data.selector_version ? ` (selector ${data.selector_version})` : ""}.
+          outlets that GDELT indexes.
           Wire agencies and several paywalled outlets appear only in the live
           Google News panel.
         </span>
