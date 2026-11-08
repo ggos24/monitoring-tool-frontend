@@ -20,7 +20,13 @@ import {
 
 import { apiClient } from "@/lib/api";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
-import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
+import {
+  FAVORABILITY_LABEL,
+  FAVORABILITY_TOOLTIP,
+  favorabilityReadiness,
+  insufficientFavorabilityNote,
+  type FavorabilityReadiness,
+} from "@/lib/favorability";
 import {
   clusterHandle,
   clusterMomentumTag,
@@ -325,6 +331,7 @@ export function ReportBody({
                   <StanceWeightedPanel
                     label="Publisher-weighted favorability"
                     values={aggregates.publisher_weighted_stance}
+                    readiness={reportFavorabilityReadiness(aggregates)}
                   />
                 )}
                 <TierBreakdownPanel
@@ -1544,12 +1551,33 @@ function StanceMiniBar({ values }: { values: Record<StanceLabel, number> }) {
   );
 }
 
+/**
+ * Min-n guard for a report's favorability shares. Reports read only
+ * enriched rows, so `n_mentions` is normally the scored count itself;
+ * the guard then reduces to "at least 20 scored articles".
+ */
+function reportFavorabilityReadiness(aggregates: ReportAggregates): FavorabilityReadiness {
+  const d = aggregates.sentiment_distribution ?? {};
+  const counts = {
+    favorable: d.supportive ?? 0,
+    neutral: d.neutral ?? 0,
+    unfavorable: d.critical ?? 0,
+    mixed: d.mixed ?? 0,
+    unscored: 0,
+  };
+  const scored = counts.favorable + counts.neutral + counts.unfavorable + counts.mixed;
+  counts.unscored = Math.max(0, (aggregates.n_mentions ?? 0) - scored);
+  return favorabilityReadiness(counts);
+}
+
 function StanceWeightedPanel({
   label,
   values,
+  readiness,
 }: {
   label: string;
   values: Record<StanceLabel, number>;
+  readiness?: FavorabilityReadiness;
 }) {
   const total = Object.values(values).reduce((sum, value) => sum + value, 0);
   return (
@@ -1557,6 +1585,8 @@ function StanceWeightedPanel({
       <h3 className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">{label}</h3>
       {total === 0 ? (
         <p className="text-xs text-text-tertiary">No favorability scores in segment.</p>
+      ) : readiness && !readiness.ready ? (
+        <p className="text-xs text-text-tertiary">{insufficientFavorabilityNote(readiness)}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {(Object.keys(values) as StanceLabel[]).map((stance) => (
@@ -1839,6 +1869,7 @@ function PeriodComparison({
 
   const fav = aggregates?.sentiment_distribution;
   const favTotal = fav ? Object.values(fav).reduce((sum, n) => sum + n, 0) : 0;
+  const favReadiness = aggregates ? reportFavorabilityReadiness(aggregates) : null;
   const cur = current.data?.total;
   const prev = previous.data?.total;
   const hasCoverage = cur !== undefined && prev !== undefined;
@@ -1890,15 +1921,25 @@ function PeriodComparison({
             <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
               Favorability (this period)
             </div>
-            <div className="mt-3 flex flex-col gap-2">
-              {(["supportive", "neutral", "critical", "mixed"] as StanceLabel[]).map((stance) => (
-                <StanceBar key={stance} stance={stance} fraction={(fav[stance] ?? 0) / favTotal} />
-              ))}
-            </div>
-            <p className="mt-2 font-mono text-[10px] text-text-tertiary">
-              {formatNumber(favTotal)} scored articles · previous-period
-              favorability coming soon
-            </p>
+            {favReadiness?.ready ? (
+              <>
+                <div className="mt-3 flex flex-col gap-2">
+                  {(["supportive", "neutral", "critical", "mixed"] as StanceLabel[]).map((stance) => (
+                    <StanceBar key={stance} stance={stance} fraction={(fav[stance] ?? 0) / favTotal} />
+                  ))}
+                </div>
+                <p className="mt-2 font-mono text-[10px] text-text-tertiary">
+                  {formatNumber(favTotal)} scored articles · previous-period
+                  favorability coming soon
+                </p>
+              </>
+            ) : (
+              favReadiness && (
+                <p className="mt-3 font-mono text-[11px] text-text-tertiary">
+                  {insufficientFavorabilityNote(favReadiness)}
+                </p>
+              )
+            )}
           </div>
         )}
       </div>

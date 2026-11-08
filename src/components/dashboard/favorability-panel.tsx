@@ -3,9 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
-import { FAVORABILITY_TOOLTIP } from "@/lib/favorability";
+import {
+  FAVORABILITY_TOOLTIP,
+  favorabilityReadiness,
+  insufficientFavorabilityNote,
+  type FavorabilityReadiness,
+} from "@/lib/favorability";
 import { formatPpDelta, type DateWindow } from "@/lib/period";
-import type { FavorabilityCounts, ScopeParam } from "@/lib/types";
+import type { FavorabilityCounts, FavorabilityStats, ScopeParam } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -47,10 +52,16 @@ export function scoredTotal(counts: FavorabilityCounts | undefined): number {
   return counts.favorable + counts.neutral + counts.unfavorable + counts.mixed;
 }
 
-/** Favorable ÷ scored, or null when nothing is scored. */
-export function favorableShare(counts: FavorabilityCounts | undefined): number | null {
+/** Readiness of one /stats/favorability response (backend flag or fallback rule). */
+export function statsReadiness(data: FavorabilityStats | undefined): FavorabilityReadiness {
+  return favorabilityReadiness(data?.counts, data ?? {});
+}
+
+/** Favorable ÷ scored, or null when too few articles are scored to say. */
+export function favorableShare(data: FavorabilityStats | undefined): number | null {
+  const counts = data?.counts;
   const total = scoredTotal(counts);
-  return counts && total > 0 ? counts.favorable / total : null;
+  return counts && total > 0 && statsReadiness(data).ready ? counts.favorable / total : null;
 }
 
 export function FavorabilityPanel({
@@ -68,10 +79,13 @@ export function FavorabilityPanel({
   const previous = useFavorability(scope, win.prevFrom, win.prevTo, country, compare);
 
   const counts = current.data?.counts;
-  const prevCounts = compare ? previous.data?.counts : undefined;
+  const readiness = statsReadiness(current.data);
+  // Previous-period deltas only when BOTH periods have enough scored articles.
+  const prevReady = compare && readiness.ready && statsReadiness(previous.data).ready;
+  const prevCounts = prevReady ? previous.data?.counts : undefined;
   const total = scoredTotal(counts);
   const prevTotal = scoredTotal(prevCounts);
-  const mean = current.data?.mean_score ?? null;
+  const mean = readiness.ready ? (current.data?.mean_score ?? null) : null;
   const prevMean = prevCounts ? (previous.data?.mean_score ?? null) : null;
 
   return (
@@ -96,6 +110,21 @@ export function FavorabilityPanel({
           No scored articles in selected period.
           {counts && counts.unscored > 0 && ` ${counts.unscored.toLocaleString()} awaiting analysis.`}
         </div>
+      ) : !readiness.ready ? (
+        <>
+          <div className="mt-4 font-mono text-[11px] text-text-tertiary">
+            {insufficientFavorabilityNote(readiness)}
+          </div>
+          <ul className="mt-4 space-y-2">
+            {ROWS.map((r) => (
+              <li key={r.key} className="flex items-center gap-2 font-mono text-[11px]">
+                <span aria-hidden className={cn("size-2 shrink-0", r.bar)} />
+                <span className="flex-1 text-text-secondary">{r.label}</span>
+                <span className="tabular-nums text-foreground">{counts[r.key].toLocaleString()}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <>
           <div className="mt-4 flex items-baseline gap-2">
