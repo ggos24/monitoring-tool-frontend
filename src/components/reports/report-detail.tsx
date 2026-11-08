@@ -23,8 +23,8 @@ import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import {
   FAVORABILITY_LABEL,
   FAVORABILITY_TOOLTIP,
-  favorabilityReadiness,
   insufficientFavorabilityNote,
+  reportFavorabilityReadiness,
   type FavorabilityReadiness,
 } from "@/lib/favorability";
 import {
@@ -1549,25 +1549,6 @@ function StanceMiniBar({ values }: { values: Record<StanceLabel, number> }) {
       <div className="bg-warning/60" style={{ width: `${(values.mixed / total) * 100}%` }} />
     </div>
   );
-}
-
-/**
- * Min-n guard for a report's favorability shares. Reports read only
- * enriched rows, so `n_mentions` is normally the scored count itself;
- * the guard then reduces to "at least 20 scored articles".
- */
-function reportFavorabilityReadiness(aggregates: ReportAggregates): FavorabilityReadiness {
-  const d = aggregates.sentiment_distribution ?? {};
-  const counts = {
-    favorable: d.supportive ?? 0,
-    neutral: d.neutral ?? 0,
-    unfavorable: d.critical ?? 0,
-    mixed: d.mixed ?? 0,
-    unscored: 0,
-  };
-  const scored = counts.favorable + counts.neutral + counts.unfavorable + counts.mixed;
-  counts.unscored = Math.max(0, (aggregates.n_mentions ?? 0) - scored);
-  return favorabilityReadiness(counts);
 }
 
 function StanceWeightedPanel({

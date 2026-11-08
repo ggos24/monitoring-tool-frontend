@@ -1,4 +1,4 @@
-import type { StanceLabel } from "./types";
+import type { ReportAggregates, ReportBasis, StanceLabel } from "./types";
 
 /**
  * Favorability = how favorable the article's content is to Ukraine.
@@ -43,6 +43,8 @@ export type FavorabilityReadiness = {
   total: number;
   minScored: number;
   minShare: number;
+  /** What `total` counts; "eligible" for reports with a coverage basis. */
+  basis?: "all" | "eligible";
 };
 
 /**
@@ -70,11 +72,53 @@ export function favorabilityReadiness(
 
 /** One-line muted note for a not-ready favorability block. */
 export function insufficientFavorabilityNote(r: FavorabilityReadiness): string {
+  const of = r.basis === "eligible" ? "eligible articles" : "all";
   return (
     `Not enough scored articles yet — ${r.scored.toLocaleString("en-US")} of ` +
-    `${r.total.toLocaleString("en-US")} scored. Shares appear once at least ` +
-    `${r.minScored} articles and ${formatMinShare(r.minShare)} of all are scored.`
+    `${r.total.toLocaleString("en-US")} ${r.basis === "eligible" ? "eligible " : ""}scored. ` +
+    `Shares appear once at least ${r.minScored} articles and ` +
+    `${formatMinShare(r.minShare)} of ${of} are scored.`
   );
+}
+
+/**
+ * Min-n guard for a report's favorability shares. `scored` is the sum of
+ * `sentiment_distribution`. The share rule needs a denominator beyond the
+ * enriched rows the report reads: when the report carries a coverage basis
+ * (selected scope, falling back to the legacy flat block) it is the
+ * enrichment-gate-eligible total, since only gate-eligible rows are ever
+ * scored. Legacy reports without a basis fall back to `n_mentions`.
+ */
+export function reportFavorabilityReadiness(
+  aggregates: ReportAggregates,
+): FavorabilityReadiness {
+  const d = aggregates.sentiment_distribution ?? {};
+  const counts = {
+    favorable: d.supportive ?? 0,
+    neutral: d.neutral ?? 0,
+    unfavorable: d.critical ?? 0,
+    mixed: d.mixed ?? 0,
+    unscored: 0,
+  };
+  const scored = counts.favorable + counts.neutral + counts.unfavorable + counts.mixed;
+  const basis: ReportBasis | undefined =
+    aggregates.selected_scope_basis ??
+    aggregates.data_basis?.selected_scope_basis ??
+    aggregates.data_basis;
+  if (basis && typeof basis.eligible_total === "number" && basis.eligible_total > 0) {
+    const total = basis.eligible_total;
+    const eligibleScored = Math.min(total, basis.eligible_enriched_total ?? scored);
+    return {
+      ready: scored >= MIN_SCORED && eligibleScored / total >= MIN_SCORED_SHARE,
+      scored: eligibleScored,
+      total,
+      minScored: MIN_SCORED,
+      minShare: MIN_SCORED_SHARE,
+      basis: "eligible",
+    };
+  }
+  counts.unscored = Math.max(0, (aggregates.n_mentions ?? 0) - scored);
+  return favorabilityReadiness(counts);
 }
 
 function formatMinShare(share: number): string {
