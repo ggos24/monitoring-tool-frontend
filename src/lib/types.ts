@@ -764,8 +764,15 @@ export type FavorabilityCounts = {
 
 export type FavorabilityStats = {
   counts: FavorabilityCounts;
-  /** Mean of the −2…+2 score over scored articles; null when none. */
+  /** Mean of the −2…+2 score over scored articles; null when none or
+   *  (with the readiness fields) when not sufficient. */
   mean_score: number | null;
+  /** Readiness (backend min-n guard). Optional until the backend ships it;
+   *  see favorabilityReadiness() for the fallback rule. */
+  n_scored?: number;
+  sufficient?: boolean;
+  min_scored?: number;
+  min_scored_share?: number;
   series: {
     date: string;
     favorable: number;
@@ -806,6 +813,12 @@ export type CampaignFavorability = {
   mixed: number;
   unscored: number;
   mean_score: number | null;
+  /** Readiness (backend min-n guard). Optional until the backend ships it;
+   *  see favorabilityReadiness() for the fallback rule. */
+  n_scored?: number;
+  sufficient?: boolean;
+  min_scored?: number;
+  min_scored_share?: number;
 };
 
 /** GET /api/campaign/headline — GKG v1 axis A/B figures for ONE window. */

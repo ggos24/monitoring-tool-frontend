@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
-import { FAVORABILITY_TOOLTIP } from "@/lib/favorability";
+import { FAVORABILITY_TOOLTIP, favorabilityReadiness } from "@/lib/favorability";
 import { computeTrend, formatDayLabel, formatPpDelta, type DateWindow } from "@/lib/period";
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
@@ -170,13 +170,14 @@ function ingestState(
 
 /**
  * Favorable ÷ scored. While enrichment is off most rows are unscored, so the
- * share is only shown when scored articles are the majority — else "n/a".
+ * share is only shown once enough articles are scored (favorabilityReadiness:
+ * backend `sufficient` flag, or ≥20 scored and ≥half of all) — else "n/a".
  */
 function favorableShare(f: CampaignFavorability | undefined): { value: number | null; note: string } {
   if (!f) return { value: null, note: "" };
   const scored = f.favorable + f.neutral + f.unfavorable + f.mixed;
   const note = `${scored.toLocaleString()} scored · ${f.unscored.toLocaleString()} unscored`;
-  if (scored === 0 || scored < f.unscored) {
+  if (scored === 0 || !favorabilityReadiness(f, f).ready) {
     return { value: null, note: `${note} — too few scored` };
   }
   return { value: f.favorable / scored, note };

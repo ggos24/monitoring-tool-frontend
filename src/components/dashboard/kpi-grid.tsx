@@ -79,8 +79,8 @@ export function KpiGrid({
 
   const tier1 = ratio(currentMentions.data?.total, currentPool.data?.total);
   const tier1Prev = ratio(previousMentions.data?.total, previousPool.data?.total);
-  const fav = favorableShare(currentFav.data?.counts);
-  const favPrev = favorableShare(previousFav.data?.counts);
+  const fav = favorableShare(currentFav.data);
+  const favPrev = favorableShare(previousFav.data);
 
   return (
     <div className="grid grid-cols-2 gap-px bg-strong md:grid-cols-3 xl:grid-cols-5">
