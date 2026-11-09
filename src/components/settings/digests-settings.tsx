@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { KickerLabel } from "@/components/ui/kicker-label";
+import { AiOffBadge } from "./ai-off-badge";
 import { ScheduledReports } from "@/components/reports/scheduled-reports";
 import {
   ScopeSelector,
@@ -18,6 +20,10 @@ export function DigestsSettings() {
 
   return (
     <section className="space-y-4 bg-card p-5">
+      <div className="flex items-center gap-2">
+        <KickerLabel>Scheduled digests</KickerLabel>
+        <AiOffBadge flag="digest_enabled" />
+      </div>
       <ScopeSelector
         value={scope}
         onChange={(next) => next.kind === "topic" && setScope(next)}

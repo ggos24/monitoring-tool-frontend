@@ -1,8 +1,8 @@
 import { Footer } from "@/components/dashboard/footer";
 import { TopBar } from "@/components/dashboard/top-bar";
+import { NarrativesPanel } from "@/components/settings/narratives/narratives-panel";
 import { SchedulerInfo } from "@/components/settings/scheduler-info";
 import { SettingsNav } from "@/components/settings/settings-nav";
-import { TopicsEditor } from "@/components/settings/topics-editor";
 
 export default function SettingsPage() {
   return (
@@ -14,14 +14,14 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="mt-1 text-xs text-text-tertiary">
-            Campaign narratives. Pipeline, prompts, groups and scheduled
-            digests live under Advanced.
+            What each campaign narrative collects and why. Report and AI
+            settings live under Advanced.
           </p>
         </header>
 
         <SettingsNav active="general" />
 
-        <TopicsEditor />
+        <NarrativesPanel />
         <SchedulerInfo />
       </main>
       <Footer />

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { AiOffBadge } from "./ai-off-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
   EnrichmentSettings,
@@ -91,7 +92,10 @@ export function EnrichmentSettings() {
     <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <KickerLabel>Enrichment pipeline</KickerLabel>
+          <div className="flex items-center gap-2">
+            <KickerLabel>Enrichment pipeline</KickerLabel>
+            <AiOffBadge flag="stance_enabled" />
+          </div>
           <p className="mt-1 text-xs text-text-tertiary">
             Runtime config for nightly stance classification and per-segment
             digests.

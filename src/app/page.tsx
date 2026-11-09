@@ -24,6 +24,7 @@ import { GenerateReportLink } from "@/components/dashboard/generate-report-link"
 import { CoverageNote } from "@/components/dashboard/coverage-note";
 import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
 import { campaignPeriod } from "@/lib/campaign";
+import { isCampaignGroupName } from "@/lib/narrative-rules";
 import { LiveSourcesPanel } from "@/components/dashboard/live-sources-panel";
 import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
@@ -71,7 +72,7 @@ export default function Home() {
     topicsQuery.data?.find((t) => t.role === "pool")?.id ?? null;
   // "All narratives" = the `Campaign` topic group (set up by WS-3).
   const allGroup =
-    groupsQuery.data?.find((g) => g.name.toLowerCase() === "campaign") ?? null;
+    groupsQuery.data?.find((g) => isCampaignGroupName(g.name)) ?? null;
   const topicNames = useMemo(
     () => new Map(narratives.map((t) => [t.id, t.name] as const)),
     [narratives],
