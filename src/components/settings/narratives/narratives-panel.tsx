@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
@@ -26,12 +26,17 @@ export function NarrativesPanel() {
   const interval = data?.pool?.schedule_interval_seconds ?? DEFAULT_INTERVAL_SECONDS;
 
   // /settings#narrative-{id} (the old rule-editor link redirects here):
-  // the cards render after the fetch, so scroll once they exist.
+  // the cards render after the fetch, so scroll once they exist. Only once:
+  // a refetch (after rename/pause, or on window focus) must not jump back.
+  const scrolledToHash = useRef(false);
   useEffect(() => {
-    if (!data) return;
+    if (!data || scrolledToHash.current) return;
     const hash = window.location.hash;
     if (!hash.startsWith("#narrative-")) return;
-    document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+    target.scrollIntoView({ block: "start" });
+    scrolledToHash.current = true;
   }, [data]);
 
   return (
@@ -97,8 +102,8 @@ function Explainer({ interval }: { interval: number }) {
         </div>
         <p>
           Rules are kept in reviewed files, not edited here. When the team changes a
-          narrative&rsquo;s rules, all older pool articles are checked again, so old and new
-          articles follow the same rules.
+          narrative&rsquo;s rules, they also re-check the older pool articles, so old and
+          new articles follow the same rules.
         </p>
         <p>
           Here you can rename a narrative or pause and resume it. Renaming changes only the

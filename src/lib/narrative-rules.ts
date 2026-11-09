@@ -10,6 +10,15 @@ import type {
 // editors. No jargon here on purpose: never "AST", "anchor", "matcher".
 
 /** How many examples a list shows before "show all". */
+// The topic group the dashboard shows as "All narratives". Matched exactly,
+// like the backend (app/api/narratives.py: TopicGroup.name == "Campaign"),
+// so the dashboard, Advanced and the Narratives cards always agree.
+export const CAMPAIGN_GROUP_NAME = "Campaign";
+
+export function isCampaignGroupName(name: string): boolean {
+  return name === CAMPAIGN_GROUP_NAME;
+}
+
 export const PREVIEW_COUNT = 6;
 
 /**

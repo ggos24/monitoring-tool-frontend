@@ -8,6 +8,7 @@ import { ApiError, apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isCampaignGroupName } from "@/lib/narrative-rules";
 import { visibleTopics } from "@/lib/topics";
 import type { TopicGroup, TopicGroupCreate } from "@/lib/types";
 
@@ -17,9 +18,9 @@ import type { TopicGroup, TopicGroupCreate } from "@/lib/types";
 //
 // The "Campaign" group is what the dashboard shows as "All narratives".
 // It is kept in step with the narrative rule files, so it cannot be
-// deleted here (same name match as the dashboard: case-insensitive).
+// deleted here (same exact name match as the dashboard and the backend).
 function isCampaignGroup(g: TopicGroup): boolean {
-  return g.name.toLowerCase() === "campaign";
+  return isCampaignGroupName(g.name);
 }
 
 export function TopicGroupsEditor() {

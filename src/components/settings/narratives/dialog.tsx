@@ -51,7 +51,6 @@ export function DialogButtons({
   pendingLabel,
   pending,
   disabled,
-  tone = "default",
   onCancel,
   onConfirm,
 }: {
@@ -59,7 +58,6 @@ export function DialogButtons({
   pendingLabel: string;
   pending: boolean;
   disabled?: boolean;
-  tone?: "default" | "danger";
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -81,9 +79,7 @@ export function DialogButtons({
           "border px-3 py-1 font-mono text-[11px] transition-colors",
           off
             ? "cursor-not-allowed border-border bg-card text-text-tertiary"
-            : tone === "danger"
-              ? "cursor-pointer border-danger bg-card text-danger hover:bg-elevated"
-              : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
+            : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
         )}
       >
         {pending ? pendingLabel : confirmLabel}

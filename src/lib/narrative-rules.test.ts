@@ -10,6 +10,7 @@ import {
   formatEvery,
   formatTerm,
   hasAnyEnding,
+  isCampaignGroupName,
   moreLabel,
   previewList,
   syncState,
@@ -188,4 +189,10 @@ test("formatEvery", () => {
   assert.equal(formatEvery(3600), "1 hour");
   assert.equal(formatEvery(1800), "30 minutes");
   assert.equal(formatEvery(45), "45 seconds");
+});
+
+test("isCampaignGroupName matches the backend's exact name rule", () => {
+  assert.equal(isCampaignGroupName("Campaign"), true);
+  assert.equal(isCampaignGroupName("campaign"), false);
+  assert.equal(isCampaignGroupName("Campaign "), false);
 });
