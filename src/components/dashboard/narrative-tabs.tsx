@@ -34,9 +34,14 @@ export function NarrativeTabs({
           key={t.id}
           active={value?.kind === "topic" && value.id === t.id}
           onClick={() => onChange({ kind: "topic", id: t.id })}
-          title={t.name}
+          title={t.is_active ? t.name : `${t.name} (paused: gets no new articles)`}
         >
-          {t.name}
+          <span className="truncate">{t.name}</span>
+          {!t.is_active && (
+            <span className="ml-1.5 shrink-0 border border-border px-1 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+              Paused
+            </span>
+          )}
         </Tab>
       ))}
     </div>
@@ -62,7 +67,7 @@ function Tab({
       onClick={onClick}
       title={title}
       className={cn(
-        "max-w-72 truncate px-3 py-2 font-mono text-xs transition-colors",
+        "flex max-w-72 items-center truncate px-3 py-2 font-mono text-xs transition-colors",
         active ? "bg-elevated text-foreground" : "bg-card text-text-tertiary hover:text-foreground",
       )}
     >

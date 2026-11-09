@@ -69,10 +69,73 @@ export type TopicCreateOut = {
   is_active: boolean;
 };
 
+// PATCH /api/admin/topics/{id} (proxy). Only the display name and the
+// active flag can change from the UI: the proxy drops every other key, and
+// `query` is gone on purpose — on an AST topic it writes a GDELT override
+// that bypasses the compiled query.
 export type TopicPatch = {
   name?: string;
-  query?: string;
   is_active?: boolean;
+};
+
+// GET /api/narratives — read-only view of every campaign narrative, its
+// counts and the rules the matcher really runs (taken from the DB AST).
+export type NarrativePool = {
+  topic_id: number;
+  name: string;
+  is_active: boolean;
+  mentions_count: number;
+  last_added_at: string | null;
+  schedule_interval_seconds: number;
+};
+
+export type NarrativeWordGroup = {
+  label: string | null;
+  description: string | null;
+  terms: string[];
+};
+
+export type NarrativeRules = {
+  type: "topic" | "brand";
+  exclusions: string[];
+  key_phrases: string[];
+  required_words: string[];
+  word_groups: NarrativeWordGroup[];
+  brand_names: string[];
+  auto_accept_axes: string[];
+};
+
+export type NarrativeSubtopic = {
+  name: string;
+  status: string; // "active" | "editor_decision"
+  description: string | null;
+};
+
+export type NarrativeSpecRef = {
+  file: string;
+  version: string | null;
+  in_sync: boolean;
+};
+
+export type Narrative = {
+  topic_id: number;
+  name: string;
+  canonical_name: string | null;
+  is_active: boolean;
+  fanout_ready: boolean;
+  in_campaign_group: boolean;
+  mentions_count: number;
+  mentions_7d: number;
+  last_added_at: string | null;
+  rules: NarrativeRules;
+  subtopics: NarrativeSubtopic[];
+  waiting_terms: { name: string; count: number }[];
+  spec: NarrativeSpecRef | null;
+};
+
+export type NarrativesResponse = {
+  pool: NarrativePool | null;
+  narratives: Narrative[];
 };
 
 export type StanceLabel = "supportive" | "critical" | "neutral" | "mixed";

@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { AiOffBadge } from "./ai-off-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PromptTemplateOut } from "@/lib/types";
 
@@ -24,7 +25,10 @@ export function PromptsEditor() {
 
   return (
     <section className="bg-card p-5">
-      <KickerLabel>Report prompts</KickerLabel>
+      <div className="flex items-center gap-2">
+        <KickerLabel>Report prompts</KickerLabel>
+        <AiOffBadge flag="stance_enabled" />
+      </div>
       <p className="mt-1 text-xs text-text-tertiary">
         The exact instructions the LLM receives at each report step. Edits
         apply to the next report run — the JSON output schema and the data

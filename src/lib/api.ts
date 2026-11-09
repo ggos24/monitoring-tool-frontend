@@ -14,6 +14,7 @@ import type {
   JobRun,
   Mention,
   MentionsListResponse,
+  NarrativesResponse,
   Overview,
   PickupsResponse,
   PromptTemplateOut,
@@ -160,8 +161,12 @@ type MentionsParams = {
 export const apiClient = {
   topics: () => api<Topic[]>("/api/topics"),
 
+  // Rename / pause / resume. Goes through the admin proxy, which keeps
+  // only {name, is_active}.
   updateTopic: (id: number, patch: TopicPatch) =>
-    api<Topic>(`/api/topics/${id}`, { method: "PATCH", body: patch }),
+    localApi<Topic>(`/api/admin/topics/${id}`, { method: "PATCH", body: patch }),
+
+  narratives: () => api<NarrativesResponse>("/api/narratives"),
 
   createTopic: (phrase: string) =>
     localApi<TopicCreateOut>("/api/admin/topics", {
@@ -414,8 +419,9 @@ export const apiClient = {
 
   // PR2 — map-reduce reports + scheduled digest results.
 
+  // Admin proxy: the backend requires X-Admin-Key (spends Gemini money).
   generateSegmentReport: (body: SegmentReportRequest) =>
-    api<Report>("/api/reports/segment", { method: "POST", body }),
+    localApi<Report>("/api/admin/reports/segment", { method: "POST", body }),
 
   previewReport: (body: SegmentReportRequest) =>
     api<ReportPreview>("/api/reports/preview", { method: "POST", body }),

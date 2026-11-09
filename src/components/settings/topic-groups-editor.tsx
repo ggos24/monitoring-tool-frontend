@@ -8,11 +8,19 @@ import { ApiError, apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { visibleTopics } from "@/lib/topics";
 import type { TopicGroup, TopicGroupCreate } from "@/lib/types";
 
 // Topic groups = reusable reporting scopes over several topics. A group
 // report unions its members, dedupes shared articles, and clusters into
 // cross-topic narratives (Reports tab → scope selector).
+//
+// The "Campaign" group is what the dashboard shows as "All narratives".
+// It is kept in step with the narrative rule files, so it cannot be
+// deleted here (same name match as the dashboard: case-insensitive).
+function isCampaignGroup(g: TopicGroup): boolean {
+  return g.name.toLowerCase() === "campaign";
+}
 
 export function TopicGroupsEditor() {
   const queryClient = useQueryClient();
@@ -24,7 +32,8 @@ export function TopicGroupsEditor() {
     queryKey: ["topic-groups"],
     queryFn: apiClient.topicGroups,
   });
-  const topics = topicsQuery.data ?? [];
+  // The Tier-1 pool is a technical topic, not something to report on.
+  const topics = visibleTopics(topicsQuery.data);
   const groups = groupsQuery.data ?? [];
 
   const deleteMutation = useMutation({
@@ -36,6 +45,7 @@ export function TopicGroupsEditor() {
   });
 
   function handleDelete(g: TopicGroup) {
+    if (isCampaignGroup(g)) return;
     if (!window.confirm(`Delete group "${g.name}"? Reports already generated are kept.`)) return;
     setError(null);
     deleteMutation.mutate(g.id);
@@ -131,6 +141,11 @@ function GroupRow({
           <span className="font-mono text-[10px] text-muted-foreground">
             #{group.id} · {group.topic_ids.length} topics
           </span>
+          {isCampaignGroup(group) && (
+            <span className="font-mono text-[10px] text-text-tertiary">
+              · Managed with the narrative rule files
+            </span>
+          )}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {group.topic_ids.map((id) => (
@@ -143,15 +158,18 @@ function GroupRow({
           ))}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deleting}
-        title="Delete group"
-        className="cursor-pointer border border-border bg-card p-1.5 text-text-tertiary hover:border-red-900 hover:text-red-400"
-      >
-        <Trash2 className="size-3.5" aria-hidden />
-      </button>
+      {!isCampaignGroup(group) && (
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          title="Delete group"
+          aria-label={`Delete group ${group.name}`}
+          className="cursor-pointer border border-border bg-card p-1.5 text-text-tertiary hover:border-red-900 hover:text-red-400"
+        >
+          <Trash2 className="size-3.5" aria-hidden />
+        </button>
+      )}
     </li>
   );
 }

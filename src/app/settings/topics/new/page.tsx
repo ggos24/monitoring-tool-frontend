@@ -54,10 +54,10 @@ export default function NewTopicPage() {
             </p>
           </div>
           <Link
-            href="/settings"
+            href="/settings/advanced"
             className="font-mono text-[11px] text-text-tertiary hover:text-foreground"
           >
-            ← back to settings
+            ← back to Advanced
           </Link>
         </header>
 

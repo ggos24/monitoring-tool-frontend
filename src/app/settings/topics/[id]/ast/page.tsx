@@ -1,7 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
@@ -41,10 +42,10 @@ export default function EditTopicAstPage({ params }: PageProps) {
             </p>
           </div>
           <Link
-            href="/settings"
+            href="/settings/advanced"
             className="font-mono text-[11px] text-text-tertiary hover:text-foreground"
           >
-            ← back to settings
+            ← back to Advanced
           </Link>
         </header>
 
@@ -79,6 +80,10 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
   if (!topic) {
     return <NotFound message={`Topic ${topicId} not found.`} />;
   }
+  // Campaign narratives are managed with reviewed rule files, not here.
+  if (topic.role === "narrative") {
+    return <RedirectToNarrative id={topic.id} />;
+  }
   if (!topic.topic_ast) {
     return (
       <div className="border border-border bg-card p-5">
@@ -87,11 +92,7 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
           This topic was created before semantic matching shipped and has no AST.
         </p>
         <p className="mt-1 font-mono text-[11px] text-text-tertiary">
-          Use the inline edit row in{" "}
-          <Link href="/settings" className="text-sky-300 hover:underline">
-            Settings → Topics
-          </Link>{" "}
-          to change name/query, or recreate the topic via &ldquo;+ New topic&rdquo; to get an AST.
+          There is nothing to edit here. Ask a developer to recreate it if it needs rules.
         </p>
       </div>
     );
@@ -123,15 +124,37 @@ function Body({ topicId, topics }: { topicId: number; topics: Topic[] }) {
   );
 }
 
+function RedirectToNarrative({ id }: { id: number }) {
+  const router = useRouter();
+  const target = `/settings#narrative-${id}`;
+  useEffect(() => {
+    router.replace(target);
+  }, [router, target]);
+  return (
+    <div className="border border-border bg-card p-5">
+      <p className="font-mono text-[12px] text-text-secondary">
+        Narrative rules are kept in reviewed files. Opening this narrative in Settings →
+        Narratives…
+      </p>
+      <Link
+        href={target}
+        className="mt-3 inline-block font-mono text-[11px] text-sky-300 hover:underline"
+      >
+        Open Narratives
+      </Link>
+    </div>
+  );
+}
+
 function NotFound({ message }: { message: string }) {
   return (
     <div className="border border-border bg-card p-5">
       <p className="font-mono text-[12px] text-text-secondary">{message}</p>
       <Link
-        href="/settings"
+        href="/settings/advanced"
         className="mt-3 inline-block font-mono text-[11px] text-sky-300 hover:underline"
       >
-        ← back to settings
+        ← back to Advanced
       </Link>
     </div>
   );
