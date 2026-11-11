@@ -156,7 +156,8 @@ export default function Home() {
           <QuerySelector
             value={scopeSel}
             onChange={handleSelectScope}
-            className="w-full sm:w-80"
+            countWindow={{ from: periodWin.from, to: periodWin.to, country }}
+            className="w-full sm:w-auto sm:min-w-56 sm:max-w-[360px]"
           />
           <PeriodToggle
             // Remount when a range is restored/applied so its inputs re-seed.
@@ -247,6 +248,7 @@ export default function Home() {
                   country={country}
                   selected={stance}
                   onSelect={toggleStance}
+                  dayLabel={selectedDay ? formatDayLabel(selectedDay) : null}
                 />
               </div>
             </div>

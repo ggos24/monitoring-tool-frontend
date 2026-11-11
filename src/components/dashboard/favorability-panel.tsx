@@ -80,6 +80,7 @@ export function FavorabilityPanel({
   country,
   selected,
   onSelect,
+  dayLabel = null,
 }: {
   scope: ScopeParam | null;
   win: DateWindow;
@@ -89,6 +90,8 @@ export function FavorabilityPanel({
   selected: StanceLabel | "all";
   /** Row click: filter the article list by that tone (again = clear). */
   onSelect: (stance: StanceLabel) => void;
+  /** The day picked on the chart ("Oct 31"); the panel then covers only it. */
+  dayLabel?: string | null;
 }) {
   const current = useFavorability(scope, win.from, win.to, country);
   const previous = useFavorability(scope, win.prevFrom, win.prevTo, country, compare);
@@ -151,7 +154,10 @@ export function FavorabilityPanel({
       data-refreshing={current.isPlaceholderData || undefined}
     >
       <RefreshLine active={current.isPlaceholderData} />
-      <KickerLabel>Tone toward Ukraine</KickerLabel>
+      <KickerLabel>
+        Tone toward Ukraine
+        {dayLabel && <span className="text-text-secondary"> · {dayLabel}</span>}
+      </KickerLabel>
 
       {scope === null || current.isLoading ? (
         // Same shape as the loaded panel: figure, bar, four rows.

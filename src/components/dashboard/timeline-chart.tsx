@@ -156,7 +156,7 @@ export function TimelineChart({
   };
 
   // Selected day at full strength, the rest dimmed; nothing selected → all even.
-  const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.3) : 1);
+  const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.5) : 1);
   // Share of a day's slot the bar takes; the rest shows the previous period
   // behind it.
   const barShare = granularity === "hour" ? 0.6 : 0.45;
@@ -302,7 +302,7 @@ export function TimelineChart({
                   // which mounts later, would cover the bars.
                   zIndex={150}
                   isAnimationActive={false}
-                  shape={(p: BarShape) => <PreviousShade {...p} />}
+                  shape={(p: BarShape) => <PreviousShade {...p} dim={!!showSelected} />}
                 />
               )}
               <Bar
@@ -339,17 +339,18 @@ type BarShape = {
   payload?: { date?: string };
 };
 
-function finite(p: BarShape): p is Required<Pick<BarShape, "x" | "y" | "width" | "height">> & BarShape {
+function finite<T extends BarShape>(p: T): p is T & Required<Pick<BarShape, "x" | "y" | "width" | "height">> {
   return [p.x, p.y, p.width, p.height].every((v) => typeof v === "number" && Number.isFinite(v));
 }
 
 /** One day of the previous period: a full-slot block with a lit top edge. */
-function PreviousShade(p: BarShape) {
+function PreviousShade(p: BarShape & { dim?: boolean }) {
   if (!finite(p) || p.height <= 0) return null;
   // +0.5px so neighbouring days join without a hairline seam.
   const right = p.x + p.width + 0.5;
   return (
-    <g>
+    // Dimmed while a day is picked, so the faded bars do not merge with it.
+    <g opacity={p.dim ? 0.5 : 1}>
       <rect x={p.x} y={p.y} width={right - p.x} height={p.height} fill={theme.bgOverlay} />
       <line x1={p.x} x2={right} y1={p.y} y2={p.y} style={{ stroke: "var(--chart-5)" }} strokeWidth={1.5} />
     </g>
