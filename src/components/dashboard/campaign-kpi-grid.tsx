@@ -178,12 +178,6 @@ export function CampaignKpiGrid({
         />
       )}
     </div>
-    {excluded.length > 0 && comparable && (
-      <div className="border border-t-0 border-border bg-card px-5 py-2 font-mono text-[11px] text-text-tertiary">
-        Change vs {win.prevLabel.toLowerCase()} counts only sources collected in both periods —
-        not {excludedLanesText(excluded)}.
-      </div>
-    )}
     </>
   );
 }
