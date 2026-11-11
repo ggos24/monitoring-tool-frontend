@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
-import { computeTrend, formatPpDelta, type DateWindow } from "@/lib/period";
+import { countChange, formatShare, shareChange, type DateWindow } from "@/lib/period";
 import { FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import { KpiCard } from "./kpi-card";
 import { TopGeoCard } from "./top-geo-card";
@@ -72,10 +72,10 @@ export function KpiGrid({
     enabled: enabled && compare,
   });
 
-  const trendTitle = `vs ${prevLabel}`;
-  // "· prev 7d 1,234" suffix — the previous window's value, so the Δ
-  // always reads against a visible base.
-  const prevSuffix = (v: string | undefined) => (compare && v !== undefined ? ` · ${prevLabel} ${v}` : "");
+  const trendTitle = prevLabel;
+  // " · Previous period: 1,234" — the previous value, so the change always
+  // reads against a visible base.
+  const prevSuffix = (v: string | undefined) => (compare && v !== undefined ? ` · ${prevLabel}: ${v}` : "");
 
   const tier1 = ratio(currentMentions.data?.total, currentPool.data?.total);
   const tier1Prev = ratio(previousMentions.data?.total, previousPool.data?.total);
@@ -87,9 +87,9 @@ export function KpiGrid({
       <KpiCard
         kicker="Total mentions"
         value={(currentMentions.data?.total ?? 0).toLocaleString()}
-        subtitle={win.label + prevSuffix(previousMentions.data?.total.toLocaleString())}
-        trend={compare ? computeTrend(currentMentions.data?.total, previousMentions.data?.total) : undefined}
-        trendTitle={trendTitle}
+        subtitle={"all sources" + prevSuffix(previousMentions.data?.total.toLocaleString())}
+        change={compare ? countChange(currentMentions.data?.total, previousMentions.data?.total) : undefined}
+        changeTitle={trendTitle}
         isLoading={!enabled || currentMentions.isLoading}
       />
       <KpiCard
@@ -101,8 +101,8 @@ export function KpiGrid({
             : `of ${(currentPool.data?.total ?? 0).toLocaleString()} Tier-1 articles` +
               prevSuffix(tier1Prev === null ? undefined : formatShare(tier1Prev))
         }
-        delta={compare && tier1 !== null && tier1Prev !== null ? formatPpDelta(tier1, tier1Prev) : undefined}
-        trendTitle={trendTitle}
+        change={compare ? shareChange(tier1, tier1Prev) : undefined}
+        changeTitle={trendTitle}
         isLoading={!enabled || (pool !== null && (currentMentions.isLoading || currentPool.isLoading))}
       />
       <KpiCard
@@ -113,16 +113,16 @@ export function KpiGrid({
           `of ${scoredTotal(currentFav.data?.counts).toLocaleString()} scored` +
           prevSuffix(favPrev === null ? undefined : formatShare(favPrev))
         }
-        delta={compare && fav !== null && favPrev !== null ? formatPpDelta(fav, favPrev) : undefined}
-        trendTitle={trendTitle}
+        change={compare ? shareChange(fav, favPrev) : undefined}
+        changeTitle={trendTitle}
         isLoading={!enabled || currentFav.isLoading}
       />
       <KpiCard
         kicker="Sources"
         value={(currentSources.data?.count ?? 0).toLocaleString()}
         subtitle={"distinct domains" + prevSuffix(previousSources.data?.count.toLocaleString())}
-        trend={compare ? computeTrend(currentSources.data?.count, previousSources.data?.count) : undefined}
-        trendTitle={trendTitle}
+        change={compare ? countChange(currentSources.data?.count, previousSources.data?.count) : undefined}
+        changeTitle={trendTitle}
         isLoading={!enabled || currentSources.isLoading}
       />
       <TopGeoCard scope={scope} win={win} compare={compare} />
@@ -133,8 +133,4 @@ export function KpiGrid({
 function ratio(num: number | undefined, den: number | undefined): number | null {
   if (num === undefined || den === undefined || den === 0) return null;
   return num / den;
-}
-
-function formatShare(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
 }

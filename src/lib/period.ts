@@ -31,8 +31,8 @@ export function formatDayLabel(day: string): string {
 /** What the operator picked: a rolling preset or an explicit UTC date range. */
 export type Period =
   | { kind: "preset"; days: number }
-  /** Inclusive UTC calendar days, `YYYY-MM-DD`. `campaign` marks the preset. */
-  | { kind: "range"; from: string; to: string; campaign?: boolean };
+  /** Inclusive UTC calendar days, `YYYY-MM-DD`. */
+  | { kind: "range"; from: string; to: string };
 
 /**
  * The resolved window every panel queries, plus the previous equal-length
@@ -50,14 +50,16 @@ export type DateWindow = {
   granularity: "hour" | "day";
   /** Short human label: "last 7d", "Nov 1 – Nov 30", "Nov 3". */
   label: string;
-  /** Label for the previous window: "prev 7d", "prev period", "prev day". */
+  /** Label for the previous window — always "Previous period". */
   prevLabel: string;
 };
+
+export const PREVIOUS_PERIOD = "Previous period";
 
 export function resolveWindow(period: Period, day: string | null): DateWindow {
   if (day) {
     const { from, to } = dayRange(day);
-    return withPrevious(from, to, 1, "day", formatDayLabel(day), "prev day");
+    return withPrevious(from, to, 1, "day", formatDayLabel(day));
   }
   if (period.kind === "preset") {
     const now = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
@@ -69,7 +71,6 @@ export function resolveWindow(period: Period, day: string | null): DateWindow {
       period.days,
       period.days <= 1 ? "hour" : "day",
       `last ${period.days}d`,
-      `prev ${period.days}d`,
     );
   }
   const from = dayRange(period.from).from;
@@ -84,8 +85,7 @@ export function resolveWindow(period: Period, day: string | null): DateWindow {
     to,
     days,
     days <= 1 ? "hour" : "day",
-    period.campaign ? `campaign · ${label}` : label,
-    days === 1 ? "prev day" : `prev ${days}d`,
+    label,
   );
 }
 
@@ -95,7 +95,6 @@ function withPrevious(
   days: number,
   granularity: "hour" | "day",
   label: string,
-  prevLabel: string,
 ): DateWindow {
   const fromMs = new Date(from).getTime();
   const span = new Date(to).getTime() - fromMs;
@@ -103,7 +102,7 @@ function withPrevious(
   // a mention at exactly the boundary is never counted in both windows.
   const prevTo = new Date(fromMs - 1).toISOString();
   const prevFrom = new Date(fromMs - 1 - span).toISOString();
-  return { from, to, prevFrom, prevTo, days, granularity, label, prevLabel };
+  return { from, to, prevFrom, prevTo, days, granularity, label, prevLabel: PREVIOUS_PERIOD };
 }
 
 /** Today's UTC calendar day, `YYYY-MM-DD`. */
@@ -111,29 +110,52 @@ export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export type Trend =
-  | { direction: "up"; percentage: number }
-  | { direction: "down"; percentage: number }
-  | { direction: "stable" }
-  | { direction: "new" };
+/**
+ * One rule for every "vs previous period" figure on the dashboard (KPI
+ * cards, sources, countries, favorability):
+ *  - counts  → relative change, whole percent: "▲ +25%", "▼ −37%";
+ *              previous 0 → "new" (or "—" when both are 0);
+ *  - shares  → difference of the two percentages, also in %: 4.9% vs 4.1%
+ *              → "▲ +0.8%" (a relative change of a share, "+19%", misleads).
+ * Colour only marks the direction, never "good" or "bad".
+ */
+export type Change = {
+  text: string;
+  direction: "up" | "down" | "flat" | "new" | "none";
+};
 
-/** Percentage change of `current` vs `previous`, as a KPI trend badge input. */
-export function computeTrend(
-  current: number | undefined,
-  previous: number | undefined,
-): Trend | undefined {
-  if (current == null || previous == null) return undefined;
-  if (previous === 0) return current > 0 ? { direction: "new" } : { direction: "stable" };
-  const pct = ((current - previous) / previous) * 100;
-  if (Math.abs(pct) < 0.05) return { direction: "stable" };
-  return pct > 0
-    ? { direction: "up", percentage: pct }
-    : { direction: "down", percentage: Math.abs(pct) };
+const MINUS = "\u2212";
+
+function signed(n: number, digits: number): string {
+  const abs = Math.abs(n).toFixed(digits);
+  return `${n > 0 ? "+" : MINUS}${abs}%`;
 }
 
-/** Percentage-point change of a share (0–1) vs the previous window. */
-export function formatPpDelta(current: number, previous: number): string {
-  const pp = (current - previous) * 100;
-  if (Math.abs(pp) < 0.05) return "±0 pp";
-  return `${pp > 0 ? "▲" : "▼"} ${Math.abs(pp).toFixed(1)} pp`;
+export function countChange(
+  current: number | undefined | null,
+  previous: number | undefined | null,
+): Change | undefined {
+  if (current == null || previous == null) return undefined;
+  if (previous === 0) {
+    return current > 0 ? { text: "new", direction: "new" } : { text: "—", direction: "none" };
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { text: "±0%", direction: "flat" };
+  return { text: `${pct > 0 ? "▲" : "▼"} ${signed(pct, 0)}`, direction: pct > 0 ? "up" : "down" };
+}
+
+/** Change of a share (0–1) as the difference of the two percentages. */
+export function shareChange(
+  current: number | undefined | null,
+  previous: number | undefined | null,
+): Change | undefined {
+  if (current == null || previous == null) return undefined;
+  const diff = Math.round((current - previous) * 1000) / 10;
+  if (diff === 0) return { text: "±0%", direction: "flat" };
+  return { text: `${diff > 0 ? "▲" : "▼"} ${signed(diff, 1)}`, direction: diff > 0 ? "up" : "down" };
+}
+
+/** Share (0–1) as a percentage label, "4.9%". */
+export function formatShare(v: number): string {
+  return `${(v * 100).toFixed(1)}%`;
 }

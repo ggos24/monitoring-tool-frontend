@@ -5,7 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
-import type { DateWindow } from "@/lib/period";
+import { countChange, type DateWindow } from "@/lib/period";
+import { ChangeBadge } from "./kpi-card";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -95,7 +96,7 @@ export function TopGeoCard({
                   <CountDelta
                     current={c.count}
                     previous={prevByIso.get(c.iso2) ?? 0}
-                    title={`vs ${win.prevLabel}`}
+                    title={win.prevLabel}
                   />
                 ) : (
                   <span className="w-9 text-right font-mono text-[11px] tabular-nums text-text-tertiary">
@@ -115,7 +116,7 @@ export function TopGeoCard({
   );
 }
 
-/** Absolute change in a count vs the previous window: "+12", "−3", "new". */
+/** Change of a count vs the previous period, by the shared rule (lib/period). */
 export function CountDelta({
   current,
   previous,
@@ -127,23 +128,12 @@ export function CountDelta({
   title?: string;
   className?: string;
 }) {
-  const diff = current - previous;
-  const text =
-    previous === 0 && current > 0
-      ? "new"
-      : diff === 0
-        ? "±0"
-        : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toLocaleString()}`;
+  const change = countChange(current, previous)!;
   return (
-    <span
+    <ChangeBadge
+      change={change}
       title={title ? `${title}: ${previous.toLocaleString()}` : undefined}
-      className={cn(
-        "w-9 text-right font-mono text-[11px] tabular-nums",
-        diff > 0 ? "text-success" : diff < 0 ? "text-danger" : "text-text-tertiary",
-        className,
-      )}
-    >
-      {text}
-    </span>
+      className={cn("w-14 text-right", className)}
+    />
   );
 }

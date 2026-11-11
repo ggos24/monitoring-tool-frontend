@@ -78,7 +78,7 @@ export function TimelineChart({
 
   const unit = granularity === "hour" ? "Hourly" : "Daily";
   const subtitle =
-    `${unit} mention count, ${win.label}` +
+    `${unit} number of articles` +
     (selectedDay && canDrill
       ? ` · showing ${formatDayLabel(selectedDay)}`
       : canDrill
@@ -111,7 +111,7 @@ export function TimelineChart({
 
   return (
     <div className="bg-card p-5">
-      <KickerLabel>Mentions over time</KickerLabel>
+      <KickerLabel>Articles over time</KickerLabel>
       <div className="mt-1 mb-4 flex flex-wrap items-baseline justify-between gap-2 text-xs text-text-secondary">
         <span>{subtitle}</span>
         {showPrev && (
@@ -142,7 +142,9 @@ export function TimelineChart({
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={data}
-              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              // Room on both sides so the first/last date labels are never
+              // clipped and the y-axis numbers don't touch the first date.
+              margin={{ top: 8, right: 20, left: 4, bottom: 0 }}
               onClick={handleChartClick}
               style={{ cursor: canDrill ? "pointer" : "default" }}
             >
@@ -168,14 +170,17 @@ export function TimelineChart({
                 axisLine={false}
                 tickLine={false}
                 interval="preserveStartEnd"
-                minTickGap={granularity === "hour" ? 24 : 8}
+                padding={{ left: 12, right: 12 }}
+                tickMargin={6}
+                minTickGap={granularity === "hour" ? 24 : 16}
                 tickFormatter={(v: string) => formatTick(v, granularity)}
               />
               <YAxis
                 tick={TICK_STYLE}
                 axisLine={false}
                 tickLine={false}
-                width={32}
+                width={36}
+                tickMargin={6}
                 allowDecimals={false}
               />
               <Tooltip
@@ -300,7 +305,7 @@ function TimelineTooltip({
     <div className="border border-border bg-overlay px-2.5 py-1.5 font-mono text-[11px] leading-tight">
       <div className="text-text-tertiary">{formatTooltipLabel(label ?? "", granularity)}</div>
       <div className="mt-0.5 text-foreground">
-        {point.count} mention{point.count === 1 ? "" : "s"}
+        {point.count} article{point.count === 1 ? "" : "s"}
       </div>
       {showPrev && point.prev !== null && point.prevDate && (
         <div className="mt-0.5 text-text-tertiary">

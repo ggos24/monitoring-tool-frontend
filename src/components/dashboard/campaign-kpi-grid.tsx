@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import { FAVORABILITY_TOOLTIP, favorabilityReadiness } from "@/lib/favorability";
-import { computeTrend, formatDayLabel, formatPpDelta, type DateWindow } from "@/lib/period";
+import { countChange, formatDayLabel, formatShare, shareChange, type DateWindow } from "@/lib/period";
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -82,10 +82,22 @@ export function CampaignKpiGrid({
 
   const h = cur?.headline;
   const ph = prev?.headline;
-  const trendTitle = `vs ${win.prevLabel}`;
-  const prevSuffix = (v: string | undefined) => (prev && v !== undefined ? ` · ${win.prevLabel} ${v}` : "");
+  const changeTitle = win.prevLabel;
+  // One shape for every card: what the number is, then "Previous period: …".
+  const sub = (what: string, previous: string | undefined) => (
+    <>
+      <div>{what}</div>
+      {prev && previous !== undefined && (
+        <div className="mt-0.5">
+          {win.prevLabel}: {previous}
+        </div>
+      )}
+    </>
+  );
   const partial =
-    ingest.kind === "partial" ? ` · ingested through ${formatDayLabel(ingest.through)}` : "";
+    ingest.kind === "partial"
+      ? ` Collected through ${formatDayLabel(ingest.through)} so far — the figure can still grow.`
+      : "";
 
   const fav = favorableShare(h?.favorability);
   const favPrev = favorableShare(ph?.favorability);
@@ -94,50 +106,46 @@ export function CampaignKpiGrid({
   return (
     <div className={`grid grid-cols-2 gap-px bg-strong md:grid-cols-3 ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
       <KpiCard
-        kicker="Tier-1 articles"
-        title="GKG v1 selection, axes A/B — each article counted once"
+        kicker="Tier-1 media articles"
+        title={"Articles from our Tier-1 media list that match this query. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
-        subtitle={win.label + prevSuffix(ph?.articles.toLocaleString()) + partial}
-        trend={prev ? computeTrend(h?.articles, ph?.articles) : undefined}
-        trendTitle={trendTitle}
+        subtitle={sub("matching this query", ph && `${ph.articles.toLocaleString()} articles`)}
+        change={prev ? countChange(h?.articles, ph?.articles) : undefined}
+        changeTitle={changeTitle}
         isLoading={loading}
       />
       <KpiCard
-        kicker="Share of Tier-1 coverage"
+        kicker="Share of Ukraine–Russia coverage"
+        title={SHARE_TOOLTIP}
         value={h?.pool_share == null ? "—" : formatShare(h.pool_share)}
         subtitle={
           h?.pool_articles == null
-            ? "Tier-1 pool not available"
-            : `of ${h.pool_articles.toLocaleString()} Tier-1 articles` +
-              prevSuffix(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))
+            ? "Tier-1 article total not available"
+            : sub(
+                `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} Tier-1 articles about Ukraine/Russia`,
+                ph?.pool_share == null ? undefined : formatShare(ph.pool_share),
+              )
         }
-        delta={
-          prev && h?.pool_share != null && ph?.pool_share != null
-            ? formatPpDelta(h.pool_share, ph.pool_share)
-            : undefined
-        }
-        trendTitle={trendTitle}
+        change={prev ? shareChange(h?.pool_share, ph?.pool_share) : undefined}
+        changeTitle={changeTitle}
         isLoading={loading}
       />
       <KpiCard
-        kicker="Favorable share"
+        kicker="Favorable to Ukraine"
         title={FAVORABILITY_TOOLTIP}
         value={fav.value === null ? "n/a" : formatShare(fav.value)}
-        subtitle={fav.note}
-        delta={
-          prev && fav.value !== null && favPrev.value !== null
-            ? formatPpDelta(fav.value, favPrev.value)
-            : undefined
-        }
-        trendTitle={trendTitle}
+        subtitle={sub(fav.note, favPrev.value === null ? undefined : formatShare(favPrev.value))}
+        change={prev ? shareChange(fav.value, favPrev.value) : undefined}
+        changeTitle={changeTitle}
         isLoading={loading}
       />
       <KpiCard
-        kicker="Outlets"
+        kicker="Tier-1 media"
+        title="How many different Tier-1 media published articles matching this query."
         value={(h?.outlets ?? 0).toLocaleString()}
-        subtitle={"distinct Tier-1 outlets" + prevSuffix(ph?.outlets.toLocaleString())}
-        trend={prev ? computeTrend(h?.outlets, ph?.outlets) : undefined}
-        trendTitle={trendTitle}
+        subtitle={sub("media covered this query", ph && `${ph.outlets.toLocaleString()} media`)}
+        change={prev ? countChange(h?.outlets, ph?.outlets) : undefined}
+        changeTitle={changeTitle}
         isLoading={loading}
       />
       {countries && (
@@ -150,6 +158,13 @@ export function CampaignKpiGrid({
     </div>
   );
 }
+
+const SHARE_TOOLTIP =
+  "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
+  "the share that matches this query. An article counts as about Ukraine/Russia when its " +
+  "headline names Ukraine, Russia, Kyiv, the Kremlin, Putin or Zelensky, or it covers " +
+  "Russia together with weapons, sanctions or military cooperation. " +
+  "Only Tier-1 media that GDELT can see are counted.";
 
 /**
  * none    — nothing ingested for this window yet (show a message, not 0);
@@ -176,15 +191,14 @@ function ingestState(
 function favorableShare(f: CampaignFavorability | undefined): { value: number | null; note: string } {
   if (!f) return { value: null, note: "" };
   const scored = f.favorable + f.neutral + f.unfavorable + f.mixed;
-  const note = `${scored.toLocaleString()} scored · ${f.unscored.toLocaleString()} unscored`;
+  const all = scored + f.unscored;
   if (scored === 0 || !favorabilityReadiness(f, f).ready) {
-    return { value: null, note: `${note} — too few scored` };
+    return {
+      value: null,
+      note: `not enough analysed yet (${scored.toLocaleString()} of ${all.toLocaleString()})`,
+    };
   }
-  return { value: f.favorable / scored, note };
-}
-
-function formatShare(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
+  return { value: f.favorable / scored, note: `of ${scored.toLocaleString()} analysed articles` };
 }
 
 function CountriesCard({
@@ -212,7 +226,7 @@ function CountriesCard({
               <span className="flex-1 truncate text-xs text-text-secondary">{countryName(c.iso2!)}</span>
               <span className="font-mono text-[11px] tabular-nums text-foreground">{c.count.toLocaleString()}</span>
               {previous ? (
-                <CountDelta current={c.count} previous={prevByIso.get(c.iso2) ?? 0} title={`vs ${win.prevLabel}`} />
+                <CountDelta current={c.count} previous={prevByIso.get(c.iso2) ?? 0} title={win.prevLabel} />
               ) : (
                 <span className="w-9 text-right font-mono text-[11px] tabular-nums text-text-tertiary">
                   {total > 0 ? Math.round((c.count / total) * 100) : 0}%
@@ -222,7 +236,7 @@ function CountriesCard({
           ))}
         </div>
       )}
-      <div className="mt-3 font-mono text-[11px] text-text-tertiary">by articles, {win.label}</div>
+      <div className="mt-3 font-mono text-[11px] text-text-tertiary">by number of articles</div>
     </div>
   );
 }

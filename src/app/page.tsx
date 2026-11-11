@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
-import { NarrativeTabs } from "@/components/dashboard/narrative-tabs";
+import { QuerySelector } from "@/components/dashboard/query-selector";
 import type { ScopeParam, ScopeSelection } from "@/lib/types";
 import { formatDayLabel, resolveWindow, type Period } from "@/lib/period";
 import { FavorabilityPanel } from "@/components/dashboard/favorability-panel";
@@ -23,19 +23,15 @@ import {
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 import { CoverageNote } from "@/components/dashboard/coverage-note";
 import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
-import { campaignPeriod } from "@/lib/campaign";
+import { DEFAULT_PERIOD, loadFilters, saveFilters } from "@/lib/dashboard-filters";
 import { isCampaignGroupName } from "@/lib/narrative-rules";
-import { LiveSourcesPanel } from "@/components/dashboard/live-sources-panel";
 import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
-  // Campaign window by default when its dates are configured; else 7d.
-  const [period, setPeriod] = useState<Period>(
-    () => campaignPeriod() ?? { kind: "preset", days: 7 },
-  );
+  const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
@@ -45,6 +41,24 @@ export default function Home() {
   // Δ vs the previous equal-length window on KPIs, sources, countries,
   // favorability, plus the dashed previous-period line on the timeline.
   const [compare, setCompare] = useState(true);
+
+  // The picked query + filters survive reloads and the Reports round trip
+  // (localStorage). Restored after mount so SSR markup stays deterministic;
+  // nothing is written back until the restore has run.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    const stored = loadFilters();
+    if (stored.scope) setScopeSel(stored.scope);
+    if (stored.period) setPeriod(stored.period);
+    if (stored.country !== undefined) setCountry(stored.country);
+    if (stored.source) setSource(stored.source);
+    if (stored.compare !== undefined) setCompare(stored.compare);
+    setRestored(true);
+  }, []);
+  useEffect(() => {
+    if (!restored) return;
+    saveFilters({ scope: scopeSel, period, country, source, compare });
+  }, [restored, scopeSel, period, country, source, compare]);
 
   // `periodWin` drives the timeline (whole period, so a drilled day stays
   // in context); `win` drives every other panel (narrowed to the day).
@@ -70,7 +84,7 @@ export default function Home() {
   );
   const poolTopicId =
     topicsQuery.data?.find((t) => t.role === "pool")?.id ?? null;
-  // "All narratives" = the `Campaign` topic group (set up by WS-3).
+  // "All queries" = the `Campaign` topic group (set up by WS-3).
   const allGroup =
     groupsQuery.data?.find((g) => isCampaignGroupName(g.name)) ?? null;
   const topicNames = useMemo(
@@ -78,15 +92,22 @@ export default function Home() {
     [narratives],
   );
 
-  // Default tab: All narratives when the Campaign group exists, else the
-  // first narrative. Waits for both lists so it doesn't flip after load.
+  // Default query: All queries when the Campaign group exists, else the
+  // first query. Also replaces a restored pick that no longer exists
+  // (deleted topic/group). Waits for both lists so it doesn't flip after load.
   const groupsSettled = groupsQuery.isSuccess || groupsQuery.isError;
   useEffect(() => {
-    if (scopeSel !== null || !groupsSettled) return;
+    if (!restored || !topicsQuery.isSuccess || !groupsSettled) return;
+    const stillExists =
+      scopeSel !== null &&
+      (scopeSel.kind === "group"
+        ? (groupsQuery.data ?? []).some((g) => g.id === scopeSel.id)
+        : narratives.some((t) => t.id === scopeSel.id));
+    if (stillExists) return;
     if (allGroup) setScopeSel({ kind: "group", id: allGroup.id });
     else if (narratives.length > 0)
       setScopeSel({ kind: "topic", id: narratives[0].id });
-  }, [narratives, allGroup, groupsSettled, scopeSel]);
+  }, [restored, topicsQuery.isSuccess, groupsQuery.data, narratives, allGroup, groupsSettled, scopeSel]);
 
   // Distinguish "still loading / about to auto-select" (→ skeletons) from a
   // genuinely empty backend (→ a message, so skeletons don't spin forever).
@@ -125,14 +146,18 @@ export default function Home() {
       <TopBar scope={scope} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3">
-          <NarrativeTabs
-            narratives={narratives}
-            allGroup={allGroup}
+          <QuerySelector
             value={scopeSel}
             onChange={handleSelectScope}
+            className="w-full sm:w-auto sm:min-w-[22rem] sm:self-start"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <PeriodToggle value={period} onChange={handleSelectPeriod} />
+            <PeriodToggle
+              // Remount when a range is restored/applied so its inputs re-seed.
+              key={period.kind === "range" ? `${period.from}_${period.to}` : "preset"}
+              value={period}
+              onChange={handleSelectPeriod}
+            />
             {scope !== null && (
               <CountryFilter
                 scope={scope}
@@ -168,7 +193,7 @@ export default function Home() {
         {noTopics ? (
           <div className="mb-6 border border-border bg-card px-5 py-16 text-center">
             <p className="font-mono text-xs text-text-tertiary">
-              No narratives yet. Add one in Settings to start monitoring.
+              No queries yet. Add one in Settings to start monitoring.
             </p>
           </div>
         ) : (
@@ -247,15 +272,9 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Outside the GKG headline figures (PLAN §9): live-only
-                collectors, and the campaign-wide UNITED24 pickup list. */}
-            <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
-              <div className="bg-card lg:col-span-3">
-                <LiveSourcesPanel scope={scope} win={win} country={country} />
-              </div>
-              <div className="bg-card lg:col-span-4">
-                <PickupsPanel win={win} />
-              </div>
+            {/* Campaign-wide: Tier-1 articles that mention UNITED24. */}
+            <div className="mb-6 border border-border bg-card">
+              <PickupsPanel win={win} />
             </div>
           </>
         )}

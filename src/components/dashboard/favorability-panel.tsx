@@ -9,7 +9,8 @@ import {
   insufficientFavorabilityNote,
   type FavorabilityReadiness,
 } from "@/lib/favorability";
-import { formatPpDelta, type DateWindow } from "@/lib/period";
+import { formatShare, shareChange, type DateWindow } from "@/lib/period";
+import { ChangeBadge } from "./kpi-card";
 import type { FavorabilityCounts, FavorabilityStats, ScopeParam } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -86,13 +87,12 @@ export function FavorabilityPanel({
   const total = scoredTotal(counts);
   const prevTotal = scoredTotal(prevCounts);
   const mean = readiness.ready ? (current.data?.mean_score ?? null) : null;
-  const prevMean = prevCounts ? (previous.data?.mean_score ?? null) : null;
 
   return (
     <div className="flex h-full flex-col bg-card p-5" title={FAVORABILITY_TOOLTIP}>
       <KickerLabel>Favorability</KickerLabel>
       <div className="mt-1 text-xs text-text-secondary">
-        How favorable coverage is to Ukraine, {win.label}
+        How favorable coverage is to Ukraine
       </div>
 
       {scope === null || current.isLoading ? (
@@ -131,21 +131,16 @@ export function FavorabilityPanel({
             <span
               className="text-[26px] font-medium leading-none tabular-nums text-foreground"
               style={{ letterSpacing: "-0.02em" }}
-              title="Mean score on a −2 (unfavorable) … +2 (favorable) scale"
+              title={mean === null ? undefined : `Average score ${formatSigned(mean)} on a −2 … +2 scale`}
             >
-              {mean === null ? "—" : formatSigned(mean)}
+              {formatShare(counts.favorable / total)}
             </span>
-            <span className="font-mono text-[11px] text-text-tertiary">mean, −2…+2</span>
-            {mean !== null && prevMean !== null && (
-              <span
-                className={cn(
-                  "font-mono text-[11px] tabular-nums",
-                  mean > prevMean ? "text-success" : mean < prevMean ? "text-danger" : "text-text-tertiary",
-                )}
-                title={`${win.prevLabel}: ${formatSigned(prevMean)}`}
-              >
-                {mean === prevMean ? "±0" : `${mean > prevMean ? "▲" : "▼"} ${Math.abs(mean - prevMean).toFixed(2)}`}
-              </span>
+            <span className="font-mono text-[11px] text-text-tertiary">favorable</span>
+            {prevCounts && prevTotal > 0 && (
+              <ChangeBadge
+                change={shareChange(counts.favorable / total, prevCounts.favorable / prevTotal)!}
+                title={`${win.prevLabel}: ${pct(prevCounts.favorable, prevTotal)}`}
+              />
             )}
           </div>
 
@@ -168,7 +163,7 @@ export function FavorabilityPanel({
                     title={`${win.prevLabel}: ${prevTotal > 0 ? pct(prevCounts[r.key], prevTotal) : "—"}`}
                   >
                     {prevTotal > 0
-                      ? formatPpDelta(counts[r.key] / total, prevCounts[r.key] / prevTotal)
+                      ? shareChange(counts[r.key] / total, prevCounts[r.key] / prevTotal)!.text
                       : "—"}
                   </span>
                 )}
@@ -177,8 +172,8 @@ export function FavorabilityPanel({
           </ul>
 
           <div className="mt-auto pt-4 font-mono text-[11px] text-text-tertiary">
-            {total.toLocaleString()} scored
-            {counts.unscored > 0 && ` · ${counts.unscored.toLocaleString()} awaiting analysis`}
+            {total.toLocaleString()} articles analysed
+            {counts.unscored > 0 && ` · ${counts.unscored.toLocaleString()} waiting`}
           </div>
         </>
       )}

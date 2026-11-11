@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2, Search, Sparkles, X } from "lucide-react";
+import { ChevronDown, Loader2, Search, Sparkles, X } from "lucide-react";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
@@ -22,6 +22,12 @@ import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -57,8 +63,8 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
 // reach — below the trust/reach gate, or body fetch blocked.
 const ENRICHED_OPTIONS: { key: EnrichedFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "enriched", label: "Enriched" },
-  { key: "pending", label: "Pending" },
+  { key: "enriched", label: "Analysed" },
+  { key: "pending", label: "Not analysed yet" },
 ];
 
 export function MentionsList({
@@ -171,12 +177,15 @@ export function MentionsList({
   return (
     <div className="bg-card p-5">
       <div className="flex items-center justify-between">
-        <KickerLabel>Mentions</KickerLabel>
+        <KickerLabel>Articles</KickerLabel>
         <div className="font-mono text-[11px] text-text-tertiary tabular-nums">
           {total > 0 && `${total.toLocaleString()} total`}
         </div>
       </div>
 
+      {/* Everyday filters in one row (search + favorability); the
+          technical ones (which collector, analysis state) sit in compact
+          dropdowns on the right. */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="relative">
@@ -185,70 +194,69 @@ export function MentionsList({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search title or body..."
+              placeholder="Search articles..."
               className={cn(
-                "h-8 w-full border border-border bg-card pr-2 pl-7 sm:w-72",
+                "h-8 w-full border border-border bg-card pr-2 pl-7 sm:w-64",
                 "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
                 "outline-none transition-colors hover:border-strong focus:border-strong",
               )}
             />
           </div>
+          <ToggleGroup
+            label="Favorability"
+            title={FAVORABILITY_TOOLTIP}
+            value={stance}
+            onChange={setStance}
+            options={STANCE_OPTIONS}
+          />
           {domain && (
             <button
               type="button"
               onClick={onClearDomain}
-              title="Clear domain filter"
+              title="Clear media filter"
               className={cn(
                 "group inline-flex h-8 items-center gap-1.5 border border-strong bg-elevated pr-1 pl-2",
                 "font-mono text-[11px] text-foreground transition-colors hover:border-strong hover:bg-overlay",
               )}
             >
-              <span className="text-text-tertiary">domain:</span>
+              <span className="text-text-tertiary">media:</span>
               <span>{domain}</span>
               <X className="size-3 text-text-tertiary transition-colors group-hover:text-foreground" />
             </button>
           )}
-          <ToggleGroup
+        </div>
+        <div className="flex items-center gap-2">
+          <DropdownFilter
             label="Source"
             value={source}
             onChange={onChangeSource}
             options={SOURCE_OPTIONS}
           />
+          <DropdownFilter
+            label="Analysis"
+            value={enriched}
+            onChange={setEnriched}
+            options={ENRICHED_OPTIONS}
+          />
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className={cn(
+                "ml-1 font-mono text-[11px] uppercase tracking-[0.1em]",
+                "text-text-secondary transition-colors hover:text-foreground",
+              )}
+            >
+              Reset
+            </button>
+          )}
         </div>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            onClick={resetFilters}
-            className={cn(
-              "font-mono text-[11px] uppercase tracking-[0.1em]",
-              "text-text-secondary transition-colors hover:text-foreground",
-            )}
-          >
-            Reset
-          </button>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-        <ToggleGroup
-          label="Favorability"
-          title={FAVORABILITY_TOOLTIP}
-          value={stance}
-          onChange={setStance}
-          options={STANCE_OPTIONS}
-        />
-        <ToggleGroup
-          label="Analysis"
-          value={enriched}
-          onChange={setEnriched}
-          options={ENRICHED_OPTIONS}
-        />
       </div>
 
       <div className="mt-4">
         {error ? (
           <div className="flex items-center gap-3 font-mono text-[11px] text-text-secondary">
-            <span>Failed to load mentions</span>
+            <span>Failed to load articles</span>
             <button
               type="button"
               onClick={() => refetch()}
@@ -267,7 +275,7 @@ export function MentionsList({
           <EmptyMessage>
             {enriched === "enriched"
               ? "Nothing analyzed yet in this period — the nightly batch runs at 22:00 UTC and verdicts land at 07:00 UTC."
-              : "No mentions in selected period."}
+              : "No articles in selected period."}
           </EmptyMessage>
         ) : (
           <ul
@@ -654,6 +662,57 @@ function ToggleGroup<T extends string>({
         })}
       </div>
     </div>
+  );
+}
+
+/** A compact single-choice filter; highlighted when not on its default. */
+function DropdownFilter<T extends string>({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: T;
+  onChange: (v: T) => void;
+  options: { key: T; label: string }[];
+}) {
+  const current = options.find((o) => o.key === value) ?? options[0];
+  const isDefault = value === options[0].key;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors",
+          isDefault
+            ? "border-border text-text-tertiary hover:border-strong hover:text-foreground"
+            : "border-strong bg-elevated text-foreground",
+        )}
+      >
+        <span>{label}:</span>
+        <span className={isDefault ? undefined : "text-foreground"}>{current.label}</span>
+        <ChevronDown className="size-3" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        sideOffset={4}
+        className="min-w-40 border border-border bg-card p-0 text-foreground ring-0 shadow-none"
+      >
+        {options.map((o) => (
+          <DropdownMenuItem
+            key={o.key}
+            onClick={() => onChange(o.key)}
+            className={cn(
+              "flex cursor-default items-center px-3 py-2 font-mono text-[11px]",
+              "focus:bg-elevated focus:text-foreground",
+              o.key === value && "bg-elevated",
+            )}
+          >
+            {o.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

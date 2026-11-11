@@ -56,11 +56,11 @@ export function TopicGroupsEditor() {
     <section className="bg-card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <KickerLabel>Topic groups</KickerLabel>
+          <KickerLabel>Query groups</KickerLabel>
           <p className="mt-1 text-xs text-text-tertiary">
-            Reporting scopes over several topics (e.g. &ldquo;Ukraine
+            Reporting scopes over several queries (e.g. &ldquo;Ukraine
             war&rdquo;). A group report unions its members and discovers
-            narratives that cut across topics.
+            narratives that cut across queries.
           </p>
         </div>
         <button
@@ -76,7 +76,7 @@ export function TopicGroupsEditor() {
               ? "cursor-not-allowed border-border bg-card text-text-tertiary"
               : "cursor-pointer border-strong bg-foreground text-primary-foreground hover:bg-text-secondary",
           )}
-          title={topics.length < 2 ? "Need at least 2 topics" : undefined}
+          title={topics.length < 2 ? "Need at least 2 queries" : undefined}
         >
           <Plus className="size-3" /> New group
         </button>
@@ -144,7 +144,7 @@ function GroupRow({
           </span>
           {isCampaignGroup(group) && (
             <span className="font-mono text-[10px] text-text-tertiary">
-              · Managed with the narrative rule files
+              · Managed with the query rule files
             </span>
           )}
         </div>
@@ -206,7 +206,7 @@ function GroupForm({
     e.preventDefault();
     onError("");
     if (!name.trim()) return onError("Name is required.");
-    if (selected.length < 1) return onError("Select at least one topic.");
+    if (selected.length < 1) return onError("Select at least one query.");
     createMutation.mutate({ name: name.trim(), topic_ids: selected });
   }
 
