@@ -5,9 +5,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Bar,
   CartesianGrid,
-  Cell,
   ComposedChart,
-  Line,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -158,7 +156,10 @@ export function TimelineChart({
   };
 
   // Selected day at full strength, the rest dimmed; nothing selected → all even.
-  const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.3) : 0.7);
+  const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.3) : 1);
+  // Share of a day's slot the bar takes; the rest shows the previous period
+  // behind it.
+  const barShare = granularity === "hour" ? 0.6 : 0.45;
 
   return (
     <div className="relative bg-card p-5" data-refreshing={refreshing || undefined}>
@@ -195,11 +196,11 @@ export function TimelineChart({
           {showPrev && (
             <>
               <span className="flex items-center gap-1.5">
-                <span aria-hidden className="inline-block size-2.5 bg-text-secondary opacity-70" />
+                <span aria-hidden className="inline-block size-2.5 bg-text-secondary" />
                 This period
               </span>
               <span className="flex items-center gap-1.5">
-                <span aria-hidden className="inline-block w-4 border-t border-dashed border-text-tertiary" />
+                <span aria-hidden className="inline-block h-2.5 w-4 border-t-[1.5px] border-chart-5 bg-overlay" />
                 {win.prevLabel}
               </span>
             </>
@@ -237,7 +238,10 @@ export function TimelineChart({
             <ComposedChart
               data={data}
               margin={{ top: 8, right: 4, left: 4, bottom: 0 }}
-              barCategoryGap={granularity === "hour" ? "12%" : "22%"}
+              // Every series gets the whole day slot; the shapes below decide
+              // how much of it they paint.
+              barCategoryGap={0}
+              barGap={0}
               onClick={handleChartClick}
               style={{ cursor: canDrill ? "pointer" : "default" }}
             >
@@ -267,6 +271,9 @@ export function TimelineChart({
                 minTickGap={granularity === "hour" ? 24 : 16}
                 tickFormatter={(v: string) => formatTick(v, granularity)}
               />
+              {/* Same days, hidden: lets the previous-period shade overlap
+                  the bars (two bars on one axis sit side by side). */}
+              <XAxis xAxisId="prev" dataKey="date" hide />
               <YAxis
                 tick={TICK_STYLE}
                 axisLine={false}
@@ -283,23 +290,28 @@ export function TimelineChart({
                   not Recharts' JS animation: a CSS animation ends in the
                   natural state, so the bars are there even when no
                   animation frame ever runs. */}
-              <Bar dataKey="count" radius={[2, 2, 0, 0]} isAnimationActive={false}>
-                {data.map((d) => (
-                  <Cell key={d.date} fill={theme.textSecondary} fillOpacity={barOpacity(d.date)} />
-                ))}
-              </Bar>
+              {/* Previous period: a quiet silhouette behind the bars, drawn on
+                  its own hidden x-axis so it overlaps them instead of sitting
+                  beside. A line over the bars got lost against them. */}
               {showPrev && (
-                <Line
-                  type="step"
+                <Bar
                   dataKey="prev"
-                  stroke={theme.textTertiary}
-                  strokeWidth={1.25}
-                  strokeDasharray="3 3"
-                  dot={false}
-                  activeDot={false}
+                  xAxisId="prev"
+                  // Explicitly under the bars (300) and the hover band (200):
+                  // without it the order follows mount order, and the shade,
+                  // which mounts later, would cover the bars.
+                  zIndex={150}
                   isAnimationActive={false}
+                  shape={(p: BarShape) => <PreviousShade {...p} />}
                 />
               )}
+              <Bar
+                dataKey="count"
+                isAnimationActive={false}
+                shape={(p: BarShape) => (
+                  <CurrentBar {...p} share={barShare} opacity={barOpacity(p.payload?.date ?? "")} />
+                )}
+              />
               {showDataMarker && firstDataDate && (
                 <ReferenceLine
                   x={firstDataDate}
@@ -316,6 +328,47 @@ export function TimelineChart({
         )}
       </div>
     </div>
+  );
+}
+
+type BarShape = {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  payload?: { date?: string };
+};
+
+function finite(p: BarShape): p is Required<Pick<BarShape, "x" | "y" | "width" | "height">> & BarShape {
+  return [p.x, p.y, p.width, p.height].every((v) => typeof v === "number" && Number.isFinite(v));
+}
+
+/** One day of the previous period: a full-slot block with a lit top edge. */
+function PreviousShade(p: BarShape) {
+  if (!finite(p) || p.height <= 0) return null;
+  // +0.5px so neighbouring days join without a hairline seam.
+  const right = p.x + p.width + 0.5;
+  return (
+    <g>
+      <rect x={p.x} y={p.y} width={right - p.x} height={p.height} fill={theme.bgOverlay} />
+      <line x1={p.x} x2={right} y1={p.y} y2={p.y} style={{ stroke: "var(--chart-5)" }} strokeWidth={1.5} />
+    </g>
+  );
+}
+
+/** One day of this period: a bar narrower than its slot, centred. */
+function CurrentBar(p: BarShape & { share: number; opacity: number }) {
+  if (!finite(p) || p.height <= 0) return null;
+  const width = Math.max(2, p.width * p.share);
+  return (
+    <rect
+      x={p.x + (p.width - width) / 2}
+      y={p.y}
+      width={width}
+      height={p.height}
+      fill={theme.textSecondary}
+      fillOpacity={p.opacity}
+    />
   );
 }
 
