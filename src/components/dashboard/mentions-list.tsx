@@ -11,6 +11,7 @@ import { ChevronDown, Loader2, Search, Sparkles, X } from "lucide-react";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
+import { stagger } from "@/lib/motion";
 import type {
   Mention,
   MentionsListResponse,
@@ -135,15 +136,6 @@ export function MentionsList({
     curFrom,
     curTo,
   ] as const;
-
-  // The per-row "Analyze with LLM" button is a paid call the backend
-  // refuses while analysis is switched off — hide it instead of offering it.
-  const settings = useQuery({
-    queryKey: ["enrichment-settings"],
-    queryFn: apiClient.enrichmentSettings,
-    staleTime: 5 * 60_000,
-  });
-  const canEnrich = settings.data?.stance_enabled === true;
 
   const { data, isLoading, isFetching, error, refetch } = useQuery({
     queryKey,
@@ -279,9 +271,17 @@ export function MentionsList({
             </button>
           </div>
         ) : !enabled || isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+          // Row-shaped: source line, headline, narrative chip.
+          <div className="divide-y divide-border" aria-hidden>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="py-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="mt-2.5 h-4" style={{ width: `${52 + ((i * 29) % 36)}%` }} />
+                <Skeleton className="mt-2.5 h-5 w-56" />
+              </div>
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -294,14 +294,15 @@ export function MentionsList({
           <ul
             className={cn(
               "divide-y divide-border",
-              isFetching && "opacity-60 transition-opacity",
+              "transition-opacity duration-[var(--dur-base)]",
+              isFetching && "opacity-50",
             )}
           >
-            {items.map((m) => (
+            {items.map((m, i) => (
               <MentionRow
                 key={m.id}
+                index={i}
                 mention={m}
-                canEnrich={canEnrich}
                 listQueryKey={queryKey}
                 narratives={
                   isGroup
@@ -360,14 +361,14 @@ export function cleanTitle(title: string | null, domain: string | null): string 
 }
 
 function MentionRow({
+  index,
   mention,
-  canEnrich,
   listQueryKey,
   narratives,
 }: {
+  /** Position on the page — staggers the row's entrance. */
+  index: number;
   mention: Mention;
-  /** LLM analysis is switched on — otherwise the per-row button is hidden. */
-  canEnrich: boolean;
   listQueryKey: readonly unknown[];
   /** Narrative chips — only filled for "All narratives" (group) scope. */
   narratives: string[];
@@ -393,7 +394,7 @@ function MentionRow({
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Analyze failed");
+      setError(err instanceof Error ? err.message : "Analysis failed");
     },
   });
 
@@ -413,7 +414,10 @@ function MentionRow({
   const previewIsSummary = mention.summary !== null;
 
   return (
-    <li className="-mx-2 px-2 py-3 transition-colors hover:bg-elevated/60">
+    <li
+      className="animate-reveal -mx-2 px-2 py-3 transition-colors hover:bg-elevated/60"
+      style={stagger(index)}
+    >
       <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-text-tertiary">
         <div className="flex min-w-0 items-center gap-2">
           <span className="truncate">{displayDomain(mention.source_domain) ?? "—"}</span>
@@ -430,13 +434,11 @@ function MentionRow({
             </span>
           )}
           <StanceBadge mention={mention} />
-          {canEnrich && (
-            <EnrichButton
-              isEnriched={isEnriched}
-              isPending={enrichMutation.isPending}
-              onClick={() => enrichMutation.mutate()}
-            />
-          )}
+          <EnrichButton
+            isEnriched={isEnriched}
+            isPending={enrichMutation.isPending}
+            onClick={() => enrichMutation.mutate()}
+          />
         </div>
       </div>
 
@@ -602,10 +604,10 @@ function EnrichButton({
   onClick: () => void;
 }) {
   const label = isPending
-    ? "Analyzing…"
+    ? "Analysing…"
     : isEnriched
-      ? "Re-analyze with LLM"
-      : "Analyze with LLM";
+      ? "Analyse this article again (one AI call)"
+      : "Analyse this article (one AI call)";
   return (
     <Tooltip.Root>
       <Tooltip.Trigger
@@ -678,7 +680,7 @@ function ToggleGroup<T extends string>({
               type="button"
               onClick={() => onChange(opt.key)}
               className={cn(
-                "px-2.5 font-mono text-[11px] leading-none transition-colors",
+                "px-2.5 font-mono text-[11px] leading-none transition-colors active:translate-y-px",
                 isActive
                   ? "bg-foreground text-primary-foreground"
                   : "bg-transparent text-text-tertiary hover:text-foreground",
@@ -711,7 +713,7 @@ function DropdownFilter<T extends string>({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors",
+          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors active:translate-y-px",
           isDefault
             ? "border-strong text-text-tertiary hover:border-text-tertiary hover:text-foreground"
             : "border-strong bg-elevated text-foreground",
@@ -759,7 +761,7 @@ function PageButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "inline-flex h-8 items-center border border-strong bg-card px-2.5 font-mono text-[11px] transition-colors",
+        "inline-flex h-8 items-center border border-strong bg-card px-2.5 font-mono text-[11px] transition-colors enabled:active:translate-y-px",
         disabled
           ? "cursor-not-allowed text-text-tertiary opacity-50"
           : "text-text-secondary hover:border-strong hover:text-foreground",

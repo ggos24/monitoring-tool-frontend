@@ -117,9 +117,11 @@ export function todayUtc(): string {
  *              previous 0 → "new" (or "—" when both are 0);
  *              previous under SMALL_BASE → the plain difference, "+45":
  *              1 → 46 is "+4500%", a number that says nothing;
- *  - shares  → difference of the two percentages in percentage points:
- *              4.9% vs 4.1% → "+0.8 pp" ("+0.8%" would read as a relative
- *              change, and the relative change of a share, "+19%", misleads).
+ *  - shares  → the same relative change of the figure on screen:
+ *              5.8% → 3.9% is "−33%". One unit for every badge; the
+ *              previous value sits right under it. (The difference of the
+ *              two percentages, "−1.9", is percentage points — a second
+ *              unit next to plain percents confused readers.)
  * The sign carries the direction; colour repeats it, never "good" or "bad".
  */
 export type Change = {
@@ -155,15 +157,18 @@ export function countChange(
   return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
 }
 
-/** Change of a share (0–1): the difference of the two percentages, in pp. */
+/** Change of a share (0–1): relative, like a count — 5.8% → 3.9% = "−33%". */
 export function shareChange(
   current: number | undefined | null,
   previous: number | undefined | null,
 ): Change | undefined {
   if (current == null || previous == null) return undefined;
-  const diff = Math.round((current - previous) * 1000) / 10;
-  if (diff === 0) return { text: "±0 pp", direction: "flat" };
-  return { text: signed(diff, 1, " pp"), direction: diff > 0 ? "up" : "down" };
+  if (previous === 0) {
+    return current > 0 ? { text: "new", direction: "new" } : { text: "—", direction: "none" };
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { text: "±0%", direction: "flat" };
+  return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
 }
 
 /** The previous window's dates, for a hover: "Oct 28 – Nov 3". */

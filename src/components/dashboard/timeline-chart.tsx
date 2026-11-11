@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
   Bar,
   CartesianGrid,
@@ -19,6 +20,8 @@ import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countChange, formatDayLabel, type DateWindow } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { AnimatedValue } from "@/components/ui/animated-value";
+import { RefreshLine } from "@/components/ui/refresh-line";
 import { Skeleton } from "@/components/ui/skeleton";
 import { theme } from "@/lib/theme";
 import { ChangeBadge } from "./kpi-card";
@@ -76,6 +79,7 @@ export function TimelineChart({
         date_to: win.to,
       }),
     enabled,
+    placeholderData: keepPreviousData,
   });
   const previous = useQuery({
     queryKey: ["timeline", scope, granularity, country, win.prevFrom, win.prevTo],
@@ -85,15 +89,25 @@ export function TimelineChart({
         date_to: win.prevTo,
       }),
     enabled: enabled && compare,
+    placeholderData: enabled && compare ? keepPreviousData : undefined,
   });
   const { isLoading, error, refetch } = current;
+  const refreshing = current.isPlaceholderData;
 
   // Previous window is aligned by position (day 1 ↔ day 1), so the dashed
   // line reads as "same point last period". Its own date goes in the tooltip.
-  const data = current.data?.map((point, i) => {
-    const prev = compare ? previous.data?.[i] : undefined;
-    return { ...point, prev: prev?.count ?? null, prevDate: prev?.date ?? null };
-  });
+  // Memoised: Recharts replays the bar animation whenever `data` is a new
+  // array, and a re-render (a day click) must not do that.
+  const currentData = current.data;
+  const previousData = compare ? previous.data : undefined;
+  const data = useMemo(
+    () =>
+      currentData?.map((point, i) => {
+        const prev = previousData?.[i];
+        return { ...point, prev: prev?.count ?? null, prevDate: prev?.date ?? null };
+      }),
+    [currentData, previousData],
+  );
   const showPrev = compare && !!previous.data;
 
   const total = data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
@@ -147,7 +161,8 @@ export function TimelineChart({
   const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.3) : 0.7);
 
   return (
-    <div className="bg-card p-5">
+    <div className="relative bg-card p-5" data-refreshing={refreshing || undefined}>
+      <RefreshLine active={refreshing} />
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div>
           <KickerLabel>Articles over time</KickerLabel>
@@ -160,7 +175,7 @@ export function TimelineChart({
                   className="text-[24px] font-medium leading-none text-foreground tabular-nums"
                   style={{ letterSpacing: "-0.02em" }}
                 >
-                  {total.toLocaleString()}
+                  <AnimatedValue value={total.toLocaleString()} />
                 </span>
                 <span className="text-xs text-text-secondary">
                   article{total === 1 ? "" : "s"}
@@ -210,9 +225,9 @@ export function TimelineChart({
           (tabindex 0 / -1), so a click on a bar focuses that layer and the
           browser rings its bounding box. The selected day is shown by the
           bar highlight, so suppress the ring on every chart element. */}
-      <div className="h-64 [&_.recharts-wrapper_*]:outline-none">
+      <div className="chart-grow h-64 [&_.recharts-wrapper_*]:outline-none">
         {!enabled || isLoading ? (
-          <Skeleton className="h-full w-full" />
+          <ChartSkeleton />
         ) : error ? (
           <ErrorState onRetry={() => refetch()} />
         ) : !data || data.length === 0 ? (
@@ -264,6 +279,10 @@ export function TimelineChart({
                 content={<TimelineTooltip granularity={granularity} showPrev={showPrev} />}
                 cursor={{ fill: theme.textPrimary, fillOpacity: 0.04 }}
               />
+              {/* Bars grow from the axis via CSS (`.chart-grow`, globals.css),
+                  not Recharts' JS animation: a CSS animation ends in the
+                  natural state, so the bars are there even when no
+                  animation frame ever runs. */}
               <Bar dataKey="count" radius={[2, 2, 0, 0]} isAnimationActive={false}>
                 {data.map((d) => (
                   <Cell key={d.date} fill={theme.textSecondary} fillOpacity={barOpacity(d.date)} />
@@ -296,6 +315,19 @@ export function TimelineChart({
           </ResponsiveContainer>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Bars on a baseline — the shape of the chart that is about to appear. */
+const SKELETON_BARS = [38, 62, 30, 74, 52, 90, 44, 66, 34, 58, 80, 48];
+
+function ChartSkeleton() {
+  return (
+    <div className="flex h-full items-end gap-3 border-b border-border px-6 pb-px" aria-hidden>
+      {SKELETON_BARS.map((h, i) => (
+        <Skeleton key={i} className="flex-1" style={{ height: `${h}%` }} />
+      ))}
     </div>
   );
 }

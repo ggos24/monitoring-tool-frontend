@@ -313,11 +313,17 @@ function CompareToggle({
       <span
         aria-hidden
         className={cn(
-          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors",
-          value ? "justify-end bg-elevated" : "justify-start",
+          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors duration-[var(--dur-base)]",
+          value && "bg-elevated",
         )}
       >
-        <span className={cn("size-2", value ? "bg-foreground" : "bg-text-tertiary")} />
+        {/* The knob slides (12px of travel) instead of jumping sides. */}
+        <span
+          className={cn(
+            "size-2 transition-[translate,background-color] duration-[var(--dur-base)]",
+            value ? "translate-x-3 bg-foreground" : "bg-text-tertiary",
+          )}
+        />
       </span>
       vs previous period
     </button>

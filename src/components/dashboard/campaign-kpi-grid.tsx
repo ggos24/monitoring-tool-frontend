@@ -5,6 +5,7 @@ import { countChange, formatDayLabel, formatShare, prevRangeLabel, shareChange, 
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { RefreshLine } from "@/components/ui/refresh-line";
 import { KpiCard } from "./kpi-card";
 import { CountDelta } from "./top-geo-card";
 import {
@@ -107,7 +108,11 @@ export function CampaignKpiGrid({
     // 2 columns until xl, then one row; Top countries takes a full row on
     // narrow screens so the grid never ends with an empty cell.
     <>
-    <div className={`grid grid-cols-2 gap-px border border-border bg-border ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
+    <div
+      className={`relative grid grid-cols-2 gap-px border border-border bg-border ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}
+      data-refreshing={current.isPlaceholderData || undefined}
+    >
+      <RefreshLine active={current.isPlaceholderData} />
       <KpiCard
         kicker="Articles"
         title={"Articles from our Tier-1 media in the selected narratives. Each article is counted once." + partial}
@@ -131,7 +136,7 @@ export function CampaignKpiGrid({
         context={
           h?.pool_articles == null
             ? undefined
-            : `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} Ukraine–Russia articles`
+            : `of all ${h.pool_articles.toLocaleString()} articles`
         }
         previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
         previousLabel={win.prevLabel}
@@ -185,7 +190,7 @@ export function CampaignKpiGrid({
 
 const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
-  "the share that matches this query. An article counts as about Ukraine/Russia when its " +
+  "the share that falls under the selected narratives. An article counts as about Ukraine/Russia when its " +
   "headline names Ukraine, Russia, Kyiv, the Kremlin, Putin or Zelensky, or it covers " +
   "Russia together with weapons, sanctions or military cooperation.";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { ApiError, apiClient } from "@/lib/api";
 import { formatDayLabel, type DateWindow } from "@/lib/period";
@@ -60,6 +60,9 @@ export function useCampaignHeadlines(
         compare_from: compareFrom,
       }),
     enabled: scope !== null && coverageSettled && on,
+    // Old figures stay on screen (dimmed) while the next window loads. Only
+    // for a query that is on: a disabled one must not show stale data.
+    placeholderData: on ? keepPreviousData : undefined,
     retry: (count: number, error: unknown) => !isNotFound(error) && count < 1,
   });
   const current = useQuery(fetchWindow(win.from, win.to, true));

@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { RefreshLine } from "@/components/ui/refresh-line";
+import { stagger } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
 import type { DateWindow } from "@/lib/period";
@@ -35,7 +37,7 @@ export function SourcesList({
   const LIMIT = 50;
   const PREV_LIMIT = 50;
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isPlaceholderData, error, refetch } = useQuery({
     queryKey: ["sources", scope, country, source, LIMIT, win.from, win.to],
     queryFn: () =>
       apiClient.topSources(scope!, win.days, LIMIT, country, {
@@ -44,6 +46,7 @@ export function SourcesList({
         date_to: win.to,
       }),
     enabled,
+    placeholderData: keepPreviousData,
   });
 
   // Previous window's top 50: a domain outside it reads as "new" (the
@@ -57,13 +60,18 @@ export function SourcesList({
         date_to: win.prevTo,
       }),
     enabled: enabled && compare,
+    placeholderData: enabled && compare ? keepPreviousData : undefined,
   });
   const prevByDomain = previous.data
     ? new Map(previous.data.map((s) => [s.domain, s.count] as const))
     : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-card p-5">
+    <div
+      className="relative flex h-full min-h-0 flex-col bg-card p-5"
+      data-refreshing={isPlaceholderData || undefined}
+    >
+      <RefreshLine active={isPlaceholderData} />
       <KickerLabel>Top media</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
         {data && data.length > 0 && data.length < LIMIT
@@ -72,9 +80,15 @@ export function SourcesList({
       </div>
 
       {!enabled || isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full bg-elevated" />
+        // Row-shaped: icon, flag, name, count — the height of a real row.
+        <div aria-hidden>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex h-[29px] items-center gap-2">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-3 w-4" />
+              <Skeleton className="h-3" style={{ width: `${88 + ((i * 37) % 64)}px` }} />
+              <Skeleton className="ml-auto h-3 w-6" />
+            </div>
           ))}
         </div>
       ) : error ? (
@@ -97,9 +111,10 @@ export function SourcesList({
               <ColumnHeader showDelta={prevByDomain !== null} />
             </div>
             <ul className="-mx-2">
-              {data.map((s) => (
+              {data.map((s, i) => (
                 <SourceRow
                   key={s.domain}
+                  index={i}
                   domain={s.domain}
                   count={s.count}
                   countryIso2={s.country_iso2 ?? null}
@@ -119,6 +134,7 @@ export function SourcesList({
 }
 
 function SourceRow({
+  index,
   domain,
   count,
   countryIso2,
@@ -128,6 +144,8 @@ function SourceRow({
   isActive,
   onToggle,
 }: {
+  /** Position in the list — staggers the row's entrance. */
+  index: number;
   domain: string;
   count: number;
   countryIso2: string | null;
@@ -138,7 +156,7 @@ function SourceRow({
   onToggle: (domain: string) => void;
 }) {
   return (
-    <li>
+    <li className="animate-reveal" style={stagger(index)}>
       <button
         type="button"
         onClick={() => onToggle(domain)}

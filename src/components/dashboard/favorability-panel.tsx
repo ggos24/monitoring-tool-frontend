@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
 import {
@@ -12,7 +12,9 @@ import {
 import { formatShare, shareChange, type DateWindow } from "@/lib/period";
 import { ChangeBadge } from "./kpi-card";
 import type { FavorabilityCounts, FavorabilityStats, ScopeParam, StanceLabel } from "@/lib/types";
+import { AnimatedValue } from "@/components/ui/animated-value";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { RefreshLine } from "@/components/ui/refresh-line";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +52,7 @@ export function useFavorability(
         country_iso2: country,
       }),
     enabled: scope !== null && enabled,
+    placeholderData: enabled ? keepPreviousData : undefined,
   });
 }
 
@@ -113,7 +116,7 @@ export function FavorabilityPanel({
               aria-pressed={active}
               title={active ? "Clear the article filter" : `Show the ${r.label.toLowerCase()} articles`}
               className={cn(
-                "flex w-full items-center gap-2 px-1 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-elevated",
+                "group flex w-full items-center gap-2 px-1 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-elevated",
                 active && "bg-elevated",
               )}
             >
@@ -128,10 +131,12 @@ export function FavorabilityPanel({
                   className="w-16 text-right tabular-nums text-text-tertiary"
                   title={`${win.prevLabel}: ${prevTotal > 0 ? pct(prevCounts[r.key], prevTotal) : "—"}`}
                 >
-                  {prevTotal > 0 ? shareChange(n / total, prevCounts[r.key] / prevTotal)!.text : "—"}
+                  {/* The previous share itself, not a delta: on a 1% share a
+                      relative change ("+400%") says nothing. */}
+                  {prevTotal > 0 ? `was ${pct(prevCounts[r.key], prevTotal)}` : "—"}
                 </span>
               )}
-              <span aria-hidden className="text-text-tertiary">›</span>
+              <span aria-hidden className="text-text-tertiary transition-transform group-hover:translate-x-0.5 group-hover:text-foreground">›</span>
             </button>
           </li>
         );
@@ -140,14 +145,28 @@ export function FavorabilityPanel({
   );
 
   return (
-    <div className="flex h-full flex-col bg-card p-5" title={FAVORABILITY_TOOLTIP}>
+    <div
+      className="relative flex h-full flex-col bg-card p-5"
+      title={FAVORABILITY_TOOLTIP}
+      data-refreshing={current.isPlaceholderData || undefined}
+    >
+      <RefreshLine active={current.isPlaceholderData} />
       <KickerLabel>Tone toward Ukraine</KickerLabel>
 
       {scope === null || current.isLoading ? (
-        <div className="mt-4 space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-5 w-full" />
-          ))}
+        // Same shape as the loaded panel: figure, bar, four rows.
+        <div aria-hidden>
+          <Skeleton className="mt-3 h-6 w-28" />
+          <Skeleton className="mt-4 h-3.5 w-full" />
+          <div className="mt-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2 border-t border-border px-1 py-1.5">
+                <Skeleton className="size-2" />
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="ml-auto h-3 w-16" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : current.error ? (
         <div className="mt-4 text-xs leading-snug text-text-tertiary">
@@ -177,7 +196,7 @@ export function FavorabilityPanel({
               style={{ letterSpacing: "-0.02em" }}
               title={mean === null ? undefined : `Average score ${formatSigned(mean)} on a −2 … +2 scale`}
             >
-              {formatShare(counts.favorable / total)}
+              <AnimatedValue value={formatShare(counts.favorable / total)} />
             </span>
             <span className="font-mono text-[11px] text-text-tertiary">favorable</span>
             {prevCounts && prevTotal > 0 && (
@@ -230,7 +249,7 @@ function ToneBar({
       {ROWS.filter((r) => counts[r.key] > 0).map((r) => (
         <div
           key={r.key}
-          className={cn("min-w-1.5", r.bar)}
+          className={cn("min-w-1.5 transition-[flex-grow] duration-[var(--dur-slow)]", r.bar)}
           style={{ ...r.style, flexGrow: counts[r.key], flexBasis: 0 }}
         />
       ))}

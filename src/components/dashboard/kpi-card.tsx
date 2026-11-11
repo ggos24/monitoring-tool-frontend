@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedValue } from "@/components/ui/animated-value";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Change } from "@/lib/period";
@@ -56,13 +57,13 @@ export function KpiCard({
             className="text-[24px] font-medium leading-none text-foreground tabular-nums"
             style={{ letterSpacing: "-0.02em" }}
           >
-            {value}
+            <AnimatedValue value={value} />
           </span>
         )}
         {change && !isLoading && <ChangeBadge change={change} title={changeTitle} />}
       </div>
       <div className="mt-2 truncate font-mono text-[11px] text-text-tertiary" title={context}>
-        {context || " "}
+        {isLoading ? <Skeleton className="inline-block h-3 w-28 align-middle" /> : context || "\u00a0"}
       </div>
       {previous !== undefined && (
         <div className="mt-auto pt-3">
