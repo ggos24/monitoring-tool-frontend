@@ -20,7 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { CONTROL } from "./toolbar";
 
-export const ALL_QUERIES_LABEL = "All queries";
+export const ALL_QUERIES_LABEL = "All narratives";
 
 /**
  * Picks what the page looks at: one tracked query (a topic), or
@@ -62,7 +62,7 @@ export function QuerySelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label="Query"
+        aria-label="Narrative"
         className={cn(CONTROL, "min-w-0 max-w-full justify-between text-left", className)}
       >
         <span className="min-w-0 flex-1 truncate font-medium text-foreground">
@@ -85,8 +85,8 @@ export function QuerySelector({
               >
                 <Layers className="size-3.5 shrink-0 text-text-secondary" />
                 <span className="flex-1 truncate font-medium">{ALL_QUERIES_LABEL}</span>
-                <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                  {allGroup.topic_ids.length} queries
+                <span className="font-mono text-[11px] text-text-tertiary tabular-nums">
+                  {allGroup.topic_ids.length} narratives
                 </span>
               </Item>
             </DropdownMenuGroup>
@@ -96,8 +96,8 @@ export function QuerySelector({
 
         <DropdownMenuGroup>
           {/* GroupLabel (Base UI) MUST be inside a Group, else error #31 */}
-          <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-            Queries
+          <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+            Narratives
           </DropdownMenuLabel>
           {topics.map((t) => (
             <Item
@@ -112,7 +112,7 @@ export function QuerySelector({
               />
               <span className="flex-1 truncate">{t.name}</span>
               {!t.is_active && (
-                <span className="shrink-0 border border-border px-1 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+                <span className="shrink-0 border border-border px-1 py-px font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
                   Paused
                 </span>
               )}
@@ -124,7 +124,7 @@ export function QuerySelector({
           <>
             <DropdownMenuSeparator className="my-0 bg-elevated" />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+              <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
                 Groups
               </DropdownMenuLabel>
               {otherGroups.map((g) => (
@@ -135,8 +135,8 @@ export function QuerySelector({
                 >
                   <Folder className="size-3 shrink-0 text-text-secondary" />
                   <span className="flex-1 truncate">{g.name}</span>
-                  <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
-                    {g.topic_ids.length} queries
+                  <span className="font-mono text-[11px] text-text-tertiary tabular-nums">
+                    {g.topic_ids.length} narratives
                   </span>
                 </Item>
               ))}

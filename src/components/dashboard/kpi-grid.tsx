@@ -73,9 +73,10 @@ export function KpiGrid({
   });
 
   const trendTitle = prevLabel;
-  // " · Previous period: 1,234" — the previous value, so the change always
-  // reads against a visible base.
-  const prevSuffix = (v: string | undefined) => (compare && v !== undefined ? ` · ${prevLabel}: ${v}` : "");
+  // Previous-period row under each card: the change always reads against a
+  // visible base. undefined = not comparing; null = no value ("—").
+  const prevValue = (q: { isLoading: boolean }, v: string | undefined) =>
+    !compare ? undefined : q.isLoading ? "…" : (v ?? null);
 
   const tier1 = ratio(currentMentions.data?.total, currentPool.data?.total);
   const tier1Prev = ratio(previousMentions.data?.total, previousPool.data?.total);
@@ -87,7 +88,9 @@ export function KpiGrid({
       <KpiCard
         kicker="Total mentions"
         value={(currentMentions.data?.total ?? 0).toLocaleString()}
-        subtitle={"all sources" + prevSuffix(previousMentions.data?.total.toLocaleString())}
+        context="all sources"
+        previous={prevValue(previousMentions, previousMentions.data?.total.toLocaleString())}
+        previousLabel={prevLabel}
         change={compare ? countChange(currentMentions.data?.total, previousMentions.data?.total) : undefined}
         changeTitle={trendTitle}
         isLoading={!enabled || currentMentions.isLoading}
@@ -95,12 +98,17 @@ export function KpiGrid({
       <KpiCard
         kicker="Share of Tier-1 coverage"
         value={pool === null ? "—" : tier1 === null ? "—" : formatShare(tier1)}
-        subtitle={
+        context={
           pool === null
             ? "Tier-1 pool not configured"
-            : `of ${(currentPool.data?.total ?? 0).toLocaleString()} Tier-1 articles` +
-              prevSuffix(tier1Prev === null ? undefined : formatShare(tier1Prev))
+            : `of ${(currentPool.data?.total ?? 0).toLocaleString()} Tier-1 articles`
         }
+        previous={
+          pool === null
+            ? undefined
+            : prevValue(previousPool, tier1Prev === null ? undefined : formatShare(tier1Prev))
+        }
+        previousLabel={prevLabel}
         change={compare ? shareChange(tier1, tier1Prev) : undefined}
         changeTitle={trendTitle}
         isLoading={!enabled || (pool !== null && (currentMentions.isLoading || currentPool.isLoading))}
@@ -109,10 +117,9 @@ export function KpiGrid({
         kicker="Favorable share"
         title={FAVORABILITY_TOOLTIP}
         value={fav === null ? "—" : formatShare(fav)}
-        subtitle={
-          `of ${scoredTotal(currentFav.data?.counts).toLocaleString()} scored` +
-          prevSuffix(favPrev === null ? undefined : formatShare(favPrev))
-        }
+        context={`of ${scoredTotal(currentFav.data?.counts).toLocaleString()} analysed`}
+        previous={prevValue(previousFav, favPrev === null ? undefined : formatShare(favPrev))}
+        previousLabel={prevLabel}
         change={compare ? shareChange(fav, favPrev) : undefined}
         changeTitle={trendTitle}
         isLoading={!enabled || currentFav.isLoading}
@@ -120,7 +127,9 @@ export function KpiGrid({
       <KpiCard
         kicker="Sources"
         value={(currentSources.data?.count ?? 0).toLocaleString()}
-        subtitle={"distinct domains" + prevSuffix(previousSources.data?.count.toLocaleString())}
+        context="distinct domains"
+        previous={prevValue(previousSources, previousSources.data?.count.toLocaleString())}
+        previousLabel={prevLabel}
         change={compare ? countChange(currentSources.data?.count, previousSources.data?.count) : undefined}
         changeTitle={trendTitle}
         isLoading={!enabled || currentSources.isLoading}

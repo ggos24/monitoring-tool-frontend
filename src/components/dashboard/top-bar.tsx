@@ -34,14 +34,34 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
     refetchInterval: 60_000,
   });
 
+  // Narratives and their group are filled from the shared Tier-1 pool, so
+  // they have no collection runs of their own: read the pool's sync time.
+  const needsPool = !!data && !data.last_sync_at;
+  const narratives = useQuery({
+    queryKey: ["narratives"],
+    queryFn: apiClient.narratives,
+    enabled: needsPool,
+    staleTime: 5 * 60_000,
+  });
+  const poolId = narratives.data?.pool?.topic_id ?? null;
+  const pool = useQuery({
+    queryKey: ["overview", poolId],
+    queryFn: () => apiClient.overview(poolId!),
+    enabled: needsPool && poolId !== null,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  const sync = data?.last_sync_at ? data : pool.data;
+  const syncLoading = isLoading || (needsPool && (narratives.isLoading || pool.isLoading));
+
   const now = useTickingNow(1000);
 
   const status = renderStatus({
     enabled: scope !== null,
-    isLoading,
+    isLoading: syncLoading,
     hasError: !!error,
-    lastSyncAt: data?.last_sync_at ?? null,
-    nextSyncAt: data?.next_sync_estimate ?? null,
+    lastSyncAt: sync?.last_sync_at ?? null,
+    nextSyncAt: sync?.next_sync_estimate ?? null,
     now,
   });
   const settingsActive =
@@ -90,7 +110,10 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
         <div className="flex items-center justify-self-end font-mono text-[11px] text-text-tertiary">
           <div className="flex items-center gap-2 px-2 sm:px-3">
             <span
-              className="inline-block size-1.5 animate-pulse bg-success"
+              className={cn(
+                "inline-block size-1.5",
+                sync?.last_sync_at ? "animate-pulse bg-success" : "bg-text-tertiary",
+              )}
               aria-hidden
             />
             <span className="hidden lg:inline">{status}</span>
@@ -143,7 +166,8 @@ function renderStatus({
   now: number;
 }): string {
   if (!enabled || isLoading) return "Live · …";
-  if (hasError || !lastSyncAt) return "Awaiting first sync…";
+  if (hasError) return "Sync status unavailable";
+  if (!lastSyncAt) return "No sync yet";
   const last = `last sync ${formatAgo(lastSyncAt, now)}`;
   if (!nextSyncAt) return `Live · ${last}`;
   const target = new Date(nextSyncAt).getTime();

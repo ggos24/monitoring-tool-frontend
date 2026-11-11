@@ -30,8 +30,9 @@ export function SourcesList({
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = scope !== null;
-  const LIMIT = 25;
-  // /api/stats/sources caps `limit` at 50 (422 above that).
+  // /api/stats/sources caps `limit` at 50 (422 above that). The panel is as
+  // tall as the article list next to it and scrolls inside, so show the cap.
+  const LIMIT = 50;
   const PREV_LIMIT = 50;
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -45,8 +46,8 @@ export function SourcesList({
     enabled,
   });
 
-  // Previous window, wider than the visible top so a domain that slipped
-  // out of the top N still gets a real previous count (not "new").
+  // Previous window's top 50: a domain outside it reads as "new" (the
+  // backend cap; in practice a query has fewer than 50 media).
   const previous = useQuery({
     queryKey: ["sources", scope, country, source, PREV_LIMIT, win.prevFrom, win.prevTo],
     queryFn: () =>
@@ -62,10 +63,12 @@ export function SourcesList({
     : null;
 
   return (
-    <div className="flex h-full flex-col bg-card p-5">
+    <div className="flex h-full min-h-0 flex-col bg-card p-5">
       <KickerLabel>Top media</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        Top {LIMIT} media by number of articles
+        {data && data.length > 0 && data.length < LIMIT
+          ? `All ${data.length} media by number of articles`
+          : `Top ${LIMIT} media by number of articles`}
       </div>
 
       {!enabled || isLoading ? (
@@ -89,7 +92,7 @@ export function SourcesList({
         <EmptyMessage>No sources in selected period.</EmptyMessage>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto max-lg:max-h-[480px]">
             <div className="sticky top-0 z-10 bg-card">
               <ColumnHeader showDelta={prevByDomain !== null} />
             </div>
@@ -108,9 +111,6 @@ export function SourcesList({
                 />
               ))}
             </ul>
-          </div>
-          <div className="mt-3 shrink-0 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground tabular-nums">
-            {data.length} media
           </div>
         </div>
       )}
@@ -194,7 +194,7 @@ const CHANGE_COL = "w-14 text-right";
 
 function ColumnHeader({ showDelta }: { showDelta: boolean }) {
   const cls =
-    "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground";
+    "font-mono text-[11px] uppercase leading-none tracking-[0.12em] text-text-tertiary";
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <span className={cls}>Media</span>

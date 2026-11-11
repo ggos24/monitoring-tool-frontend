@@ -4,15 +4,16 @@ type Variant = "positive" | "negative" | "neutral" | "mixed" | "muted";
 
 const styles: Record<Variant, string> = {
   // Emerald — positive stance / supportive
-  positive: "bg-emerald-950 text-emerald-300 border-emerald-800",
+  positive: "bg-success/10 text-success border-success/40",
   // Red — negative stance / critical
-  negative: "bg-red-950 text-red-300 border-red-800",
+  negative: "bg-danger/10 text-danger border-danger/40",
   // Neutral zinc — clearly readable on bg-card
   neutral: "bg-elevated text-text-secondary border-strong",
-  // Amber — mixed framing
-  mixed: "bg-amber-950 text-amber-300 border-amber-800",
-  // Unscored — visible muted pill (was 1:1 contrast against bg-card; now ~6:1)
-  muted: "bg-elevated text-text-tertiary border-strong",
+  // Mixed — neutral grey like the tone panel (a yellow read as a warning);
+  // the ↕ glyph tells it apart from Neutral.
+  mixed: "bg-elevated text-text-secondary border-strong",
+  // Not analysed — plain quiet label, no box: it is the common case, not a state to flag
+  muted: "border-transparent bg-transparent px-0 text-text-tertiary",
 };
 
 /**
@@ -40,12 +41,12 @@ export function SentimentPill({
     <span
       className={cn(
         "inline-flex items-center gap-1 border font-mono uppercase leading-none tracking-[0.1em]",
-        "px-1.5 py-0.5 text-[9px]",
+        "px-1.5 py-0.5 text-[11px]",
         styles[variant],
         className,
       )}
     >
-      <span aria-hidden className="text-[10px] leading-none">
+      <span aria-hidden className="text-[11px] leading-none">
         {glyphs[variant]}
       </span>
       {children}

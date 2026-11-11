@@ -11,18 +11,23 @@ import {
 } from "@/lib/favorability";
 import { formatShare, shareChange, type DateWindow } from "@/lib/period";
 import { ChangeBadge } from "./kpi-card";
-import type { FavorabilityCounts, FavorabilityStats, ScopeParam } from "@/lib/types";
+import type { FavorabilityCounts, FavorabilityStats, ScopeParam, StanceLabel } from "@/lib/types";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 type Scored = Exclude<keyof FavorabilityCounts, "unscored">;
 
-const ROWS: { key: Scored; label: string; bar: string }[] = [
-  { key: "favorable", label: "Favorable", bar: "bg-success" },
-  { key: "neutral", label: "Neutral", bar: "bg-muted-foreground" },
-  { key: "unfavorable", label: "Unfavorable", bar: "bg-danger" },
-  { key: "mixed", label: "Mixed", bar: "bg-warning" },
+// Only the two poles carry a saturated colour. Neutral is plain grey and
+// Mixed hatched grey — a yellow "mixed" read as a warning and competed
+// with the red. Order is fixed: favorable left, unfavorable right.
+const HATCH =
+  "repeating-linear-gradient(135deg, var(--text-tertiary) 0 2px, transparent 2px 4px)";
+const ROWS: { key: Scored; stance: StanceLabel; label: string; bar: string; style?: React.CSSProperties }[] = [
+  { key: "favorable", stance: "supportive", label: "Favorable", bar: "bg-success" },
+  { key: "neutral", stance: "neutral", label: "Neutral", bar: "bg-text-tertiary" },
+  { key: "mixed", stance: "mixed", label: "Mixed", bar: "", style: { backgroundImage: HATCH } },
+  { key: "unfavorable", stance: "critical", label: "Unfavorable", bar: "bg-danger" },
 ];
 
 /**
@@ -70,11 +75,17 @@ export function FavorabilityPanel({
   win,
   compare,
   country,
+  selected,
+  onSelect,
 }: {
   scope: ScopeParam | null;
   win: DateWindow;
   compare: boolean;
   country: string | null;
+  /** Tone the article list is filtered by ("all" = none). */
+  selected: StanceLabel | "all";
+  /** Row click: filter the article list by that tone (again = clear). */
+  onSelect: (stance: StanceLabel) => void;
 }) {
   const current = useFavorability(scope, win.from, win.to, country);
   const previous = useFavorability(scope, win.prevFrom, win.prevTo, country, compare);
@@ -88,12 +99,49 @@ export function FavorabilityPanel({
   const prevTotal = scoredTotal(prevCounts);
   const mean = readiness.ready ? (current.data?.mean_score ?? null) : null;
 
+  const analysed = counts ? total + counts.unscored : 0;
+  const rows = (showShares: boolean) => (
+    <ul className="mt-4">
+      {ROWS.map((r) => {
+        const n = counts![r.key];
+        const active = selected === r.stance;
+        return (
+          <li key={r.key} className="border-t border-border">
+            <button
+              type="button"
+              onClick={() => onSelect(r.stance)}
+              aria-pressed={active}
+              title={active ? "Clear the article filter" : `Show the ${r.label.toLowerCase()} articles`}
+              className={cn(
+                "flex w-full items-center gap-2 px-1 py-1.5 text-left font-mono text-[11px] transition-colors hover:bg-elevated",
+                active && "bg-elevated",
+              )}
+            >
+              <span aria-hidden className={cn("size-2 shrink-0", r.bar)} style={r.style} />
+              <span className={cn("flex-1", active ? "text-foreground" : "text-text-secondary")}>{r.label}</span>
+              <span className="tabular-nums text-foreground">{n.toLocaleString()}</span>
+              {showShares && (
+                <span className="w-10 text-right tabular-nums text-text-tertiary">{pct(n, total)}</span>
+              )}
+              {showShares && prevCounts && (
+                <span
+                  className="w-16 text-right tabular-nums text-text-tertiary"
+                  title={`${win.prevLabel}: ${prevTotal > 0 ? pct(prevCounts[r.key], prevTotal) : "—"}`}
+                >
+                  {prevTotal > 0 ? shareChange(n / total, prevCounts[r.key] / prevTotal)!.text : "—"}
+                </span>
+              )}
+              <span aria-hidden className="text-text-tertiary">›</span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
     <div className="flex h-full flex-col bg-card p-5" title={FAVORABILITY_TOOLTIP}>
-      <KickerLabel>Favorability</KickerLabel>
-      <div className="mt-1 text-xs text-text-secondary">
-        How favorable coverage is to Ukraine
-      </div>
+      <KickerLabel>Tone toward Ukraine</KickerLabel>
 
       {scope === null || current.isLoading ? (
         <div className="mt-4 space-y-3">
@@ -102,34 +150,30 @@ export function FavorabilityPanel({
           ))}
         </div>
       ) : current.error ? (
-        <div className="mt-4 font-mono text-[11px] text-text-tertiary">
-          Failed to load favorability.
+        <div className="mt-4 text-xs leading-snug text-text-tertiary">
+          Failed to load the tone breakdown.
         </div>
       ) : !counts || total === 0 ? (
-        <div className="mt-4 font-mono text-[11px] text-text-tertiary">
-          No scored articles in selected period.
-          {counts && counts.unscored > 0 && ` ${counts.unscored.toLocaleString()} awaiting analysis.`}
+        <div className="mt-4 text-xs leading-snug text-text-tertiary">
+          No analysed articles in the selected period.
+          {counts && counts.unscored > 0 && ` ${counts.unscored.toLocaleString()} not analysed.`}
         </div>
       ) : !readiness.ready ? (
         <>
-          <div className="mt-4 font-mono text-[11px] text-text-tertiary">
-            {insufficientFavorabilityNote(readiness)}
+          <div
+            className="mt-4 text-xs leading-snug text-text-tertiary"
+            title={insufficientFavorabilityNote(readiness)}
+          >
+            Too few analysed articles for a percentage —{" "}
+            {readiness.scored.toLocaleString()} of {readiness.total.toLocaleString()}.
           </div>
-          <ul className="mt-4 space-y-2">
-            {ROWS.map((r) => (
-              <li key={r.key} className="flex items-center gap-2 font-mono text-[11px]">
-                <span aria-hidden className={cn("size-2 shrink-0", r.bar)} />
-                <span className="flex-1 text-text-secondary">{r.label}</span>
-                <span className="tabular-nums text-foreground">{counts[r.key].toLocaleString()}</span>
-              </li>
-            ))}
-          </ul>
+          {rows(false)}
         </>
       ) : (
         <>
-          <div className="mt-4 flex items-baseline gap-2">
+          <div className="mt-3 flex items-baseline gap-2">
             <span
-              className="text-[26px] font-medium leading-none tabular-nums text-foreground"
+              className="text-[24px] font-medium leading-none tabular-nums text-foreground"
               style={{ letterSpacing: "-0.02em" }}
               title={mean === null ? undefined : `Average score ${formatSigned(mean)} on a −2 … +2 scale`}
             >
@@ -144,39 +188,52 @@ export function FavorabilityPanel({
             )}
           </div>
 
-          <div className="mt-4 flex h-2 w-full" role="img" aria-label={ROWS.map((r) => `${r.label} ${pct(counts[r.key], total)}`).join(", ")}>
-            {ROWS.map((r) => (
-              <div key={r.key} className={r.bar} style={{ width: `${(counts[r.key] / total) * 100}%` }} />
-            ))}
-          </div>
+          {prevCounts && prevTotal > 0 && (
+            <div className="mt-4 font-mono text-[11px] text-text-tertiary">This period</div>
+          )}
+          <ToneBar counts={counts} total={total} className={cn("h-3.5", prevCounts && prevTotal > 0 ? "mt-1" : "mt-4")} />
+          {prevCounts && prevTotal > 0 && (
+            <>
+              <div className="mt-2 font-mono text-[11px] text-text-tertiary">{win.prevLabel}</div>
+              <ToneBar counts={prevCounts} total={prevTotal} className="mt-1 h-1.5 opacity-60" />
+            </>
+          )}
 
-          <ul className="mt-4 space-y-2">
-            {ROWS.map((r) => (
-              <li key={r.key} className="flex items-center gap-2 font-mono text-[11px]">
-                <span aria-hidden className={cn("size-2 shrink-0", r.bar)} />
-                <span className="flex-1 text-text-secondary">{r.label}</span>
-                <span className="tabular-nums text-foreground">{counts[r.key].toLocaleString()}</span>
-                <span className="w-10 text-right tabular-nums text-text-tertiary">{pct(counts[r.key], total)}</span>
-                {prevCounts && (
-                  <span
-                    className="w-16 text-right tabular-nums text-text-tertiary"
-                    title={`${win.prevLabel}: ${prevTotal > 0 ? pct(prevCounts[r.key], prevTotal) : "—"}`}
-                  >
-                    {prevTotal > 0
-                      ? shareChange(counts[r.key] / total, prevCounts[r.key] / prevTotal)!.text
-                      : "—"}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {rows(true)}
 
           <div className="mt-auto pt-4 font-mono text-[11px] text-text-tertiary">
-            {total.toLocaleString()} articles analysed
-            {counts.unscored > 0 && ` · ${counts.unscored.toLocaleString()} waiting`}
+            {total.toLocaleString()} of {analysed.toLocaleString()} articles analysed
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Stacked shares. Gaps between segments and a minimum width, so a
+ *  category with one or two articles is still visible. */
+function ToneBar({
+  counts,
+  total,
+  className,
+}: {
+  counts: FavorabilityCounts;
+  total: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn("flex w-full gap-0.5", className)}
+      role="img"
+      aria-label={ROWS.map((r) => `${r.label} ${pct(counts[r.key], total)}`).join(", ")}
+    >
+      {ROWS.filter((r) => counts[r.key] > 0).map((r) => (
+        <div
+          key={r.key}
+          className={cn("min-w-1.5", r.bar)}
+          style={{ ...r.style, flexGrow: counts[r.key], flexBasis: 0 }}
+        />
+      ))}
     </div>
   );
 }

@@ -314,11 +314,15 @@ export const apiClient = {
       date_to: string;
       selector_version?: string | null;
       country_iso2?: string | null;
+      /** Start of the EARLIER window of a comparison — the same value for
+       *  both windows, so their like-for-like figures cover the same sources. */
+      compare_from?: string | null;
     },
   ) => {
     const qs = scopeQuery(scope);
     qs.set("date_from", opts.date_from);
     qs.set("date_to", opts.date_to);
+    if (opts.compare_from) qs.set("compare_from", opts.compare_from);
     // Pass the coverage selector verbatim so both windows are measured by
     // the same selector (otherwise mixed_selector_versions can flip on).
     if (opts.selector_version) qs.set("selector_version", opts.selector_version);

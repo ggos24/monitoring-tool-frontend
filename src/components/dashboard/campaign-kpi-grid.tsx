@@ -1,21 +1,28 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-
-import { apiClient } from "@/lib/api";
 import { FAVORABILITY_TOOLTIP, favorabilityReadiness } from "@/lib/favorability";
-import { countChange, formatDayLabel, formatShare, shareChange, type DateWindow } from "@/lib/period";
+import { countChange, formatDayLabel, formatShare, prevRangeLabel, shareChange, type DateWindow } from "@/lib/period";
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { KpiCard } from "./kpi-card";
 import { CountDelta } from "./top-geo-card";
-import { isNotFound, useCampaignCoverage } from "./campaign-data";
+import {
+  comparableTotals,
+  excludedLanes,
+  excludedLanesText,
+  isNotFound,
+  laneLabel,
+  shownTotals,
+  useCampaignHeadlines,
+} from "./campaign-data";
 
 /**
- * Headline KPIs from /api/campaign/headline — GKG v1 axis A/B articles only
- * (PLAN §9), not the generic endpoints, which mix DOC + GN + RSS rows.
- * One call per window; both pass the coverage selector version verbatim.
+ * Headline KPIs from /api/campaign/headline. The VALUES count every source
+ * (GDELT, Google News, RSS, …), each article once. The CHANGE vs the
+ * previous period is like-for-like: only the sources that already covered
+ * the previous window, so a newly added source doesn't read as growth; a
+ * line under the cards names the sources left out. One call per window.
  * `fallback` renders when the backend has no campaign endpoint (404).
  */
 export function CampaignKpiGrid({
@@ -31,26 +38,12 @@ export function CampaignKpiGrid({
   country: string | null;
   fallback: React.ReactNode;
 }) {
-  const coverage = useCampaignCoverage();
-  // Wait for coverage to settle so the first headline call already carries
-  // the selector version (no second request when it arrives).
-  const coverageSettled = coverage.isSuccess || coverage.isError;
-  const selector = coverage.data?.selector_version ?? null;
-
-  const fetchWindow = (from: string, to: string, on: boolean) => ({
-    queryKey: ["campaign-headline", scope, country, selector, from, to],
-    queryFn: () =>
-      apiClient.campaignHeadline(scope!, {
-        date_from: from,
-        date_to: to,
-        selector_version: selector,
-        country_iso2: country,
-      }),
-    enabled: scope !== null && coverageSettled && on,
-    retry: (count: number, error: unknown) => !isNotFound(error) && count < 1,
-  });
-  const current = useQuery(fetchWindow(win.from, win.to, true));
-  const previous = useQuery(fetchWindow(win.prevFrom, win.prevTo, compare));
+  const { coverage, coverageSettled, current, previous } = useCampaignHeadlines(
+    scope,
+    win,
+    country,
+    compare,
+  );
 
   if (isNotFound(current.error)) return <>{fallback}</>;
 
@@ -80,20 +73,15 @@ export function CampaignKpiGrid({
     );
   }
 
-  const h = cur?.headline;
-  const ph = prev?.headline;
+  // Shown: all sources. Compared: the like-for-like subset of both windows.
+  const h = shownTotals(cur);
+  const ph = shownTotals(prev);
+  const c = comparableTotals(cur);
+  const pc = comparableTotals(prev);
+  const comparable = !!prev && !!c && !!pc;
+  const excluded = prev ? excludedLanes(cur) : [];
+  const lanes = (cur?.all_sources?.by_source ?? []).filter((l) => l.articles > 0);
   const changeTitle = win.prevLabel;
-  // Under each number: at most one short fact, then the previous value.
-  const sub = (fact: string | null, previous: string | undefined) => (
-    <>
-      {fact && <div>{fact}</div>}
-      {prev && previous !== undefined && (
-        <div className={fact ? "mt-0.5" : undefined}>
-          {win.prevLabel}: {previous}
-        </div>
-      )}
-    </>
-  );
   const partial =
     ingest.kind === "partial"
       ? ` Collected through ${formatDayLabel(ingest.through)} so far — the figure can still grow.`
@@ -101,61 +89,97 @@ export function CampaignKpiGrid({
 
   const fav = favorableShare(h?.favorability);
   const favPrev = favorableShare(ph?.favorability);
+  const favCmp = favorableShare(c?.favorability);
+  const favCmpPrev = favorableShare(pc?.favorability);
   const countries = h?.countries;
+  // Previous-period row: absent when not comparing, "—" when the value is missing.
+  const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? "…" : prev ? (v ?? null) : null);
+  // Size of the Tier-1 network the outlets are counted out of.
+  const cov = coverage.data;
+  const network = cov?.available
+    ? (cov.counts.visible ?? 0) + (cov.counts.sparse ?? 0) + (cov.counts.invisible ?? 0)
+    : null;
+  const changeNote = excluded.length
+    ? `${changeTitle}, without ${excludedLanesText(excluded)}`
+    : changeTitle;
 
   return (
     // 2 columns until xl, then one row; Top countries takes a full row on
     // narrow screens so the grid never ends with an empty cell.
-    <div className={`grid grid-cols-2 gap-px bg-strong ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
+    <>
+    <div className={`grid grid-cols-2 gap-px border border-border bg-border ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
       <KpiCard
-        kicker="Tier-1 media articles"
-        title={"Articles from our Tier-1 media that match this query. Each article is counted once." + partial}
+        kicker="Articles"
+        title={"Articles from our Tier-1 media in the selected narratives. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
-        subtitle={sub(null, ph?.articles.toLocaleString())}
-        change={prev ? countChange(h?.articles, ph?.articles) : undefined}
-        changeTitle={changeTitle}
+        context={
+          lanes.length > 1
+            ? lanes.map((l) => `${l.articles.toLocaleString()} ${laneLabel(l.code)}`).join(" · ")
+            : "in Tier-1 media"
+        }
+        previous={prevValue(ph?.articles.toLocaleString())}
+        previousLabel={win.prevLabel}
+        previousTitle={prevRangeLabel(win)}
+        change={comparable ? countChange(c?.articles, pc?.articles) : undefined}
+        changeTitle={changeNote}
         isLoading={loading}
       />
       <KpiCard
-        kicker="Share of Ukraine–Russia coverage"
+        kicker="Share of coverage"
         title={SHARE_TOOLTIP}
         value={h?.pool_share == null ? "—" : formatShare(h.pool_share)}
-        subtitle={sub(
+        context={
           h?.pool_articles == null
-            ? null
-            : `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} articles`,
-          ph?.pool_share == null ? undefined : formatShare(ph.pool_share),
-        )}
-        change={prev ? shareChange(h?.pool_share, ph?.pool_share) : undefined}
-        changeTitle={changeTitle}
+            ? undefined
+            : `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} Ukraine–Russia articles`
+        }
+        previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
+        previousLabel={win.prevLabel}
+        previousTitle={prevRangeLabel(win)}
+        change={comparable ? shareChange(c?.pool_share, pc?.pool_share) : undefined}
+        changeTitle={changeNote}
         isLoading={loading}
       />
       <KpiCard
         kicker="Favorable to Ukraine"
         title={FAVORABILITY_TOOLTIP}
         value={fav.value === null ? "—" : formatShare(fav.value)}
-        subtitle={sub(fav.note, favPrev.value === null ? undefined : formatShare(favPrev.value))}
-        change={prev ? shareChange(fav.value, favPrev.value) : undefined}
-        changeTitle={changeTitle}
+        context={fav.note}
+        previous={prevValue(favPrev.value === null ? undefined : formatShare(favPrev.value))}
+        previousLabel={win.prevLabel}
+        previousTitle={prevRangeLabel(win)}
+        change={comparable ? shareChange(favCmp.value, favCmpPrev.value) : undefined}
+        changeTitle={changeNote}
         isLoading={loading}
       />
       <KpiCard
-        kicker="Tier-1 media"
-        title="How many different Tier-1 media published articles matching this query."
+        kicker="Media reached"
+        title="How many different Tier-1 media published at least one of these articles."
         value={(h?.outlets ?? 0).toLocaleString()}
-        subtitle={sub(null, ph?.outlets.toLocaleString())}
-        change={prev ? countChange(h?.outlets, ph?.outlets) : undefined}
-        changeTitle={changeTitle}
+        context={network === null ? "with at least one article" : `of ${network} Tier-1 media`}
+        previous={prevValue(ph?.outlets.toLocaleString())}
+        previousLabel={win.prevLabel}
+        previousTitle={prevRangeLabel(win)}
+        change={comparable ? countChange(c?.outlets, pc?.outlets) : undefined}
+        changeTitle={changeNote}
         isLoading={loading}
       />
       {countries && (
         <CountriesCard
           rows={countries}
-          previous={ph?.countries}
+          current={comparable ? c?.countries : undefined}
+          previous={comparable ? pc?.countries : undefined}
           win={win}
         />
       )}
     </div>
+    {excluded.length > 0 && comparable && (
+      <div className="border border-t-0 border-border bg-card px-5 py-2 font-mono text-[11px] text-text-tertiary">
+        Change vs {win.prevLabel.toLowerCase()} counts only sources collected in both periods —
+        not {excludedLanesText(excluded)}.
+      </div>
+    )}
+    </>
   );
 }
 
@@ -163,8 +187,7 @@ const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
   "the share that matches this query. An article counts as about Ukraine/Russia when its " +
   "headline names Ukraine, Russia, Kyiv, the Kremlin, Putin or Zelensky, or it covers " +
-  "Russia together with weapons, sanctions or military cooperation. " +
-  "Only Tier-1 media that GDELT can see are counted.";
+  "Russia together with weapons, sanctions or military cooperation.";
 
 /**
  * none    — nothing ingested for this window yet (show a message, not 0);
@@ -178,7 +201,7 @@ function ingestState(
   if (!cur || cur.last_ingested_at === undefined) return { kind: "ok" };
   const through = cur.last_ingested_at;
   if (through === null || through < win.from) {
-    return cur.headline.articles === 0 ? { kind: "none", through } : { kind: "ok" };
+    return (shownTotals(cur)?.articles ?? 0) === 0 ? { kind: "none", through } : { kind: "ok" };
   }
   return through < win.to ? { kind: "partial", through } : { kind: "ok" };
 }
@@ -199,16 +222,23 @@ function favorableShare(f: CampaignFavorability | undefined): { value: number | 
 
 function CountriesCard({
   rows,
+  current,
   previous,
   win,
 }: {
+  /** Shown counts (all sources). */
   rows: { iso2: string | null; count: number }[];
+  /** Like-for-like counts of this window and the previous one — the change
+   *  is computed between these two, not from `rows`. */
+  current: { iso2: string | null; count: number }[] | undefined;
   previous: { iso2: string | null; count: number }[] | undefined;
   win: DateWindow;
 }) {
   const total = rows.reduce((sum, c) => sum + c.count, 0);
   const prevByIso = new Map((previous ?? []).map((c) => [c.iso2, c.count] as const));
-  const top = rows.filter((c) => c.iso2).slice(0, 3);
+  const curByIso = new Map((current ?? []).map((c) => [c.iso2, c.count] as const));
+  // 4 rows = exactly the height of the KPI cards next to it; a 5th makes the row taller.
+  const top = rows.filter((c) => c.iso2).slice(0, 4);
   return (
     <div className="col-span-2 bg-card p-5 xl:col-span-1">
       <KickerLabel>Top countries</KickerLabel>
@@ -221,8 +251,12 @@ function CountriesCard({
               <span aria-hidden className="text-[14px] leading-none">{iso2ToFlagEmoji(c.iso2!)}</span>
               <span className="flex-1 truncate text-xs text-text-secondary">{countryName(c.iso2!)}</span>
               <span className="font-mono text-[11px] tabular-nums text-foreground">{c.count.toLocaleString()}</span>
-              {previous ? (
-                <CountDelta current={c.count} previous={prevByIso.get(c.iso2) ?? 0} title={win.prevLabel} />
+              {previous && current ? (
+                <CountDelta
+                  current={curByIso.get(c.iso2) ?? 0}
+                  previous={prevByIso.get(c.iso2) ?? 0}
+                  title={win.prevLabel}
+                />
               ) : (
                 <span className="w-9 text-right font-mono text-[11px] tabular-nums text-text-tertiary">
                   {total > 0 ? Math.round((c.count / total) * 100) : 0}%
