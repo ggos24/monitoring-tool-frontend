@@ -83,12 +83,12 @@ export function CampaignKpiGrid({
   const h = cur?.headline;
   const ph = prev?.headline;
   const changeTitle = win.prevLabel;
-  // One shape for every card: what the number is, then "Previous period: …".
-  const sub = (what: string, previous: string | undefined) => (
+  // Under each number: at most one short fact, then the previous value.
+  const sub = (fact: string | null, previous: string | undefined) => (
     <>
-      <div>{what}</div>
+      {fact && <div>{fact}</div>}
       {prev && previous !== undefined && (
-        <div className="mt-0.5">
+        <div className={fact ? "mt-0.5" : undefined}>
           {win.prevLabel}: {previous}
         </div>
       )}
@@ -104,12 +104,14 @@ export function CampaignKpiGrid({
   const countries = h?.countries;
 
   return (
-    <div className={`grid grid-cols-2 gap-px bg-strong md:grid-cols-3 ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
+    // 2 columns until xl, then one row; Top countries takes a full row on
+    // narrow screens so the grid never ends with an empty cell.
+    <div className={`grid grid-cols-2 gap-px bg-strong ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
       <KpiCard
         kicker="Tier-1 media articles"
-        title={"Articles from our Tier-1 media list that match this query. Each article is counted once." + partial}
+        title={"Articles from our Tier-1 media that match this query. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
-        subtitle={sub("matching this query", ph && `${ph.articles.toLocaleString()} articles`)}
+        subtitle={sub(null, ph?.articles.toLocaleString())}
         change={prev ? countChange(h?.articles, ph?.articles) : undefined}
         changeTitle={changeTitle}
         isLoading={loading}
@@ -118,14 +120,12 @@ export function CampaignKpiGrid({
         kicker="Share of Ukraine–Russia coverage"
         title={SHARE_TOOLTIP}
         value={h?.pool_share == null ? "—" : formatShare(h.pool_share)}
-        subtitle={
+        subtitle={sub(
           h?.pool_articles == null
-            ? "Tier-1 article total not available"
-            : sub(
-                `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} Tier-1 articles about Ukraine/Russia`,
-                ph?.pool_share == null ? undefined : formatShare(ph.pool_share),
-              )
-        }
+            ? null
+            : `${(h.articles ?? 0).toLocaleString()} of ${h.pool_articles.toLocaleString()} articles`,
+          ph?.pool_share == null ? undefined : formatShare(ph.pool_share),
+        )}
         change={prev ? shareChange(h?.pool_share, ph?.pool_share) : undefined}
         changeTitle={changeTitle}
         isLoading={loading}
@@ -133,7 +133,7 @@ export function CampaignKpiGrid({
       <KpiCard
         kicker="Favorable to Ukraine"
         title={FAVORABILITY_TOOLTIP}
-        value={fav.value === null ? "n/a" : formatShare(fav.value)}
+        value={fav.value === null ? "—" : formatShare(fav.value)}
         subtitle={sub(fav.note, favPrev.value === null ? undefined : formatShare(favPrev.value))}
         change={prev ? shareChange(fav.value, favPrev.value) : undefined}
         changeTitle={changeTitle}
@@ -143,7 +143,7 @@ export function CampaignKpiGrid({
         kicker="Tier-1 media"
         title="How many different Tier-1 media published articles matching this query."
         value={(h?.outlets ?? 0).toLocaleString()}
-        subtitle={sub("media covered this query", ph && `${ph.outlets.toLocaleString()} media`)}
+        subtitle={sub(null, ph?.outlets.toLocaleString())}
         change={prev ? countChange(h?.outlets, ph?.outlets) : undefined}
         changeTitle={changeTitle}
         isLoading={loading}
@@ -191,14 +191,10 @@ function ingestState(
 function favorableShare(f: CampaignFavorability | undefined): { value: number | null; note: string } {
   if (!f) return { value: null, note: "" };
   const scored = f.favorable + f.neutral + f.unfavorable + f.mixed;
-  const all = scored + f.unscored;
   if (scored === 0 || !favorabilityReadiness(f, f).ready) {
-    return {
-      value: null,
-      note: `not enough analysed yet (${scored.toLocaleString()} of ${all.toLocaleString()})`,
-    };
+    return { value: null, note: "Not enough analysed yet" };
   }
-  return { value: f.favorable / scored, note: `of ${scored.toLocaleString()} analysed articles` };
+  return { value: f.favorable / scored, note: `of ${scored.toLocaleString()} analysed` };
 }
 
 function CountriesCard({
@@ -214,7 +210,7 @@ function CountriesCard({
   const prevByIso = new Map((previous ?? []).map((c) => [c.iso2, c.count] as const));
   const top = rows.filter((c) => c.iso2).slice(0, 3);
   return (
-    <div className="bg-card p-5">
+    <div className="col-span-2 bg-card p-5 xl:col-span-1">
       <KickerLabel>Top countries</KickerLabel>
       {top.length === 0 ? (
         <div className="mt-3 font-mono text-[11px] text-text-tertiary">No country data yet.</div>
@@ -236,7 +232,7 @@ function CountriesCard({
           ))}
         </div>
       )}
-      <div className="mt-3 font-mono text-[11px] text-text-tertiary">by number of articles</div>
+      
     </div>
   );
 }

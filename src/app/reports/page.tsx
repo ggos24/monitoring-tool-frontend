@@ -117,12 +117,12 @@ function ReportsInner() {
       </div>
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <QuerySelector value={scope} onChange={setScope} className="w-full sm:w-auto sm:min-w-[22rem]" />
+          <QuerySelector value={scope} onChange={setScope} className="w-full sm:w-80" />
           {scope !== null && !showForm && (
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-1 border border-strong bg-foreground px-3 py-1.5 font-mono text-xs text-primary-foreground hover:bg-text-secondary"
+              className="inline-flex h-9 items-center gap-1.5 border border-strong bg-foreground px-3 font-mono text-xs text-primary-foreground hover:bg-text-secondary"
             >
               <Plus className="size-3" /> New report
             </button>

@@ -7,6 +7,7 @@ import type { SourceFilter } from "@/components/dashboard/mentions-list";
 import type { ScopeParam } from "@/lib/types";
 import type { DateWindow } from "@/lib/period";
 import { toLocalInput } from "@/lib/dashboard-filters";
+import { CONTROL } from "./toolbar";
 
 // Forwards the dashboard's current scope + filter state to the Reports
 // page via URL query params (topic_id OR group_id). The /reports page
@@ -42,10 +43,10 @@ export function GenerateReportLink({
   return (
     <Link
       href={`/reports?${params.toString()}`}
-      className="flex items-center gap-1 border border-border bg-card px-3 py-1.5 font-mono text-xs text-text-secondary hover:bg-muted transition-colors"
+      className={CONTROL}
       title="Generate a report from the current filters"
     >
-      <FileText className="size-3" />
+      <FileText className="size-3.5" />
       <span>Generate report</span>
     </Link>
   );

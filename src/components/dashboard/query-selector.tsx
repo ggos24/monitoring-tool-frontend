@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CONTROL } from "./toolbar";
 
 export const ALL_QUERIES_LABEL = "All queries";
 
@@ -49,7 +50,7 @@ export function QuerySelector({
   });
 
   if (topicsQuery.isLoading) {
-    return <Skeleton className={cn("h-11 w-80 bg-elevated", className)} />;
+    return <Skeleton className={cn("h-9 w-72 bg-elevated", className)} />;
   }
   const topics = visibleTopics(topicsQuery.data);
   const groups = topicsOnly ? [] : (groupsQuery.data ?? []);
@@ -61,19 +62,13 @@ export function QuerySelector({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className={cn(
-          "inline-flex min-w-0 max-w-full items-center gap-3 border border-strong bg-card px-4 py-2.5 text-left outline-none",
-          "hover:bg-elevated aria-expanded:bg-elevated",
-          className,
-        )}
+        aria-label="Query"
+        className={cn(CONTROL, "min-w-0 max-w-full justify-between text-left", className)}
       >
-        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
-          Query
+        <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+          {selected ?? <span className="font-normal text-text-tertiary">Select a query</span>}
         </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {selected ?? <span className="text-text-tertiary">Select a query</span>}
-        </span>
-        <ChevronDown className="size-4 shrink-0 text-text-secondary" />
+        <ChevronDown className="size-3.5 shrink-0 text-text-tertiary" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent

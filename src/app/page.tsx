@@ -25,9 +25,9 @@ import { CoverageNote } from "@/components/dashboard/coverage-note";
 import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
 import { DEFAULT_PERIOD, loadFilters, saveFilters } from "@/lib/dashboard-filters";
 import { isCampaignGroupName } from "@/lib/narrative-rules";
-import { PickupsPanel } from "@/components/dashboard/pickups-panel";
 import { visibleTopics } from "@/lib/topics";
 import { cn } from "@/lib/utils";
+import { CONTROL } from "@/components/dashboard/toolbar";
 
 export default function Home() {
   const [scopeSel, setScopeSel] = useState<ScopeSelection | null>(null);
@@ -145,48 +145,49 @@ export default function Home() {
     <>
       <TopBar scope={scope} />
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
-        <div className="mb-6 flex flex-col gap-3">
+        {/* One toolbar row: what we look at (query), when, where — then
+            the view toggle and the hand-off to Reports. Every control shares
+            the CONTROL size so the strip reads as one line. */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <QuerySelector
             value={scopeSel}
             onChange={handleSelectScope}
-            className="w-full sm:w-auto sm:min-w-[22rem] sm:self-start"
+            className="w-full sm:w-80"
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <PeriodToggle
-              // Remount when a range is restored/applied so its inputs re-seed.
-              key={period.kind === "range" ? `${period.from}_${period.to}` : "preset"}
-              value={period}
-              onChange={handleSelectPeriod}
+          <PeriodToggle
+            // Remount when a range is restored/applied so its inputs re-seed.
+            key={period.kind === "range" ? `${period.from}_${period.to}` : "preset"}
+            value={period}
+            onChange={handleSelectPeriod}
+          />
+          {scope !== null && (
+            <CountryFilter
+              scope={scope}
+              win={win}
+              value={country}
+              onChange={handleSelectCountry}
             />
-            {scope !== null && (
-              <CountryFilter
-                scope={scope}
-                win={win}
-                value={country}
-                onChange={handleSelectCountry}
-              />
-            )}
-            {selectedDay && (
-              <button
-                type="button"
-                onClick={() => setSelectedDay(null)}
-                title="Clear day filter — back to the full period"
-                className="inline-flex h-8 items-center gap-1.5 border border-strong bg-elevated px-2 font-mono text-[11px] text-foreground transition-colors hover:bg-overlay"
-              >
-                <span className="size-1.5 bg-success" aria-hidden />
-                <span>{formatDayLabel(selectedDay)}</span>
-                <X className="size-3 text-text-tertiary" />
-              </button>
-            )}
-            <div className="ml-auto flex items-center gap-4">
-              <CompareToggle value={compare} onChange={setCompare} />
-              <GenerateReportLink
-                scope={scope}
-                win={periodWin}
-                country={country}
-                source={source}
-              />
-            </div>
+          )}
+          {selectedDay && (
+            <button
+              type="button"
+              onClick={() => setSelectedDay(null)}
+              title="Clear day filter — back to the full period"
+              className={cn(CONTROL, "border-strong bg-elevated text-foreground")}
+            >
+              <span className="size-1.5 bg-success" aria-hidden />
+              <span>{formatDayLabel(selectedDay)}</span>
+              <X className="size-3 text-text-tertiary" />
+            </button>
+          )}
+          <div className="flex items-center gap-2 lg:ml-auto">
+            <CompareToggle value={compare} onChange={setCompare} />
+            <GenerateReportLink
+              scope={scope}
+              win={periodWin}
+              country={country}
+              source={source}
+            />
           </div>
         </div>
 
@@ -272,10 +273,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Campaign-wide: Tier-1 articles that mention UNITED24. */}
-            <div className="mb-6 border border-border bg-card">
-              <PickupsPanel win={win} />
-            </div>
+            {/* UNITED24 pickups (PickupsPanel) hidden for now — product call. */}
           </>
         )}
       </main>
@@ -297,7 +295,8 @@ function CompareToggle({
       role="switch"
       aria-checked={value}
       onClick={() => onChange(!value)}
-      className="inline-flex items-center gap-2 font-mono text-[11px] text-text-tertiary transition-colors hover:text-foreground"
+      title="Show the change vs the previous period of the same length"
+      className={cn(CONTROL, value && "text-foreground")}
     >
       <span
         aria-hidden
@@ -308,7 +307,7 @@ function CompareToggle({
       >
         <span className={cn("size-2", value ? "bg-foreground" : "bg-text-tertiary")} />
       </span>
-      Compare to previous period
+      Compare
     </button>
   );
 }
