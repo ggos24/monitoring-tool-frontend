@@ -113,11 +113,11 @@ export function todayUtc(): string {
 /**
  * One rule for every "vs previous period" figure on the dashboard (KPI
  * cards, sources, countries, favorability):
- *  - counts  → relative change, whole percent: "▲ +25%", "▼ −37%";
+ *  - counts  → relative change, whole percent: "+25%", "−37%";
  *              previous 0 → "new" (or "—" when both are 0);
  *  - shares  → difference of the two percentages, also in %: 4.9% vs 4.1%
- *              → "▲ +0.8%" (a relative change of a share, "+19%", misleads).
- * Colour only marks the direction, never "good" or "bad".
+ *              → "+0.8%" (a relative change of a share, "+19%", misleads).
+ * The sign carries the direction; colour repeats it, never "good" or "bad".
  */
 export type Change = {
   text: string;
@@ -141,7 +141,7 @@ export function countChange(
   }
   const pct = Math.round(((current - previous) / previous) * 100);
   if (pct === 0) return { text: "±0%", direction: "flat" };
-  return { text: `${pct > 0 ? "▲" : "▼"} ${signed(pct, 0)}`, direction: pct > 0 ? "up" : "down" };
+  return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
 }
 
 /** Change of a share (0–1) as the difference of the two percentages. */
@@ -152,7 +152,7 @@ export function shareChange(
   if (current == null || previous == null) return undefined;
   const diff = Math.round((current - previous) * 1000) / 10;
   if (diff === 0) return { text: "±0%", direction: "flat" };
-  return { text: `${diff > 0 ? "▲" : "▼"} ${signed(diff, 1)}`, direction: diff > 0 ? "up" : "down" };
+  return { text: signed(diff, 1), direction: diff > 0 ? "up" : "down" };
 }
 
 /** Share (0–1) as a percentage label, "4.9%". */

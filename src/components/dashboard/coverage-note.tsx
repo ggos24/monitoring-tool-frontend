@@ -45,8 +45,10 @@ export function CoverageNote() {
       >
         <span aria-hidden>*</span>
         <span>
-          Figures include {full} of our {total} Tier-1 media fully and {sparse} partially;
-          the other {total - full - sparse} are not visible to GDELT yet. Show list
+          Based on the {full + sparse} of our {total} Tier-1 media that GDELT can see.{" "}
+          <span className="underline decoration-dotted underline-offset-2">
+            {open ? "Hide list" : "Show list"}
+          </span>
         </span>
         {open ? <ChevronUp className="ml-auto size-3 shrink-0" /> : <ChevronDown className="ml-auto size-3 shrink-0" />}
       </button>

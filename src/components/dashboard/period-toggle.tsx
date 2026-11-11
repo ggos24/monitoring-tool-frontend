@@ -31,7 +31,7 @@ export function PeriodToggle({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="inline-flex items-center gap-0.5 border border-border bg-card p-0.5">
+      <div role="group" aria-label="Period" className="inline-flex h-9 items-stretch gap-0.5 border border-border bg-card p-0.5">
         {PRESETS.map((p) => (
           <Segment
             key={p.days}
@@ -51,7 +51,7 @@ export function PeriodToggle({
 
       {showInputs && (
         <form
-          className="inline-flex items-center gap-1 font-mono text-[11px]"
+          className="inline-flex items-center gap-1 font-mono text-xs"
           onSubmit={(e) => {
             e.preventDefault();
             if (invalid) return;
@@ -66,7 +66,7 @@ export function PeriodToggle({
             type="submit"
             disabled={invalid}
             title={spanDays > MAX_RANGE_DAYS ? `At most ${MAX_RANGE_DAYS} days` : undefined}
-            className="h-7 border border-strong px-2 text-foreground transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-9 border border-strong px-3 text-foreground transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-40"
           >
             Apply
           </button>
@@ -97,7 +97,7 @@ function Segment({
       title={title}
       aria-pressed={active}
       className={cn(
-        "px-2.5 py-1 font-mono text-[11px] leading-none transition-colors",
+        "px-3 font-mono text-xs leading-none transition-colors",
         active
           ? "bg-foreground text-primary-foreground"
           : "bg-transparent text-text-tertiary hover:text-foreground",
@@ -130,7 +130,7 @@ function DateInput({
       min={min}
       max={max}
       onChange={(e) => onChange(e.target.value)}
-      className="h-7 border border-border bg-card px-1.5 text-foreground [color-scheme:dark] outline-none hover:border-strong focus:border-strong"
+      className="h-9 border border-border bg-card px-2 text-foreground [color-scheme:dark] outline-none hover:border-strong focus:border-strong"
     />
   );
 }

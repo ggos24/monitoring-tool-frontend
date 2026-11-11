@@ -10,6 +10,7 @@ import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import type { DateWindow } from "@/lib/period";
 import { cn } from "@/lib/utils";
+import { CONTROL } from "./toolbar";
 
 type CountryItem = {
   iso2: string;
@@ -91,9 +92,7 @@ export function CountryFilter({
           <button
             type="button"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 border border-border bg-card px-2",
-              "font-mono text-[11px] text-text-secondary transition-colors",
-              "hover:border-strong hover:text-foreground",
+              CONTROL,
               "data-[popup-open]:border-strong data-[popup-open]:text-foreground",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}

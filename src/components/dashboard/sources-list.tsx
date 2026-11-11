@@ -175,11 +175,11 @@ function SourceRow({
             <span className="truncate">{domain}</span>
           </span>
           <span className="flex shrink-0 items-center gap-3">
-            <span className="w-8 text-right font-mono text-xs font-medium text-foreground tabular-nums">
+            <span className={cn(COUNT_COL, "font-mono text-xs font-medium text-foreground tabular-nums")}>
               {count}
             </span>
             {previous !== null && (
-              <CountDelta current={count} previous={previous} title={prevLabel} />
+              <CountDelta current={count} previous={previous} title={prevLabel} className={CHANGE_COL} />
             )}
           </span>
         </div>
@@ -188,6 +188,10 @@ function SourceRow({
   );
 }
 
+// Header and rows share these widths, so labels sit over their numbers.
+const COUNT_COL = "w-16 text-right";
+const CHANGE_COL = "w-14 text-right";
+
 function ColumnHeader({ showDelta }: { showDelta: boolean }) {
   const cls =
     "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground";
@@ -195,8 +199,12 @@ function ColumnHeader({ showDelta }: { showDelta: boolean }) {
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <span className={cls}>Media</span>
       <span className="flex shrink-0 items-baseline gap-3">
-        <span className={cn(cls, "w-8 text-right")}>Articles</span>
-        {showDelta && <span className={cn(cls, "w-14 text-right")} title="Change vs previous period">vs prev.</span>}
+        <span className={cn(cls, COUNT_COL)}>Articles</span>
+        {showDelta && (
+          <span className={cn(cls, CHANGE_COL)} title="Change vs previous period">
+            Change
+          </span>
+        )}
       </span>
     </div>
   );
