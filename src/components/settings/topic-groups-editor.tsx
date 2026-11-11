@@ -16,7 +16,7 @@ import type { TopicGroup, TopicGroupCreate } from "@/lib/types";
 // report unions its members, dedupes shared articles, and clusters into
 // cross-topic narratives (Reports tab → scope selector).
 //
-// The "Campaign" group is what the dashboard shows as "All narratives".
+// The "Campaign" group is what the dashboard shows as "All queries".
 // It is kept in step with the narrative rule files, so it cannot be
 // deleted here (same exact name match as the dashboard and the backend).
 function isCampaignGroup(g: TopicGroup): boolean {

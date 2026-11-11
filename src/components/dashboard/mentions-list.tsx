@@ -370,7 +370,7 @@ function MentionRow({
   index: number;
   mention: Mention;
   listQueryKey: readonly unknown[];
-  /** Narrative chips — only filled for "All narratives" (group) scope. */
+  /** Narrative chips — only filled for "All queries" (group) scope. */
   narratives: string[];
 }) {
   const queryClient = useQueryClient();

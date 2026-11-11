@@ -115,7 +115,7 @@ export function CampaignKpiGrid({
       <RefreshLine active={current.isPlaceholderData} />
       <KpiCard
         kicker="Articles"
-        title={"Articles from our Tier-1 media in the selected narratives. Each article is counted once." + partial}
+        title={"Articles from our Tier-1 media matching the selected queries. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
         context={
           lanes.length > 1
@@ -190,7 +190,7 @@ export function CampaignKpiGrid({
 
 const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
-  "the share that falls under the selected narratives. An article counts as about Ukraine/Russia when its " +
+  "the share that matches the selected queries. An article counts as about Ukraine/Russia when its " +
   "headline names Ukraine, Russia, Kyiv, the Kremlin, Putin or Zelensky, or it covers " +
   "Russia together with weapons, sanctions or military cooperation.";
 
