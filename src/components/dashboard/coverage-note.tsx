@@ -29,8 +29,8 @@ export function CoverageNote() {
   const total = full + sparse + (data.counts.invisible ?? 0);
   const measured =
     data.measured_from && data.measured_to
-      ? ` Visibility measured ${formatDayLabel(data.measured_from)} – ${formatDayLabel(data.measured_to)}.`
-      : "";
+      ? `Visibility measured ${formatDayLabel(data.measured_from)} – ${formatDayLabel(data.measured_to)}`
+      : undefined;
 
   return (
     <div className="border border-t-0 border-border bg-card px-5 py-2.5 font-mono text-[11px] text-text-tertiary">
@@ -40,13 +40,13 @@ export function CoverageNote() {
         onClick={() => setOpen((v) => !v)}
         // Selector version is an opaque build id (e.g. "gkg-v1+n3.f627…"):
         // useful for audits, too long for the sentence itself.
-        title={data.selector_version ? `GKG selector: ${data.selector_version}` : undefined}
+        title={[measured, data.selector_version ? `GKG selector: ${data.selector_version}` : null].filter(Boolean).join(" · ") || undefined}
         className="flex w-full items-center gap-1.5 text-left hover:text-foreground"
       >
         <span aria-hidden>*</span>
         <span>
-          Figures cover {full} fully and {sparse} partially of {total} Tier-1
-          outlets that GDELT indexes.{measured}
+          Figures include {full} of our {total} Tier-1 media fully and {sparse} partially;
+          the other {total - full - sparse} are not visible to GDELT yet. Show list
         </span>
         {open ? <ChevronUp className="ml-auto size-3 shrink-0" /> : <ChevronDown className="ml-auto size-3 shrink-0" />}
       </button>

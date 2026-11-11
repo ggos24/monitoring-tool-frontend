@@ -13,7 +13,7 @@ import {
   resolveReportType,
 } from "@/lib/report-view";
 import type { Report } from "@/lib/types";
-import type { ScopeSelection } from "@/components/dashboard/scope-selector";
+import type { ScopeSelection } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 

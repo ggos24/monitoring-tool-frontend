@@ -6,12 +6,13 @@ import { FileText } from "lucide-react";
 import type { SourceFilter } from "@/components/dashboard/mentions-list";
 import type { ScopeParam } from "@/lib/types";
 import type { DateWindow } from "@/lib/period";
+import { toLocalInput } from "@/lib/dashboard-filters";
 
 // Forwards the dashboard's current scope + filter state to the Reports
 // page via URL query params (topic_id OR group_id). The /reports page
 // parses these and seeds the GenerateReportForm.
 //
-// Date range = the dashboard's current window (preset, custom or Campaign).
+// Date range = the dashboard's current window (preset or custom range).
 export function GenerateReportLink({
   scope,
   win,
@@ -48,9 +49,4 @@ export function GenerateReportLink({
       <span>Generate report</span>
     </Link>
   );
-}
-
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

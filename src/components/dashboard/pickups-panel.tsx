@@ -42,11 +42,15 @@ export function PickupsPanel({ win }: { win: DateWindow }) {
   return (
     <div className="bg-card p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <KickerLabel>UNITED24 pickups</KickerLabel>
+        <KickerLabel>UNITED24 mentioned in Tier-1 media</KickerLabel>
         <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
-          {data ? `${data.articles.toLocaleString()} in ${win.label}` : win.label}
+          {data ? `${data.articles.toLocaleString()} articles` : null}
         </span>
       </div>
+      <p className="mt-1 text-xs text-text-tertiary">
+        Tier-1 articles that cite, link to or reprint UNITED24 Media, or mention the
+        UNITED24 fundraising platform. Across all queries.
+      </p>
       {error ? (
         <div role="alert" className="mt-4 font-mono text-[11px] text-danger">
           {error instanceof ApiError && error.status === 422
@@ -61,7 +65,7 @@ export function PickupsPanel({ win }: { win: DateWindow }) {
         </div>
       ) : !data || data.items.length === 0 ? (
         <div className="mt-4 font-mono text-[11px] text-text-tertiary">
-          No UNITED24 pickups in selected period.
+          No Tier-1 article mentioned UNITED24 in this period.
         </div>
       ) : (
         <ul className="mt-3 divide-y divide-border">

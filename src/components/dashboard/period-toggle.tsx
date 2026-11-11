@@ -2,16 +2,12 @@
 
 import { useState } from "react";
 
-import { campaignPeriod } from "@/lib/campaign";
+import { PERIOD_PRESET_DAYS } from "@/lib/dashboard-filters";
 import { todayUtc, type Period } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
-const PRESETS: { label: string; days: number }[] = [
-  { label: "24h", days: 1 },
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
-];
+// A campaign window is just a Custom range — no separate preset.
+const PRESETS = PERIOD_PRESET_DAYS.map((days) => ({ label: `${days}d`, days }));
 
 // Backend caps an explicit range at 400 days.
 const MAX_RANGE_DAYS = 400;
@@ -23,8 +19,7 @@ export function PeriodToggle({
   value: Period;
   onChange: (period: Period) => void;
 }) {
-  const campaign = campaignPeriod();
-  const isCustom = value.kind === "range" && !value.campaign;
+  const isCustom = value.kind === "range";
   const [editing, setEditing] = useState(false);
   const showInputs = editing || isCustom;
 
@@ -49,22 +44,6 @@ export function PeriodToggle({
             {p.label}
           </Segment>
         ))}
-        <Segment
-          active={!showInputs && value.kind === "range" && !!value.campaign}
-          disabled={campaign === null}
-          title={
-            campaign === null
-              ? "Campaign dates not configured (NEXT_PUBLIC_CAMPAIGN_START)"
-              : `${campaign.from} → ${campaign.to} (UTC)`
-          }
-          onClick={() => {
-            if (!campaign) return;
-            setEditing(false);
-            onChange(campaign);
-          }}
-        >
-          Campaign
-        </Segment>
         <Segment active={showInputs} onClick={() => setEditing(true)}>
           Custom
         </Segment>

@@ -9,28 +9,31 @@ import type { SegmentCondition } from "@/lib/types";
 import { DEFAULT_REPORT_TYPE } from "@/lib/report-view";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { Button } from "@/components/ui/button";
-import type { ScopeSelection } from "@/components/dashboard/scope-selector";
+import type { ScopeSelection } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Preset ranges — match the dashboard PeriodToggle vocabulary so users
-// don't have to learn a second scale. `hours` null marks the custom
+// Preset ranges — the same scale as the dashboard PeriodToggle so users
+// don't have to learn a second one. `hours` null marks the custom
 // branch which reveals the datetime-local pickers below.
 const RANGES: { key: RangeKey; label: string; hours: number | null }[] = [
-  { key: "24h", label: "24h", hours: 24 },
   { key: "7d", label: "7d", hours: 24 * 7 },
-  { key: "14d", label: "14d", hours: 24 * 14 },
   { key: "30d", label: "30d", hours: 24 * 30 },
   { key: "90d", label: "90d", hours: 24 * 90 },
   { key: "custom", label: "Custom", hours: null },
 ];
 
-type RangeKey = "24h" | "7d" | "14d" | "30d" | "90d" | "custom";
+type RangeKey = "7d" | "30d" | "90d" | "custom";
+
+function presetKey(days: number | null | undefined): RangeKey | null {
+  return RANGES.find((r) => r.hours === (days ?? 0) * 24)?.key ?? null;
+}
 
 export function GenerateReportForm({
   scope,
   prefillFilters,
   prefillDateFrom,
   prefillDateTo,
+  prefillPresetDays = null,
   onCreated,
   onCancel,
 }: {
@@ -38,6 +41,8 @@ export function GenerateReportForm({
   prefillFilters: SegmentCondition[];
   prefillDateFrom: string | null;
   prefillDateTo: string | null;
+  /** The Overview's preset (7/30/90 days) when no explicit dates are given. */
+  prefillPresetDays?: number | null;
   onCreated: (reportId: number) => void;
   onCancel?: () => void;
 }) {
@@ -54,7 +59,9 @@ export function GenerateReportForm({
   // dashboard's "Generate report" link), default to custom + seed the
   // inputs. Otherwise default to a sensible 7d.
   const initialRange: RangeKey =
-    prefillDateFrom || prefillDateTo ? "custom" : "7d";
+    prefillDateFrom || prefillDateTo
+      ? "custom"
+      : (presetKey(prefillPresetDays) ?? "7d");
   const [range, setRange] = useState<RangeKey>(initialRange);
   const [customFrom, setCustomFrom] = useState(prefillDateFrom ?? "");
   const [customTo, setCustomTo] = useState(prefillDateTo ?? "");
@@ -63,7 +70,7 @@ export function GenerateReportForm({
   );
   const queryClient = useQueryClient();
 
-  // "All narratives" = the `Campaign` topic group (every narrative topic,
+  // "All queries" = the `Campaign` topic group (every tracked query,
   // pool excluded). Falls back to the page's own group scope if one is
   // selected; disabled when neither exists.
   const groupsQuery = useQuery({
@@ -169,16 +176,16 @@ export function GenerateReportForm({
             selected={scopeMode === "narrative"}
             disabled={scope.kind === "group"}
             onSelect={() => setScopeMode("narrative")}
-            label="This narrative"
+            label="This query"
           />
           <ScopeButton
             selected={scopeMode === "all"}
             disabled={allGroupId === null}
             onSelect={() => setScopeMode("all")}
-            label="All narratives"
+            label="All queries"
             title={
               allGroupId === null
-                ? "Needs the “Campaign” topic group (all narratives)"
+                ? "Needs the “Campaign” group (all queries)"
                 : undefined
             }
           />

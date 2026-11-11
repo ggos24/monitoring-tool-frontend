@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -10,10 +10,9 @@ import { Footer } from "@/components/dashboard/footer";
 import { DigestResultView, ReportDetail } from "@/components/reports/report-detail";
 import { ReportList } from "@/components/reports/report-list";
 import { GenerateReportForm } from "@/components/reports/generate-report-form";
-import { ScopeSelector, type ScopeSelection } from "@/components/dashboard/scope-selector";
-import type {
-  SegmentCondition,
-} from "@/lib/types";
+import { QuerySelector } from "@/components/dashboard/query-selector";
+import type { ScopeSelection, SegmentCondition } from "@/lib/types";
+import { loadFilters, periodToLocalRange, saveFilters } from "@/lib/dashboard-filters";
 import { apiClient } from "@/lib/api";
 
 // One Reports tab. Scope = a single TOPIC or a GROUP (union of topics).
@@ -63,9 +62,29 @@ function ReportsInner() {
     scope ? `${scope.kind === "group" ? "group_id" : "topic_id"}=${scope.id}` : "";
 
   const setScope = (next: ScopeSelection) => {
+    saveFilters({ scope: next });
     const key = next.kind === "group" ? "group_id" : "topic_id";
     router.replace(`/reports?${key}=${next.id}`);
   };
+
+  // No query in the URL → reopen the one last picked on the Overview or
+  // here (localStorage), so the choice sticks until the operator changes it.
+  const hasScopeParam = scope !== null;
+  const reportParam = search.get("report_id");
+  useEffect(() => {
+    if (hasScopeParam) return;
+    const stored = loadFilters().scope;
+    if (!stored) return;
+    const parts = [`${stored.kind === "group" ? "group_id" : "topic_id"}=${stored.id}`];
+    if (reportParam) parts.push(`report_id=${reportParam}`);
+    router.replace(`/reports?${parts.join("&")}`);
+  }, [hasScopeParam, reportParam, router]);
+
+  // The report form opens on the Overview's period when the URL carries no
+  // dates (Overview → Reports via the top nav).
+  const [storedRange] = useState(() =>
+    typeof window === "undefined" ? null : storedPeriodRange(),
+  );
 
   const selectReport = (newId: number) => {
     const parts = [scopeParam(), `report_id=${newId}`].filter(Boolean);
@@ -74,13 +93,14 @@ function ReportsInner() {
   };
 
   const prefillFilters = parseFiltersFromSearch(search);
-  const prefillFrom = search.get("date_from");
-  const prefillTo = search.get("date_to");
+  const urlFrom = search.get("date_from");
+  const urlTo = search.get("date_to");
   // The form sits behind "New report"; arriving from the Overview's
   // "Generate report" link (dates in the URL) opens it straight away.
-  const [showForm, setShowForm] = useState(
-    Boolean(prefillFrom || prefillTo),
-  );
+  const [showForm, setShowForm] = useState(Boolean(urlFrom || urlTo));
+  const prefillFrom = urlFrom ?? (urlTo ? null : storedRange?.from ?? null);
+  const prefillTo = urlTo ?? (urlFrom ? null : storedRange?.to ?? null);
+  const prefillPreset = urlFrom || urlTo ? null : storedRange?.presetDays ?? null;
 
   return (
     <>
@@ -97,7 +117,7 @@ function ReportsInner() {
       </div>
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-5 py-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-          <ScopeSelector value={scope} onChange={setScope} />
+          <QuerySelector value={scope} onChange={setScope} className="w-full sm:w-auto sm:min-w-[22rem]" />
           {scope !== null && !showForm && (
             <button
               type="button"
@@ -111,7 +131,7 @@ function ReportsInner() {
 
         {scope === null ? (
           <div className="border border-dashed border-border p-12 text-center text-sm text-text-tertiary">
-            Select a narrative to view or generate reports.
+            Select a query to view or generate reports.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -122,6 +142,7 @@ function ReportsInner() {
                   prefillFilters={prefillFilters}
                   prefillDateFrom={prefillFrom}
                   prefillDateTo={prefillTo}
+                  prefillPresetDays={prefillPreset}
                   onCreated={selectReport}
                   onCancel={() => setShowForm(false)}
                 />
@@ -174,6 +195,14 @@ function ReportsInner() {
       </div>
     </>
   );
+}
+
+/** The Overview's stored period, as the report form wants it. */
+function storedPeriodRange(): { from: string | null; to: string | null; presetDays: number | null } | null {
+  const period = loadFilters().period;
+  if (!period) return null;
+  if (period.kind === "preset") return { from: null, to: null, presetDays: period.days };
+  return { ...periodToLocalRange(period), presetDays: null };
 }
 
 function parseId(raw: string | null): number | null {

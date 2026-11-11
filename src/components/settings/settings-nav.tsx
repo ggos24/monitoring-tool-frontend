@@ -9,7 +9,7 @@ const SETTINGS_SECTIONS: Array<{
   label: string;
   href: string;
 }> = [
-  { id: "general", label: "Narratives", href: "/settings" },
+  { id: "general", label: "Queries", href: "/settings" },
   { id: "sources", label: "Sources", href: "/sources" },
   { id: "advanced", label: "Advanced", href: "/settings/advanced" },
 ];

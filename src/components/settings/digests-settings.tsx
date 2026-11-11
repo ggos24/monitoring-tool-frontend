@@ -6,13 +6,11 @@ import { useRouter } from "next/navigation";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { AiOffBadge } from "./ai-off-badge";
 import { ScheduledReports } from "@/components/reports/scheduled-reports";
-import {
-  ScopeSelector,
-  type ScopeSelection,
-} from "@/components/dashboard/scope-selector";
+import { QuerySelector } from "@/components/dashboard/query-selector";
+import type { ScopeSelection } from "@/lib/types";
 
 // Scheduled digests (digest_definition rows) — moved off the Reports tab.
-// Digests are per-topic, so a narrative picker scopes the list; opening a
+// Digests are per-topic, so a query picker scopes the list; opening a
 // run jumps to the Reports tab, which renders `digest_result_id`.
 export function DigestsSettings() {
   const router = useRouter();
@@ -24,7 +22,8 @@ export function DigestsSettings() {
         <KickerLabel>Scheduled digests</KickerLabel>
         <AiOffBadge flag="digest_enabled" />
       </div>
-      <ScopeSelector
+      <QuerySelector
+        topicsOnly
         value={scope}
         onChange={(next) => next.kind === "topic" && setScope(next)}
       />
@@ -38,7 +37,7 @@ export function DigestsSettings() {
         />
       ) : (
         <p className="font-mono text-[11px] text-text-tertiary">
-          Scheduled digests — pick a narrative to manage its nightly reports.
+          Scheduled digests — pick a query to manage its nightly reports.
         </p>
       )}
     </section>

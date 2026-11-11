@@ -198,7 +198,7 @@ export function NarrativeCard({
       {/* Facts and how rules change */}
       <div className="mt-5 space-y-1.5 border-t border-border pt-4 text-xs leading-relaxed">
         <p className="text-text-secondary">
-          <span className="text-text-tertiary">Shown under All narratives on the dashboard: </span>
+          <span className="text-text-tertiary">Shown under All queries on the dashboard: </span>
           {n.in_campaign_group ? "Yes" : "No"}
         </p>
         {sync === "in_sync" && n.spec && (
@@ -223,7 +223,7 @@ export function NarrativeCard({
       </div>
 
       {/* Dialogs */}
-      <Dialog open={dialog === "rename"} onClose={() => setDialog(null)} title="Rename narrative">
+      <Dialog open={dialog === "rename"} onClose={() => setDialog(null)} title="Rename query">
         <label className="block">
           <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
             Name
@@ -259,7 +259,7 @@ export function NarrativeCard({
         />
       </Dialog>
 
-      <Dialog open={dialog === "pause"} onClose={() => setDialog(null)} title="Pause this narrative?">
+      <Dialog open={dialog === "pause"} onClose={() => setDialog(null)} title="Pause this query?">
         <p className="text-xs leading-relaxed text-text-secondary">
           It keeps its {plural(n.mentions_count, "article", "articles")} but gets no new ones
           from the next update (within {every}). Nothing else changes.
@@ -274,7 +274,7 @@ export function NarrativeCard({
         />
       </Dialog>
 
-      <Dialog open={dialog === "resume"} onClose={() => setDialog(null)} title="Resume this narrative?">
+      <Dialog open={dialog === "resume"} onClose={() => setDialog(null)} title="Resume this query?">
         <p className="text-xs leading-relaxed text-text-secondary">
           It starts checking NEW pool articles from the next update (within {every}). Older
           pool articles are only added when the team re-checks the pool — ask a developer.

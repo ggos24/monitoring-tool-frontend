@@ -63,9 +63,9 @@ export function SourcesList({
 
   return (
     <div className="flex h-full flex-col bg-card p-5">
-      <KickerLabel>Top sources</KickerLabel>
+      <KickerLabel>Top media</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        Top {LIMIT} domains by mention count, {win.label}
+        Top {LIMIT} media by number of articles
       </div>
 
       {!enabled || isLoading ? (
@@ -110,7 +110,7 @@ export function SourcesList({
             </ul>
           </div>
           <div className="mt-3 shrink-0 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground tabular-nums">
-            {data.length} {data.length === 1 ? "domain" : "domains"}
+            {data.length} media
           </div>
         </div>
       )}
@@ -193,10 +193,10 @@ function ColumnHeader({ showDelta }: { showDelta: boolean }) {
     "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground";
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
-      <span className={cls}>Domain</span>
+      <span className={cls}>Media</span>
       <span className="flex shrink-0 items-baseline gap-3">
-        <span className={cn(cls, "w-8 text-right")}>Ment.</span>
-        {showDelta && <span className={cn(cls, "w-9 text-right")}>Δ</span>}
+        <span className={cn(cls, "w-8 text-right")}>Articles</span>
+        {showDelta && <span className={cn(cls, "w-14 text-right")} title="Change vs previous period">vs prev.</span>}
       </span>
     </div>
   );

@@ -52,7 +52,7 @@ export function NarrativesPanel() {
         </div>
       ) : error || !data ? (
         <div className="flex items-center gap-3 bg-card p-5 font-mono text-[11px] text-text-tertiary">
-          <span>Could not load narratives.</span>
+          <span>Could not load queries.</span>
           <button
             type="button"
             onClick={() => refetch()}
@@ -72,11 +72,11 @@ function Explainer({ interval }: { interval: number }) {
   const every = formatEvery(interval);
   return (
     <section className="bg-card p-5">
-      <KickerLabel>Narratives</KickerLabel>
+      <KickerLabel>Queries</KickerLabel>
       <div className="mt-3 max-w-3xl space-y-3 text-xs leading-relaxed text-text-secondary">
         <p>
-          A narrative is a filter over the Tier-1 pool. Every {every} we collect new articles
-          from about 95 Tier-1 outlets. Each collecting narrative then checks every new
+          A query is a filter over the Tier-1 pool. Every {every} we collect new articles
+          from about 95 Tier-1 outlets. Each collecting query then checks every new
           article and keeps the ones that fit its rules.
         </p>
         <div>
@@ -88,7 +88,7 @@ function Explainer({ interval }: { interval: number }) {
             </li>
             <li>
               <span className="font-mono text-[11px] text-text-tertiary">2.</span> Yes, if the
-              headline contains one of the narrative&rsquo;s key phrases.
+              headline contains one of the query&rsquo;s key phrases.
             </li>
             <li>
               <span className="font-mono text-[11px] text-text-tertiary">3.</span> Otherwise,
@@ -102,11 +102,11 @@ function Explainer({ interval }: { interval: number }) {
         </div>
         <p>
           Rules are kept in reviewed files, not edited here. When the team changes a
-          narrative&rsquo;s rules, they also re-check the older pool articles, so old and
+          query&rsquo;s rules, they also re-check the older pool articles, so old and
           new articles follow the same rules.
         </p>
         <p>
-          Here you can rename a narrative or pause and resume it. Renaming changes only the
+          Here you can rename a query or pause and resume it. Renaming changes only the
           display name.
         </p>
       </div>
@@ -126,20 +126,20 @@ function Body({ data, interval }: { data: NarrativesResponse; interval: number }
       <p className="text-xs text-text-tertiary">
         {inCampaign.length > 0 ? (
           <>
-            All narratives on the dashboard = the Campaign group:{" "}
+            All queries on the dashboard = the Campaign group:{" "}
             <span className="text-text-secondary">
               {inCampaign.map((n) => n.name).join(", ")}
             </span>{" "}
             (managed with the rule files).
           </>
         ) : (
-          <>No narrative is shown under All narratives on the dashboard yet.</>
+          <>No query is shown under All queries on the dashboard yet.</>
         )}
       </p>
 
       {data.narratives.length === 0 ? (
         <div className="bg-card p-5 font-mono text-[11px] text-text-tertiary">
-          No narratives yet.
+          No queries yet.
         </div>
       ) : (
         <>

@@ -2,29 +2,27 @@
 
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Trend } from "@/lib/period";
+import type { Change } from "@/lib/period";
 import { cn } from "@/lib/utils";
 
 export function KpiCard({
   kicker,
   value,
   subtitle,
-  trend,
-  delta,
-  trendTitle,
+  change,
+  changeTitle,
   title,
   isLoading,
 }: {
   kicker: string;
-  /** Pre-formatted change for share metrics, e.g. "▲ 1.2 pp". */
-  delta?: string;
   /** Hover explanation for the whole card. */
   title?: string;
   value: string | number;
-  subtitle: string;
-  trend?: Trend;
-  /** Hover tooltip on the trend badge, e.g. "vs previous 30d". */
-  trendTitle?: string;
+  subtitle: React.ReactNode;
+  /** vs the previous period — countChange / shareChange from lib/period. */
+  change?: Change;
+  /** Hover tooltip on the change badge. */
+  changeTitle?: string;
   isLoading?: boolean;
 }) {
   return (
@@ -41,49 +39,37 @@ export function KpiCard({
             {value}
           </span>
         )}
-        {trend && !isLoading && <TrendBadge trend={trend} title={trendTitle} />}
-        {delta && !isLoading && (
-          <span
-            className={cn(
-              "font-mono text-[11px] tabular-nums",
-              delta.startsWith("▲") ? "text-success" : delta.startsWith("▼") ? "text-danger" : "text-text-tertiary",
-            )}
-            title={trendTitle}
-          >
-            {delta}
-          </span>
-        )}
+        {change && !isLoading && <ChangeBadge change={change} title={changeTitle} />}
       </div>
       <div className="mt-2 font-mono text-[11px] text-text-tertiary">{subtitle}</div>
     </div>
   );
 }
 
-function TrendBadge({ trend, title }: { trend: Trend; title?: string }) {
-  if (trend.direction === "stable") {
-    return (
-      <span className="font-mono text-[11px] text-text-tertiary" title={title}>
-        ±0%
-      </span>
-    );
-  }
-  if (trend.direction === "new") {
-    return (
-      <span className="font-mono text-[11px] text-success" title={title}>
-        ▲ new
-      </span>
-    );
-  }
-  const isUp = trend.direction === "up";
+/** The one rendering of a "vs previous period" change (see lib/period). */
+export function ChangeBadge({
+  change,
+  title,
+  className,
+}: {
+  change: Change;
+  title?: string;
+  className?: string;
+}) {
   return (
     <span
-      className={cn(
-        "font-mono text-[11px] tabular-nums",
-        isUp ? "text-success" : "text-danger",
-      )}
       title={title}
+      className={cn(
+        "font-mono text-[11px] tabular-nums whitespace-nowrap",
+        change.direction === "up" || change.direction === "new"
+          ? "text-success"
+          : change.direction === "down"
+            ? "text-danger"
+            : "text-text-tertiary",
+        className,
+      )}
     >
-      {isUp ? "▲" : "▼"} {trend.percentage.toFixed(1)}%
+      {change.text}
     </span>
   );
 }
