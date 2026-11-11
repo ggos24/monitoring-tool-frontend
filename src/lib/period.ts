@@ -115,8 +115,13 @@ export function todayUtc(): string {
  * cards, sources, countries, favorability):
  *  - counts  → relative change, whole percent: "+25%", "−37%";
  *              previous 0 → "new" (or "—" when both are 0);
- *  - shares  → difference of the two percentages, also in %: 4.9% vs 4.1%
- *              → "+0.8%" (a relative change of a share, "+19%", misleads).
+ *              previous under SMALL_BASE → the plain difference, "+45":
+ *              1 → 46 is "+4500%", a number that says nothing;
+ *  - shares  → the same relative change of the figure on screen:
+ *              5.8% → 3.9% is "−33%". One unit for every badge; the
+ *              previous value sits right under it. (The difference of the
+ *              two percentages, "−1.9", is percentage points — a second
+ *              unit next to plain percents confused readers.)
  * The sign carries the direction; colour repeats it, never "good" or "bad".
  */
 export type Change = {
@@ -126,12 +131,34 @@ export type Change = {
 
 const MINUS = "\u2212";
 
-function signed(n: number, digits: number): string {
+/** Below this previous count a percentage is noise — show the difference. */
+export const SMALL_BASE = 10;
+
+function signed(n: number, digits: number, unit = "%"): string {
   const abs = Math.abs(n).toFixed(digits);
-  return `${n > 0 ? "+" : MINUS}${abs}%`;
+  return `${n > 0 ? "+" : MINUS}${abs}${unit}`;
 }
 
 export function countChange(
+  current: number | undefined | null,
+  previous: number | undefined | null,
+): Change | undefined {
+  if (current == null || previous == null) return undefined;
+  if (previous === 0) {
+    return current > 0 ? { text: "new", direction: "new" } : { text: "—", direction: "none" };
+  }
+  if (previous < SMALL_BASE) {
+    const diff = current - previous;
+    if (diff === 0) return { text: "±0", direction: "flat" };
+    return { text: signed(diff, 0, ""), direction: diff > 0 ? "up" : "down" };
+  }
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { text: "±0%", direction: "flat" };
+  return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
+}
+
+/** Change of a share (0–1): relative, like a count — 5.8% → 3.9% = "−33%". */
+export function shareChange(
   current: number | undefined | null,
   previous: number | undefined | null,
 ): Change | undefined {
@@ -144,15 +171,11 @@ export function countChange(
   return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
 }
 
-/** Change of a share (0–1) as the difference of the two percentages. */
-export function shareChange(
-  current: number | undefined | null,
-  previous: number | undefined | null,
-): Change | undefined {
-  if (current == null || previous == null) return undefined;
-  const diff = Math.round((current - previous) * 1000) / 10;
-  if (diff === 0) return { text: "±0%", direction: "flat" };
-  return { text: signed(diff, 1), direction: diff > 0 ? "up" : "down" };
+/** The previous window's dates, for a hover: "Oct 28 – Nov 3". */
+export function prevRangeLabel(win: DateWindow): string {
+  const a = formatDayLabel(win.prevFrom.slice(0, 10));
+  const b = formatDayLabel(win.prevTo.slice(0, 10));
+  return a === b ? a : `${a} – ${b}`;
 }
 
 /** Share (0–1) as a percentage label, "4.9%". */

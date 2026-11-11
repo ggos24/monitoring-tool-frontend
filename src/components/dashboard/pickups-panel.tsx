@@ -112,7 +112,7 @@ function PickupKind({ signals, links }: { signals: PickupSignal[]; links: string
   return (
     <span
       title={title}
-      className="shrink-0 border border-border px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary"
+      className="shrink-0 border border-border px-1.5 py-0.5 font-mono text-[11px] text-text-tertiary"
     >
       {kind === "both" ? "text + link" : kind}
     </span>

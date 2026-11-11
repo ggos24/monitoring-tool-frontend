@@ -11,6 +11,7 @@ import { ChevronDown, Loader2, Search, Sparkles, X } from "lucide-react";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
+import { stagger } from "@/lib/motion";
 import type {
   Mention,
   MentionsListResponse,
@@ -32,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
-type StanceFilter = "all" | StanceLabel;
+export type StanceFilter = "all" | StanceLabel;
 // Enrichment runs as one nightly batch (submit 22:00 UTC, verdicts land
 // 07:00 UTC), so the newest-first feed always opens on rows the pipeline
 // hasn't reached yet. This filter is how you get to what *has* been
@@ -64,7 +65,7 @@ const SOURCE_OPTIONS: { key: SourceFilter; label: string }[] = [
 const ENRICHED_OPTIONS: { key: EnrichedFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "enriched", label: "Analysed" },
-  { key: "pending", label: "Not analysed yet" },
+  { key: "pending", label: "Not analysed" },
 ];
 
 export function MentionsList({
@@ -74,6 +75,8 @@ export function MentionsList({
   domain,
   country,
   source,
+  stance,
+  onChangeStance,
   onChangeSource,
   onClearDomain,
 }: {
@@ -84,6 +87,9 @@ export function MentionsList({
   domain: string | null;
   country: string | null;
   source: SourceFilter;
+  /** Tone filter — owned by the page so the tone block's rows can set it. */
+  stance: StanceFilter;
+  onChangeStance: (v: StanceFilter) => void;
   onChangeSource: (v: SourceFilter) => void;
   onClearDomain: () => void;
 }) {
@@ -95,7 +101,6 @@ export function MentionsList({
 
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [stance, setStance] = useState<StanceFilter>("all");
   const [enriched, setEnriched] = useState<EnrichedFilter>("all");
   const [page, setPage] = useState(0);
 
@@ -161,7 +166,7 @@ export function MentionsList({
 
   const resetFilters = () => {
     onChangeSource("all");
-    setStance("all");
+    onChangeStance("all");
     setEnriched("all");
     setSearch("");
     if (domain) onClearDomain();
@@ -196,17 +201,17 @@ export function MentionsList({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search articles..."
               className={cn(
-                "h-8 w-full border border-border bg-card pr-2 pl-7 sm:w-64",
+                "h-8 w-full border border-strong bg-card pr-2 pl-7 sm:w-64",
                 "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
-                "outline-none transition-colors hover:border-strong focus:border-strong",
+                "outline-none transition-colors hover:border-text-tertiary focus:border-text-tertiary",
               )}
             />
           </div>
           <ToggleGroup
-            label="Favorability"
+            label="Tone"
             title={FAVORABILITY_TOOLTIP}
             value={stance}
-            onChange={setStance}
+            onChange={onChangeStance}
             options={STANCE_OPTIONS}
           />
           {domain && (
@@ -227,7 +232,7 @@ export function MentionsList({
         </div>
         <div className="flex items-center gap-2">
           <DropdownFilter
-            label="Source"
+            label="Collected via"
             value={source}
             onChange={onChangeSource}
             options={SOURCE_OPTIONS}
@@ -266,27 +271,37 @@ export function MentionsList({
             </button>
           </div>
         ) : !enabled || isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+          // Row-shaped: source line, headline, narrative chip.
+          <div className="divide-y divide-border" aria-hidden>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="py-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                <Skeleton className="mt-2.5 h-4" style={{ width: `${52 + ((i * 29) % 36)}%` }} />
+                <Skeleton className="mt-2.5 h-5 w-56" />
+              </div>
             ))}
           </div>
         ) : items.length === 0 ? (
           <EmptyMessage>
             {enriched === "enriched"
-              ? "Nothing analyzed yet in this period — the nightly batch runs at 22:00 UTC and verdicts land at 07:00 UTC."
+              ? "Nothing analysed yet in this period — the nightly batch runs at 22:00 UTC and verdicts land at 07:00 UTC."
               : "No articles in selected period."}
           </EmptyMessage>
         ) : (
           <ul
             className={cn(
               "divide-y divide-border",
-              isFetching && "opacity-60 transition-opacity",
+              "transition-opacity duration-[var(--dur-base)]",
+              isFetching && "opacity-50",
             )}
           >
-            {items.map((m) => (
+            {items.map((m, i) => (
               <MentionRow
                 key={m.id}
+                index={i}
                 mention={m}
                 listQueryKey={queryKey}
                 narratives={
@@ -325,14 +340,37 @@ export function MentionsList({
   );
 }
 
+/** `www.reuters.com` → `reuters.com`, as the Top media list shows it. */
+export function displayDomain(domain: string | null): string | null {
+  return domain ? domain.replace(/^www\./i, "") : domain;
+}
+
+/**
+ * Drops a trailing " - Publisher" (Google News appends it) when the tail is
+ * the outlet's own name: "… - Reuters" on reuters.com. Any other tail stays.
+ */
+export function cleanTitle(title: string | null, domain: string | null): string | null {
+  if (!title || !domain) return title;
+  const m = title.match(/^(.*\S)\s+[-–—|]\s+([^-–—|]{2,40})$/);
+  if (!m) return title;
+  const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const tail = squash(m[2]);
+  const label = squash(displayDomain(domain)!.split(".")[0]);
+  if (tail.length < 2 || label.length < 2) return title;
+  return tail === label || tail === `the${label}` || `the${tail}` === label ? m[1] : title;
+}
+
 function MentionRow({
+  index,
   mention,
   listQueryKey,
   narratives,
 }: {
+  /** Position on the page — staggers the row's entrance. */
+  index: number;
   mention: Mention;
   listQueryKey: readonly unknown[];
-  /** Narrative chips — only filled for "All narratives" (group) scope. */
+  /** Narrative chips — only filled for "All queries" (group) scope. */
   narratives: string[];
 }) {
   const queryClient = useQueryClient();
@@ -356,7 +394,7 @@ function MentionRow({
       setError(null);
     },
     onError: (err) => {
-      setError(err instanceof Error ? err.message : "Analyze failed");
+      setError(err instanceof Error ? err.message : "Analysis failed");
     },
   });
 
@@ -376,29 +414,21 @@ function MentionRow({
   const previewIsSummary = mention.summary !== null;
 
   return (
-    <li className="-mx-2 px-2 py-3 transition-colors hover:bg-elevated/60">
+    <li
+      className="animate-reveal -mx-2 px-2 py-3 transition-colors hover:bg-elevated/60"
+      style={stagger(index)}
+    >
       <div className="flex items-center justify-between gap-3 font-mono text-[11px] text-text-tertiary">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate">{mention.source_domain ?? "—"}</span>
+          <span className="truncate">{displayDomain(mention.source_domain) ?? "—"}</span>
           <span aria-hidden>·</span>
           <span className="shrink-0">{ts}</span>
-          {previewIsSummary && (
-            <>
-              <span aria-hidden>·</span>
-              <span
-                className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-success"
-                title="Title and preview generated by the enrichment pipeline."
-              >
-                Enriched
-              </span>
-            </>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {mention.enrichment_basis === "title_only" && (
             <span
               title="Paywalled outlet — favorability scored from the headline and standfirst only"
-              className="border border-border px-1 py-px font-mono text-[9px] uppercase leading-none tracking-[0.1em] text-text-tertiary"
+              className="border border-border px-1 py-px font-mono text-[11px] uppercase leading-none tracking-[0.1em] text-text-tertiary"
             >
               title only
             </span>
@@ -423,7 +453,7 @@ function MentionRow({
             : "cursor-default",
         )}
       >
-        {mention.title ?? "(untitled)"}
+        {cleanTitle(mention.title, mention.source_domain) ?? "(untitled)"}
       </button>
 
       {narratives.length > 0 && (
@@ -431,7 +461,7 @@ function MentionRow({
           {narratives.map((name) => (
             <span
               key={name}
-              className="border border-border bg-card px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary"
+              className="border border-border bg-card px-1.5 py-0.5 font-mono text-[11px] text-text-tertiary"
             >
               {name}
             </span>
@@ -453,7 +483,7 @@ function MentionRow({
       )}
 
       {error && (
-        <div className="mt-1 font-mono text-[10px] text-danger">{error}</div>
+        <div className="mt-1 font-mono text-[11px] text-danger">{error}</div>
       )}
     </li>
   );
@@ -473,7 +503,7 @@ const STANCE_PILL: Record<
 
 function StanceBadge({ mention }: { mention: Mention }) {
   if (!mention.stance_label) {
-    return <SentimentPill variant="muted">Unscored</SentimentPill>;
+    return <SentimentPill variant="muted">Not analysed</SentimentPill>;
   }
   const { variant, label } = STANCE_PILL[mention.stance_label];
   const confidence =
@@ -541,7 +571,7 @@ function ClaimCardBlock({ card }: { card: NonNullable<Mention["claim_card"]> }) 
         </div>
       )}
       {(card.key_entities.length > 0 || card.framing_tags.length > 0) && (
-        <div className="flex flex-wrap gap-1 text-[10px] text-text-tertiary">
+        <div className="flex flex-wrap gap-1 text-[11px] text-text-tertiary">
           {card.key_entities.slice(0, 6).map((e) => (
             <span
               key={`e-${e}`}
@@ -574,10 +604,10 @@ function EnrichButton({
   onClick: () => void;
 }) {
   const label = isPending
-    ? "Analyzing…"
+    ? "Analysing…"
     : isEnriched
-      ? "Re-analyze with LLM"
-      : "Analyze with LLM";
+      ? "Analyse this article again (one AI call)"
+      : "Analyse this article (one AI call)";
   return (
     <Tooltip.Root>
       <Tooltip.Trigger
@@ -638,10 +668,10 @@ function ToggleGroup<T extends string>({
 }) {
   return (
     <div className="inline-flex items-center gap-2" title={title}>
-      <span className="font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-text-tertiary">
+      <span className="font-mono text-[11px] uppercase leading-none tracking-[0.12em] text-text-tertiary">
         {label}
       </span>
-      <div className="inline-flex items-center gap-0.5 border border-border bg-card p-0.5">
+      <div className="inline-flex h-8 items-stretch gap-0.5 border border-strong bg-card p-0.5">
         {options.map((opt) => {
           const isActive = opt.key === value;
           return (
@@ -650,7 +680,7 @@ function ToggleGroup<T extends string>({
               type="button"
               onClick={() => onChange(opt.key)}
               className={cn(
-                "px-2 py-0.5 font-mono text-[11px] leading-none transition-colors",
+                "px-2.5 font-mono text-[11px] leading-none transition-colors active:translate-y-px",
                 isActive
                   ? "bg-foreground text-primary-foreground"
                   : "bg-transparent text-text-tertiary hover:text-foreground",
@@ -683,9 +713,9 @@ function DropdownFilter<T extends string>({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors",
+          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors active:translate-y-px",
           isDefault
-            ? "border-border text-text-tertiary hover:border-strong hover:text-foreground"
+            ? "border-strong text-text-tertiary hover:border-text-tertiary hover:text-foreground"
             : "border-strong bg-elevated text-foreground",
         )}
       >
@@ -731,7 +761,7 @@ function PageButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "border border-border bg-card px-2 py-1 font-mono text-[11px] transition-colors",
+        "inline-flex h-8 items-center border border-strong bg-card px-2.5 font-mono text-[11px] transition-colors enabled:active:translate-y-px",
         disabled
           ? "cursor-not-allowed text-text-tertiary opacity-50"
           : "text-text-secondary hover:border-strong hover:text-foreground",

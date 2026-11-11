@@ -35,7 +35,7 @@ export function AdvancedIntro() {
     <p className="mt-1 text-xs text-text-tertiary">
       Technical settings for reports and AI features.
       {on === false && " AI is switched off, so sections marked Off do nothing right now."}{" "}
-      Narratives live under Narratives.
+      Queries live under Queries.
     </p>
   );
 }

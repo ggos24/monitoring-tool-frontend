@@ -902,8 +902,38 @@ export type CampaignHeadline = {
     /** WS-4 adding. */
     countries?: { iso2: string | null; count: number }[];
   };
+  /** Every relevant article in scope, whichever collector brought it.
+   *  Absent on a backend older than the all-sources change. */
+  all_sources?: CampaignTotals & {
+    by_source: CampaignSourceLane[];
+    compare_from: string | null;
+    comparable_lanes: string[];
+    /** Like-for-like subset for the change vs the other window: only the
+     *  sources whose history covers the earlier window. null = none does
+     *  (or no `compare_from` was sent). */
+    comparable: CampaignTotals | null;
+  };
   /** WS-4 adding. Newest GKG file ingested; null = nothing ingested yet. */
   last_ingested_at?: string | null;
+};
+
+export type CampaignTotals = {
+  articles: number;
+  outlets: number;
+  pool_articles: number | null;
+  pool_share: number | null;
+  favorability: CampaignFavorability;
+  countries?: { iso2: string | null; count: number }[];
+};
+
+/** One source lane: "gkg" (the GDELT archive) or a collector code. */
+export type CampaignSourceLane = {
+  code: string;
+  articles: number;
+  /** First day (YYYY-MM-DD) the lane's data is comparable from. */
+  comparable_since: string | null;
+  /** Covers the earlier window? null when no comparison was requested. */
+  comparable: boolean | null;
 };
 
 /** U-axis provenance: GKG page link, GKG title match, DOC text mention. */

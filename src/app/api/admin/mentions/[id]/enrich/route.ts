@@ -35,7 +35,10 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "id must be numeric" }, { status: 400 });
   }
 
-  const upstream = await fetch(`${API_URL}/api/mentions/${id}/enrich`, {
+  // `force=true`: a click on one article is a deliberate one-off, so it
+  // runs even while the nightly analysis is switched off (the backend
+  // otherwise answers 409). One call, one article.
+  const upstream = await fetch(`${API_URL}/api/mentions/${id}/enrich?force=true`, {
     method: "POST",
     headers: { "X-Admin-Key": ADMIN_API_KEY },
   });

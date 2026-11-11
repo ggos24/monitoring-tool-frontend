@@ -14,7 +14,7 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="mt-1 text-xs text-text-tertiary">
-            What each campaign narrative collects and why. Report and AI
+            What each campaign query collects and why. Report and AI
             settings live under Advanced.
           </p>
         </header>

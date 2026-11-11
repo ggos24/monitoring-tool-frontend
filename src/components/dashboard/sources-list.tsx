@@ -1,10 +1,12 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { RefreshLine } from "@/components/ui/refresh-line";
+import { stagger } from "@/lib/motion";
 import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
 import type { DateWindow } from "@/lib/period";
@@ -30,11 +32,12 @@ export function SourcesList({
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = scope !== null;
-  const LIMIT = 25;
-  // /api/stats/sources caps `limit` at 50 (422 above that).
+  // /api/stats/sources caps `limit` at 50 (422 above that). The panel is as
+  // tall as the article list next to it and scrolls inside, so show the cap.
+  const LIMIT = 50;
   const PREV_LIMIT = 50;
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, isPlaceholderData, error, refetch } = useQuery({
     queryKey: ["sources", scope, country, source, LIMIT, win.from, win.to],
     queryFn: () =>
       apiClient.topSources(scope!, win.days, LIMIT, country, {
@@ -43,10 +46,11 @@ export function SourcesList({
         date_to: win.to,
       }),
     enabled,
+    placeholderData: keepPreviousData,
   });
 
-  // Previous window, wider than the visible top so a domain that slipped
-  // out of the top N still gets a real previous count (not "new").
+  // Previous window's top 50: a domain outside it reads as "new" (the
+  // backend cap; in practice a query has fewer than 50 media).
   const previous = useQuery({
     queryKey: ["sources", scope, country, source, PREV_LIMIT, win.prevFrom, win.prevTo],
     queryFn: () =>
@@ -56,22 +60,35 @@ export function SourcesList({
         date_to: win.prevTo,
       }),
     enabled: enabled && compare,
+    placeholderData: enabled && compare ? keepPreviousData : undefined,
   });
   const prevByDomain = previous.data
     ? new Map(previous.data.map((s) => [s.domain, s.count] as const))
     : null;
 
   return (
-    <div className="flex h-full flex-col bg-card p-5">
+    <div
+      className="relative flex h-full min-h-0 flex-col bg-card p-5"
+      data-refreshing={isPlaceholderData || undefined}
+    >
+      <RefreshLine active={isPlaceholderData} />
       <KickerLabel>Top media</KickerLabel>
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        Top {LIMIT} media by number of articles
+        {data && data.length > 0 && data.length < LIMIT
+          ? `All ${data.length} media by number of articles`
+          : `Top ${LIMIT} media by number of articles`}
       </div>
 
       {!enabled || isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full bg-elevated" />
+        // Row-shaped: icon, flag, name, count — the height of a real row.
+        <div aria-hidden>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex h-[29px] items-center gap-2">
+              <Skeleton className="size-4" />
+              <Skeleton className="h-3 w-4" />
+              <Skeleton className="h-3" style={{ width: `${88 + ((i * 37) % 64)}px` }} />
+              <Skeleton className="ml-auto h-3 w-6" />
+            </div>
           ))}
         </div>
       ) : error ? (
@@ -89,14 +106,15 @@ export function SourcesList({
         <EmptyMessage>No sources in selected period.</EmptyMessage>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto max-lg:max-h-[480px]">
             <div className="sticky top-0 z-10 bg-card">
               <ColumnHeader showDelta={prevByDomain !== null} />
             </div>
             <ul className="-mx-2">
-              {data.map((s) => (
+              {data.map((s, i) => (
                 <SourceRow
                   key={s.domain}
+                  index={i}
                   domain={s.domain}
                   count={s.count}
                   countryIso2={s.country_iso2 ?? null}
@@ -109,9 +127,6 @@ export function SourcesList({
               ))}
             </ul>
           </div>
-          <div className="mt-3 shrink-0 border-t border-border pt-3 font-mono text-[11px] text-muted-foreground tabular-nums">
-            {data.length} media
-          </div>
         </div>
       )}
     </div>
@@ -119,6 +134,7 @@ export function SourcesList({
 }
 
 function SourceRow({
+  index,
   domain,
   count,
   countryIso2,
@@ -128,6 +144,8 @@ function SourceRow({
   isActive,
   onToggle,
 }: {
+  /** Position in the list — staggers the row's entrance. */
+  index: number;
   domain: string;
   count: number;
   countryIso2: string | null;
@@ -138,7 +156,7 @@ function SourceRow({
   onToggle: (domain: string) => void;
 }) {
   return (
-    <li>
+    <li className="animate-reveal" style={stagger(index)}>
       <button
         type="button"
         onClick={() => onToggle(domain)}
@@ -194,7 +212,7 @@ const CHANGE_COL = "w-14 text-right";
 
 function ColumnHeader({ showDelta }: { showDelta: boolean }) {
   const cls =
-    "font-mono text-[9px] uppercase leading-none tracking-[0.12em] text-muted-foreground";
+    "font-mono text-[11px] uppercase leading-none tracking-[0.12em] text-text-tertiary";
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-border pb-2">
       <span className={cls}>Media</span>

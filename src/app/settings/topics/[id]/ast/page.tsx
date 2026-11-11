@@ -133,14 +133,14 @@ function RedirectToNarrative({ id }: { id: number }) {
   return (
     <div className="border border-border bg-card p-5">
       <p className="font-mono text-[12px] text-text-secondary">
-        Narrative rules are kept in reviewed files. Opening this narrative in Settings →
-        Narratives…
+        Query rules are kept in reviewed files. Opening this query in Settings →
+        Queries…
       </p>
       <Link
         href={target}
         className="mt-3 inline-block font-mono text-[11px] text-sky-300 hover:underline"
       >
-        Open Narratives
+        Open Queries
       </Link>
     </div>
   );

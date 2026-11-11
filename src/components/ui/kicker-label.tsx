@@ -8,13 +8,13 @@ export function KickerLabel({
   className?: string;
 }) {
   return (
-    <div
+    <h2
       className={cn(
-        "font-mono text-[10px] uppercase leading-none tracking-[0.1em] text-muted-foreground",
+        "font-mono text-[11px] uppercase leading-none tracking-[0.1em] text-text-tertiary",
         className,
       )}
     >
       {children}
-    </div>
+    </h2>
   );
 }

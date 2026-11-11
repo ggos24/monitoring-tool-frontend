@@ -31,7 +31,7 @@ export function PeriodToggle({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div role="group" aria-label="Period" className="inline-flex h-9 items-stretch gap-0.5 border border-border bg-card p-0.5">
+      <div role="group" aria-label="Period" className="inline-flex h-9 items-stretch gap-0.5 border border-strong bg-card p-0.5">
         {PRESETS.map((p) => (
           <Segment
             key={p.days}

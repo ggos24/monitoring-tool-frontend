@@ -18,10 +18,8 @@ import { TimelineChart } from "@/components/dashboard/timeline-chart";
 import { SourcesList } from "@/components/dashboard/sources-list";
 import {
   MentionsList,
-  type SourceFilter,
-} from "@/components/dashboard/mentions-list";
+  type SourceFilter, type StanceFilter } from "@/components/dashboard/mentions-list";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
-import { CoverageNote } from "@/components/dashboard/coverage-note";
 import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
 import { DEFAULT_PERIOD, loadFilters, saveFilters } from "@/lib/dashboard-filters";
 import { isCampaignGroupName } from "@/lib/narrative-rules";
@@ -37,6 +35,12 @@ export default function Home() {
   // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
   // every panel scopes to that day instead of the rolling period.
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Tone filter of the article list; the tone block's rows toggle it.
+  const [stance, setStance] = useState<StanceFilter>("all");
+  const toggleStance = (label: StanceFilter) => {
+    setStance((prev) => (prev === label ? "all" : label));
+    document.getElementById("articles")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const [source, setSource] = useState<SourceFilter>("all");
   // Δ vs the previous equal-length window on KPIs, sources, countries,
   // favorability, plus the dashed previous-period line on the timeline.
@@ -222,7 +226,6 @@ export default function Home() {
                   </>
                 }
               />
-              <CoverageNote />
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
@@ -242,12 +245,18 @@ export default function Home() {
                   win={win}
                   compare={compare}
                   country={country}
+                  selected={stance}
+                  onSelect={toggleStance}
                 />
               </div>
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-7">
+              {/* The panel keeps its natural height and stays in view under
+                  the top bar while the article list scrolls; a list taller
+                  than the screen scrolls inside the panel. */}
               <div className="bg-card lg:col-span-2">
+                <div className="flex flex-col lg:sticky lg:top-14 lg:max-h-[calc(100vh-3.5rem)]">
                 <SourcesList
                   scope={scope}
                   win={win}
@@ -258,8 +267,9 @@ export default function Home() {
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
                 />
+                </div>
               </div>
-              <div className="bg-card lg:col-span-5">
+              <div id="articles" className="scroll-mt-4 bg-card lg:col-span-5">
                 <MentionsList
                   scope={scope}
                   win={win}
@@ -267,6 +277,8 @@ export default function Home() {
                   domain={selectedDomain}
                   country={country}
                   source={source}
+                  stance={stance}
+                  onChangeStance={setStance}
                   onChangeSource={setSource}
                   onClearDomain={() => setSelectedDomain(null)}
                 />
@@ -301,13 +313,19 @@ function CompareToggle({
       <span
         aria-hidden
         className={cn(
-          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors",
-          value ? "justify-end bg-elevated" : "justify-start",
+          "inline-flex h-3 w-6 items-center border border-strong p-px transition-colors duration-[var(--dur-base)]",
+          value && "bg-elevated",
         )}
       >
-        <span className={cn("size-2", value ? "bg-foreground" : "bg-text-tertiary")} />
+        {/* The knob slides (12px of travel) instead of jumping sides. */}
+        <span
+          className={cn(
+            "size-2 transition-[translate,background-color] duration-[var(--dur-base)]",
+            value ? "translate-x-3 bg-foreground" : "bg-text-tertiary",
+          )}
+        />
       </span>
-      Compare
+      vs previous period
     </button>
   );
 }
