@@ -111,8 +111,13 @@ export function todayUtc(): string {
 }
 
 /**
- * One rule for every "vs previous period" figure on the dashboard (KPI
- * cards, sources, countries, favorability):
+ * "vs previous period" figures: one unit per widget, never a unit that
+ * flips from row to row.
+ *  - lists   → diffChange: the plain difference in articles, "+44", "−3",
+ *              in the same unit as the count column next to it (media and
+ *              country lists). Rows there are mostly small numbers, where a
+ *              percentage is noise (1 → 2 reads "+100%").
+ * The rest (KPI cards, chart totals, favorability):
  *  - counts  → relative change, whole percent: "+25%", "−37%";
  *              previous 0 → "new" (or "—" when both are 0);
  *              previous under SMALL_BASE → the plain difference, "+45":
@@ -155,6 +160,20 @@ export function countChange(
   const pct = Math.round(((current - previous) / previous) * 100);
   if (pct === 0) return { text: "±0%", direction: "flat" };
   return { text: signed(pct, 0), direction: pct > 0 ? "up" : "down" };
+}
+
+/** Change of a count in a list row: always the plain difference, "+44". */
+export function diffChange(
+  current: number | undefined | null,
+  previous: number | undefined | null,
+): Change | undefined {
+  if (current == null || previous == null) return undefined;
+  if (previous === 0) {
+    return current > 0 ? { text: "new", direction: "new" } : { text: "—", direction: "none" };
+  }
+  const diff = current - previous;
+  if (diff === 0) return { text: "±0", direction: "flat" };
+  return { text: signed(diff, 0, ""), direction: diff > 0 ? "up" : "down" };
 }
 
 /** Change of a share (0–1): relative, like a count — 5.8% → 3.9% = "−33%". */
