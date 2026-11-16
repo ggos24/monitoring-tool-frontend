@@ -126,3 +126,9 @@ test("what the system decided", () => {
   assert.equal(systemIncluded("no", 1, true), false);
   assert.equal(systemIncluded(undefined, 1, true), null);
 });
+
+test("Yes clears the better-fit query, No and Borderline keep it", () => {
+  const d = { ...applyVerdict(EMPTY_DRAFT, "no"), betterFit: 13 };
+  assert.equal(applyVerdict(d, "border").betterFit, 13);
+  assert.equal(applyVerdict(d, "yes").betterFit, null);
+});

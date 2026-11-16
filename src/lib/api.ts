@@ -519,10 +519,19 @@ export const apiClient = {
     ),
   reviewItem: (itemId: number, editor: string) =>
     api<ReviewItemDetail>(`/api/review/items/${itemId}?${new URLSearchParams({ editor })}`),
-  saveReviewLabels: (itemId: number, editor: string, labels: ReviewLabelInput[]) =>
+  saveReviewLabels: (
+    itemId: number,
+    editor: string,
+    labels: ReviewLabelInput[],
+    fit?: { taskTopicId: number; betterFitTopicId: number | null },
+  ) =>
     localApi<ReviewSaved>(`/api/admin/review/items/${itemId}/labels`, {
       method: "PUT",
-      body: { editor, labels },
+      body: {
+        editor,
+        labels,
+        ...(fit ? { task_topic_id: fit.taskTopicId, better_fit_topic_id: fit.betterFitTopicId } : {}),
+      },
     }),
   boundaryQuestions: (editor: string) =>
     api<BoundaryQuestion[]>(
