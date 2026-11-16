@@ -36,13 +36,13 @@ import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
-export type StanceFilter = "all" | StanceLabel;
+import type { SourceFilter, StanceFilter } from "@/lib/article-filters";
+export type { SourceFilter, StanceFilter };
 // Enrichment runs as one nightly batch (submit 22:00 UTC, verdicts land
 // 07:00 UTC), so the newest-first feed always opens on rows the pipeline
 // hasn't reached yet. This filter is how you get to what *has* been
 // analyzed without scrolling past a day of pending rows.
 type EnrichedFilter = "all" | "enriched" | "pending";
-export type SourceFilter = "all" | "gn" | "gdelt" | "firehose" | "rss";
 const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
   { key: "all", label: "All" },
   { key: "supportive", label: "Favorable" },

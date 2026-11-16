@@ -4,6 +4,12 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
+import {
+  activeFilterLabels,
+  type SourceFilter,
+  type StanceFilter,
+} from "@/lib/article-filters";
+import { ActiveFilters } from "@/components/dashboard/active-filters";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { RefreshLine } from "@/components/ui/refresh-line";
 import { stagger } from "@/lib/motion";
@@ -20,6 +26,7 @@ export function SourcesList({
   compare,
   country,
   source,
+  stance = "all",
   selectedDomain,
   onToggleDomain,
 }: {
@@ -27,7 +34,9 @@ export function SourcesList({
   win: DateWindow;
   compare: boolean;
   country: string | null;
-  source: "all" | "gn" | "gdelt" | "firehose" | "rss";
+  source: SourceFilter;
+  /** Favorability filter of the article list: rank media by those articles. */
+  stance?: StanceFilter;
   selectedDomain: string | null;
   onToggleDomain: (domain: string) => void;
 }) {
@@ -38,10 +47,11 @@ export function SourcesList({
   const PREV_LIMIT = 50;
 
   const { data, isLoading, isPlaceholderData, error, refetch } = useQuery({
-    queryKey: ["sources", scope, country, source, LIMIT, win.from, win.to],
+    queryKey: ["sources", scope, country, source, stance, LIMIT, win.from, win.to],
     queryFn: () =>
       apiClient.topSources(scope!, win.days, LIMIT, country, {
         source: source === "all" ? undefined : source,
+        stance_label: stance === "all" ? undefined : stance,
         date_from: win.from,
         date_to: win.to,
       }),
@@ -52,10 +62,11 @@ export function SourcesList({
   // Previous window's top 50: a domain outside it reads as "new" (the
   // backend cap; in practice a query has fewer than 50 media).
   const previous = useQuery({
-    queryKey: ["sources", scope, country, source, PREV_LIMIT, win.prevFrom, win.prevTo],
+    queryKey: ["sources", scope, country, source, stance, PREV_LIMIT, win.prevFrom, win.prevTo],
     queryFn: () =>
       apiClient.topSources(scope!, win.days, PREV_LIMIT, country, {
         source: source === "all" ? undefined : source,
+        stance_label: stance === "all" ? undefined : stance,
         date_from: win.prevFrom,
         date_to: win.prevTo,
       }),
@@ -73,6 +84,7 @@ export function SourcesList({
     >
       <RefreshLine active={isPlaceholderData} />
       <KickerLabel>Top media</KickerLabel>
+      <ActiveFilters labels={activeFilterLabels({ stance, source })} className="mt-2" />
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
         {data && data.length > 0 && data.length < LIMIT
           ? `All ${data.length} media by number of articles`

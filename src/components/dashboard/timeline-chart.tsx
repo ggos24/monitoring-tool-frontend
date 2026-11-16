@@ -15,6 +15,12 @@ import {
 } from "recharts";
 
 import { apiClient } from "@/lib/api";
+import {
+  activeFilterLabels,
+  type SourceFilter,
+  type StanceFilter,
+} from "@/lib/article-filters";
+import { ActiveFilters } from "@/components/dashboard/active-filters";
 import type { ScopeParam } from "@/lib/types";
 import { countChange, formatDayLabel, prevRangeLabel, type DateWindow } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -46,12 +52,19 @@ const TICK_STYLE = {
  * headline: only sources that covered the previous window too), the same
  * figure as the KPI card; without that endpoint it falls back to the plain
  * difference of the two totals.
+ *
+ * The article-list filters (favorability, collector, outlet) narrow the bars
+ * too. The like-for-like figure counts every article, so while one is on the
+ * header change is the plain difference of the two filtered totals.
  */
 export function TimelineChart({
   scope,
   win,
   compare,
   country,
+  stance = "all",
+  source = "all",
+  domain = null,
   selectedDay,
   onSelectDay,
 }: {
@@ -61,6 +74,10 @@ export function TimelineChart({
   /** Pair each bar with the previous equal-length window. */
   compare: boolean;
   country: string | null;
+  stance?: StanceFilter;
+  source?: SourceFilter;
+  /** Outlet picked in Top media. */
+  domain?: string | null;
   selectedDay: string | null;
   /** Toggles: the selected day again clears the filter. */
   onSelectDay: (day: string) => void;
@@ -68,24 +85,39 @@ export function TimelineChart({
   const enabled = scope !== null;
   const granularity = win.granularity;
   const canDrill = granularity === "day";
+  const listFilters = {
+    stance_label: stance === "all" ? undefined : stance,
+    source: source === "all" ? undefined : source,
+    source_domain: domain,
+  };
+  const filterLabels = activeFilterLabels({ stance, source, domain });
+  const listFiltered = filterLabels.length > 0;
 
   const current = useQuery({
-    queryKey: ["timeline", scope, granularity, country, win.from, win.to],
+    queryKey: ["timeline", scope, granularity, country, stance, source, domain, win.from, win.to],
     queryFn: () =>
-      apiClient.timeline(scope!, win.days, granularity, country, {
-        date_from: win.from,
-        date_to: win.to,
-      }),
+      apiClient.timeline(
+        scope!,
+        win.days,
+        granularity,
+        country,
+        { date_from: win.from, date_to: win.to },
+        listFilters,
+      ),
     enabled,
     placeholderData: keepPreviousData,
   });
   const previous = useQuery({
-    queryKey: ["timeline", scope, granularity, country, win.prevFrom, win.prevTo],
+    queryKey: ["timeline", scope, granularity, country, stance, source, domain, win.prevFrom, win.prevTo],
     queryFn: () =>
-      apiClient.timeline(scope!, win.days, granularity, country, {
-        date_from: win.prevFrom,
-        date_to: win.prevTo,
-      }),
+      apiClient.timeline(
+        scope!,
+        win.days,
+        granularity,
+        country,
+        { date_from: win.prevFrom, date_to: win.prevTo },
+        listFilters,
+      ),
     enabled: enabled && compare,
     placeholderData: enabled && compare ? keepPreviousData : undefined,
   });
@@ -114,7 +146,8 @@ export function TimelineChart({
   const campaign = useCampaignHeadlines(scope, win, country, compare);
   const cmp = comparableTotals(campaign.current.data);
   const cmpPrev = comparableTotals(campaign.previous.data);
-  const likeForLike = compare && campaign.current.data?.all_sources !== undefined;
+  const likeForLike =
+    compare && !listFiltered && campaign.current.data?.all_sources !== undefined;
   const change = !showPrev
     ? undefined
     : likeForLike
@@ -168,6 +201,7 @@ export function TimelineChart({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div>
           <KickerLabel>Articles over time</KickerLabel>
+          <ActiveFilters labels={filterLabels} className="mt-2" />
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             {!enabled || isLoading ? (
               <Skeleton className="h-6 w-32" />
