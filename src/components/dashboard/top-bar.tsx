@@ -21,6 +21,7 @@ type NavItem = {
 const PRIMARY_NAV: NavItem[] = [
   { label: "Overview", href: "/", routable: true },
   { label: "Reports", href: "/reports", routable: true, preserveScope: true },
+  { label: "Review", href: "/review", routable: true },
 ];
 
 export function TopBar({ scope }: { scope: ScopeParam | null }) {
@@ -77,7 +78,10 @@ export function TopBar({ scope }: { scope: ScopeParam | null }) {
 
         <nav className="hidden items-center gap-1 md:flex">
           {PRIMARY_NAV.map((item) => {
-            const isActive = item.routable && pathname === item.href;
+            const isActive =
+              item.routable &&
+              (pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(`${item.href}/`)));
             const className = cn(
               "px-3 py-1.5 font-mono text-xs transition-colors",
               item.routable ? "cursor-pointer" : "cursor-default",
