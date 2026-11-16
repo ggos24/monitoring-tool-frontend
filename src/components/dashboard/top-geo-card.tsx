@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
-import { countChange, type DateWindow } from "@/lib/period";
+import { diffChange, type DateWindow } from "@/lib/period";
 import { ChangeBadge } from "./kpi-card";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -116,7 +116,7 @@ export function TopGeoCard({
   );
 }
 
-/** Change of a count vs the previous period, by the shared rule (lib/period). */
+/** List-row change vs the previous period: plain difference (lib/period diffChange). */
 export function CountDelta({
   current,
   previous,
@@ -128,7 +128,7 @@ export function CountDelta({
   title?: string;
   className?: string;
 }) {
-  const change = countChange(current, previous)!;
+  const change = diffChange(current, previous)!;
   return (
     <ChangeBadge
       change={change}
