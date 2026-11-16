@@ -957,3 +957,93 @@ export type PickupsResponse = {
   items: Pickup[];
   truncated: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Review — editors label articles per campaign query (backend /api/review)
+// ---------------------------------------------------------------------------
+export type Verdict = "yes" | "border" | "no";
+export type BoundaryAnswerValue = "yes" | "no" | "unsure";
+
+export type ReviewQuery = {
+  number: number;
+  topic_id: number | null;
+  title: string;
+  subtopics: string[];
+  basic_keywords: string | null;
+  detailed_keywords: string | null;
+};
+
+export type ReviewRoundProgress = { round: number; total: number; done: number };
+
+export type ReviewBatch = {
+  id: number;
+  name: string;
+  kind: "audit" | "monthly";
+  topic_id: number | null;
+  topic_ids: number[];
+  rounds: ReviewRoundProgress[];
+};
+
+export type ReviewItem = {
+  id: number;
+  batch_id: number;
+  round: number;
+  position: number;
+  outlet: string | null;
+  published_date: string | null;
+  headline: string;
+  url: string;
+  opening: string | null;
+};
+
+export type ReviewLabel = {
+  topic_id: number;
+  verdict: Verdict;
+  subtopic: number | null;
+  comment: string | null;
+  editor: string;
+  updated_at?: string | null;
+};
+
+export type ReviewReference = {
+  system_put_it_in?: string;
+  auditor?: Record<string, string>;
+  auditor_subtopic?: Record<string, string>;
+  auditor_note?: string;
+  text_available?: string;
+  source?: string;
+  sample_group?: string;
+  method?: string | null;
+  reason?: string | null;
+  judge?: { model?: string | null; verdict?: { belongs?: boolean; subtopic?: string; reason?: string } | null };
+};
+
+export type ReviewReveal = { reference: ReviewReference; others: ReviewLabel[] };
+
+export type ReviewNext = { item: ReviewItem | null; progress: ReviewRoundProgress };
+
+export type ReviewLabelInput = {
+  topic_id: number;
+  verdict: Verdict;
+  subtopic: number | null;
+  comment: string | null;
+};
+
+export type ReviewSaved = { mine: ReviewLabel[]; reveal: ReviewReveal };
+
+export type BoundaryAnswer = {
+  editor: string;
+  answer: BoundaryAnswerValue;
+  comment: string | null;
+  updated_at?: string | null;
+};
+
+export type BoundaryQuestion = {
+  id: number;
+  number: number;
+  query_number: number;
+  question: string;
+  example_headline: string | null;
+  mine: BoundaryAnswer | null;
+  others: BoundaryAnswer[] | null;
+};

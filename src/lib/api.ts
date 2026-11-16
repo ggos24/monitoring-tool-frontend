@@ -1,4 +1,12 @@
 import type {
+  BoundaryAnswer,
+  BoundaryAnswerValue,
+  BoundaryQuestion,
+  ReviewBatch,
+  ReviewLabelInput,
+  ReviewNext,
+  ReviewQuery,
+  ReviewSaved,
   CountryAttribution,
   CountryCount,
   CampaignCoverage,
@@ -487,5 +495,42 @@ export const apiClient = {
   deleteTopicGroup: (id: number) =>
     localApi<{ deleted: number }>(`/api/admin/topic-groups/${id}`, {
       method: "DELETE",
+    }),
+
+  // Review — reads go to the backend directly; writes through the
+  // /api/admin/review proxy, which adds the admin key server-side.
+  reviewQueries: () => api<{ queries: ReviewQuery[] }>("/api/review/queries"),
+  reviewBatches: (editor: string, topics: number[]) =>
+    api<ReviewBatch[]>(
+      `/api/review/batches?${new URLSearchParams({ editor, topics: topics.join(",") })}`,
+    ),
+  reviewNext: (
+    batchId: number,
+    params: { editor: string; topics: number[]; round: number; after?: number },
+  ) =>
+    api<ReviewNext>(
+      `/api/review/batches/${batchId}/next?${new URLSearchParams({
+        editor: params.editor,
+        topics: params.topics.join(","),
+        round: String(params.round),
+        after: String(params.after ?? -1),
+      })}`,
+    ),
+  saveReviewLabels: (itemId: number, editor: string, labels: ReviewLabelInput[]) =>
+    localApi<ReviewSaved>(`/api/admin/review/items/${itemId}/labels`, {
+      method: "PUT",
+      body: { editor, labels },
+    }),
+  boundaryQuestions: (editor: string) =>
+    api<BoundaryQuestion[]>(
+      `/api/review/boundary-questions?${new URLSearchParams({ editor })}`,
+    ),
+  saveBoundaryAnswer: (
+    questionId: number,
+    body: { editor: string; answer: BoundaryAnswerValue; comment: string | null },
+  ) =>
+    localApi<BoundaryAnswer>(`/api/admin/review/boundary-questions/${questionId}/answer`, {
+      method: "PUT",
+      body,
     }),
 };
