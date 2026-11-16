@@ -143,6 +143,16 @@ export const VERDICT_CHOICE: Record<VerdictValue, string> = {
   no: "No",
 };
 
+/** The AI judge's answer as yes / border / no: the labels format, or a legacy belongs-only verdict. */
+export function judgeLabel(
+  verdict: { label?: VerdictValue; belongs?: boolean | null } | null | undefined,
+): VerdictValue | null {
+  if (!verdict) return null;
+  if (verdict.label === "yes" || verdict.label === "border" || verdict.label === "no") return verdict.label;
+  if (typeof verdict.belongs === "boolean") return verdict.belongs ? "yes" : "no";
+  return null;
+}
+
 export const HOWTO_KEY = "u24-review-howto-hidden";
 
 /** Link to one task: a batch, one query, one part. */
