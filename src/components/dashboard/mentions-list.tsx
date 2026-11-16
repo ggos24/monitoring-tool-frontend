@@ -26,7 +26,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -188,12 +191,14 @@ export function MentionsList({
         </div>
       </div>
 
-      {/* Everyday filters in one row (search + favorability); the
-          technical ones (which collector, analysis state) sit in compact
-          dropdowns on the right. */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="relative">
+      {/* One row, nothing reflows when a filter changes: every control but
+          the search box has a fixed width (Filters shows a count, not the
+          value, Reset keeps its slot while hidden) and sits on the right, so
+          the media chip only narrows the search box. The technical filters
+          (collector, analysis state) share one menu to leave the row room. */}
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-40 flex-1 items-center gap-2">
+          <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
@@ -201,12 +206,29 @@ export function MentionsList({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search articles..."
               className={cn(
-                "h-8 w-full border border-strong bg-card pr-2 pl-7 sm:w-64",
+                "h-8 w-full border border-strong bg-card pr-2 pl-7",
                 "font-mono text-[11px] text-foreground placeholder:text-text-tertiary",
                 "outline-none transition-colors hover:border-text-tertiary focus:border-text-tertiary",
               )}
             />
           </div>
+          {domain && (
+            <button
+              type="button"
+              onClick={onClearDomain}
+              title="Clear media filter"
+              className={cn(
+                "group inline-flex h-8 max-w-48 shrink-0 items-center gap-1.5 border border-strong bg-elevated pr-1 pl-2",
+                "font-mono text-[11px] text-foreground transition-colors hover:border-strong hover:bg-overlay",
+              )}
+            >
+              <span className="text-text-tertiary">media:</span>
+              <span className="truncate">{domain}</span>
+              <X className="size-3 shrink-0 text-text-tertiary transition-colors group-hover:text-foreground" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
           <ToggleGroup
             label="Tone"
             title={FAVORABILITY_TOOLTIP}
@@ -214,47 +236,38 @@ export function MentionsList({
             onChange={onChangeStance}
             options={STANCE_OPTIONS}
           />
-          {domain && (
-            <button
-              type="button"
-              onClick={onClearDomain}
-              title="Clear media filter"
-              className={cn(
-                "group inline-flex h-8 items-center gap-1.5 border border-strong bg-elevated pr-1 pl-2",
-                "font-mono text-[11px] text-foreground transition-colors hover:border-strong hover:bg-overlay",
-              )}
-            >
-              <span className="text-text-tertiary">media:</span>
-              <span>{domain}</span>
-              <X className="size-3 text-text-tertiary transition-colors group-hover:text-foreground" />
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <DropdownFilter
-            label="Collected via"
-            value={source}
-            onChange={onChangeSource}
-            options={SOURCE_OPTIONS}
+          <FiltersMenu
+            sections={[
+              {
+                label: "Collected via",
+                value: source,
+                onChange: (v) => onChangeSource(v as SourceFilter),
+                options: SOURCE_OPTIONS,
+              },
+              {
+                label: "Analysis",
+                value: enriched,
+                onChange: (v) => setEnriched(v as EnrichedFilter),
+                options: ENRICHED_OPTIONS,
+              },
+            ]}
           />
-          <DropdownFilter
-            label="Analysis"
-            value={enriched}
-            onChange={setEnriched}
-            options={ENRICHED_OPTIONS}
-          />
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className={cn(
-                "ml-1 font-mono text-[11px] uppercase tracking-[0.1em]",
-                "text-text-secondary transition-colors hover:text-foreground",
-              )}
-            >
-              Reset
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            aria-hidden={!hasActiveFilters}
+            tabIndex={hasActiveFilters ? undefined : -1}
+            title="Reset filters"
+            aria-label="Reset filters"
+            className={cn(
+              "inline-flex size-8 shrink-0 items-center justify-center border border-strong",
+              "text-text-secondary transition-colors hover:border-text-tertiary hover:text-foreground",
+              !hasActiveFilters && "invisible",
+            )}
+          >
+            <X className="size-3.5" />
+          </button>
         </div>
       </div>
 
@@ -695,51 +708,68 @@ function ToggleGroup<T extends string>({
   );
 }
 
-/** A compact single-choice filter; highlighted when not on its default. */
-function DropdownFilter<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
+type FilterSection = {
   label: string;
-  value: T;
-  onChange: (v: T) => void;
-  options: { key: T; label: string }[];
-}) {
-  const current = options.find((o) => o.key === value) ?? options[0];
-  const isDefault = value === options[0].key;
+  value: string;
+  onChange: (v: string) => void;
+  options: { key: string; label: string }[];
+};
+
+/**
+ * The technical filters in one menu, one section each (first option of a
+ * section = "all", the default). The trigger stays compact: it counts the
+ * active choices ("Filters · 1"), names them on hover, and keeps a fixed
+ * width so the row never shifts.
+ */
+function FiltersMenu({ sections }: { sections: FilterSection[] }) {
+  const active = sections.filter((s) => s.value !== s.options[0].key);
+  const labelOf = (s: FilterSection) =>
+    s.options.find((o) => o.key === s.value)?.label ?? s.options[0].label;
+  const text = active.length === 0 ? "Filters" : `Filters · ${active.length}`;
+  // Hover names the active choices; the menu shows them too.
+  const title = active.map((s) => `${s.label}: ${labelOf(s)}`).join(", ") || undefined;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        title={title}
+        style={{ width: `calc(${"Filters · 9".length}ch + 2.25rem)` }}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 border px-2 font-mono text-[11px] outline-none transition-colors active:translate-y-px",
-          isDefault
-            ? "border-strong text-text-tertiary hover:border-text-tertiary hover:text-foreground"
-            : "border-strong bg-elevated text-foreground",
+          "inline-flex h-8 shrink-0 items-center justify-between gap-1.5 border border-strong px-2 font-mono text-[11px] outline-none transition-colors active:translate-y-px",
+          active.length === 0
+            ? "text-text-tertiary hover:border-text-tertiary hover:text-foreground"
+            : "bg-elevated text-foreground",
         )}
       >
-        <span>{label}:</span>
-        <span className={isDefault ? undefined : "text-foreground"}>{current.label}</span>
-        <ChevronDown className="size-3" />
+        <span className="truncate">{text}</span>
+        <ChevronDown className="size-3 shrink-0" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
         sideOffset={4}
-        className="min-w-40 border border-border bg-card p-0 text-foreground ring-0 shadow-none"
+        className="min-w-44 border border-border bg-card p-0 text-foreground ring-0 shadow-none"
       >
-        {options.map((o) => (
-          <DropdownMenuItem
-            key={o.key}
-            onClick={() => onChange(o.key)}
-            className={cn(
-              "flex cursor-default items-center px-3 py-2 font-mono text-[11px]",
-              "focus:bg-elevated focus:text-foreground",
-              o.key === value && "bg-elevated",
-            )}
-          >
-            {o.label}
-          </DropdownMenuItem>
+        {sections.map((s, i) => (
+          <div key={s.label}>
+            {i > 0 && <DropdownMenuSeparator className="mx-0 my-0 bg-border" />}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="px-3 pt-2.5 pb-1 font-mono text-[11px] font-normal uppercase tracking-[0.1em] text-text-tertiary">
+                {s.label}
+              </DropdownMenuLabel>
+              {s.options.map((o) => (
+                <DropdownMenuItem
+                  key={o.key}
+                  onClick={() => s.onChange(o.key)}
+                  className={cn(
+                    "flex cursor-default items-center px-3 py-2 font-mono text-[11px]",
+                    "focus:bg-elevated focus:text-foreground",
+                    o.key === s.value && "bg-elevated",
+                  )}
+                >
+                  {o.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </div>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
