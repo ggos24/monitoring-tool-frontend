@@ -11,8 +11,7 @@ export default function BoundaryQuestionsPage() {
         <header>
           <h1 className="font-mono text-sm uppercase tracking-[0.1em] text-foreground">Review</h1>
           <p className="mt-1 text-xs text-text-tertiary">
-            Open questions about where each query ends, from the November selection
-            audit. Your answers decide how articles on the line are counted.
+            Help us check which articles belong to each query.
           </p>
         </header>
         <ReviewNav active="boundaries" />

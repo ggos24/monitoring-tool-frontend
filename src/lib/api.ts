@@ -2,6 +2,7 @@ import type {
   BoundaryAnswer,
   BoundaryAnswerValue,
   BoundaryQuestion,
+  ReviewItemDetail,
   ReviewBatch,
   ReviewLabelInput,
   ReviewNext,
@@ -516,6 +517,8 @@ export const apiClient = {
         after: String(params.after ?? -1),
       })}`,
     ),
+  reviewItem: (itemId: number, editor: string) =>
+    api<ReviewItemDetail>(`/api/review/items/${itemId}?${new URLSearchParams({ editor })}`),
   saveReviewLabels: (itemId: number, editor: string, labels: ReviewLabelInput[]) =>
     localApi<ReviewSaved>(`/api/admin/review/items/${itemId}/labels`, {
       method: "PUT",

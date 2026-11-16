@@ -120,3 +120,63 @@ export function writeEditor(storage: Pick<Storage, "setItem" | "removeItem"> | u
     // private window / blocked storage: the name lives only in memory
   }
 }
+
+// ---------------------------------------------------------------------------
+// Task flow (one query at a time)
+// ---------------------------------------------------------------------------
+export const VERDICT_HELP: Record<VerdictValue, string> = {
+  yes: "The article is mainly about this query.",
+  border: "Only partly, or the query is a side point.",
+  no: "The article is not about this query.",
+};
+
+export const VERDICT_CHOICE: Record<VerdictValue, string> = {
+  yes: "Yes",
+  border: "Borderline",
+  no: "No",
+};
+
+export const HOWTO_KEY = "u24-review-howto-hidden";
+
+/** Link to one task: a batch, one query, one part. */
+export function taskHref(batchId: number, query: number, part = 1): string {
+  return `/review?batch=${batchId}&query=${query}&part=${part}`;
+}
+
+export function parseTask(params: { get(name: string): string | null }):
+  | { batchId: number; query: number; part: number }
+  | null {
+  const batchId = Number(params.get("batch"));
+  const query = Number(params.get("query"));
+  const part = Number(params.get("part") ?? "1") || 1;
+  if (!Number.isInteger(batchId) || batchId <= 0) return null;
+  if (![1, 2, 3].includes(query)) return null;
+  return { batchId, query, part };
+}
+
+/** "Article 38 of 150" — the one on screen, never past the total. */
+export function articleNumber(done: number, total: number): number {
+  return Math.min(done + 1, Math.max(total, 1));
+}
+
+export type TaskState = "new" | "started" | "done";
+
+export function taskState(done: number, total: number): TaskState {
+  if (total > 0 && done >= total) return "done";
+  return done > 0 ? "started" : "new";
+}
+
+export const TASK_BUTTON: Record<TaskState, string> = {
+  new: "Start",
+  started: "Continue",
+  done: "Done",
+};
+
+/** Did the system put the article in query `n`? Audit rows say e.g.
+ * "2 Winter defense & resilience" (several joined by ";"), monthly rows say
+ * "yes" / "no" for their own query. */
+export function systemIncluded(value: string | undefined | null, n: number, monthly: boolean): boolean | null {
+  if (value == null) return null;
+  if (monthly) return value === "yes" ? true : value === "no" ? false : null;
+  return new RegExp(`(^|[;,|]\\s*)${n}(\\s|$)`).test(value.trim());
+}
