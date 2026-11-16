@@ -979,6 +979,8 @@ export type ReviewBatch = {
   id: number;
   name: string;
   kind: "audit" | "monthly";
+  title: string;
+  description: string;
   topic_id: number | null;
   topic_ids: number[];
   rounds: ReviewRoundProgress[];
@@ -1019,6 +1021,12 @@ export type ReviewReference = {
 };
 
 export type ReviewReveal = { reference: ReviewReference; others: ReviewLabel[] };
+
+export type ReviewItemDetail = {
+  item: ReviewItem;
+  mine: ReviewLabel[];
+  reveal: ReviewReveal | null;
+};
 
 export type ReviewNext = { item: ReviewItem | null; progress: ReviewRoundProgress };
 

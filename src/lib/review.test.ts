@@ -97,3 +97,32 @@ test("editor storage survives broken storage", () => {
   writeEditor(broken, "Olena");
   assert.equal(readEditor(undefined), null);
 });
+
+// @ts-ignore Node's built-in TypeScript stripping requires the source suffix.
+import { articleNumber, parseTask, systemIncluded, taskHref, taskState } from "./review.ts";
+
+test("task links round-trip", () => {
+  const href = taskHref(3, 2);
+  const params = new URLSearchParams(href.split("?")[1]);
+  assert.deepEqual(parseTask(params), { batchId: 3, query: 2, part: 1 });
+  assert.equal(parseTask(new URLSearchParams("batch=1&query=7")), null);
+  assert.equal(parseTask(new URLSearchParams("query=1")), null);
+});
+
+test("article number and task state", () => {
+  assert.equal(articleNumber(37, 150), 38);
+  assert.equal(articleNumber(150, 150), 150);
+  assert.equal(taskState(0, 150), "new");
+  assert.equal(taskState(3, 150), "started");
+  assert.equal(taskState(150, 150), "done");
+});
+
+test("what the system decided", () => {
+  assert.equal(systemIncluded("2 Winter defense & resilience", 2, false), true);
+  assert.equal(systemIncluded("2 Winter defense & resilience", 1, false), false);
+  assert.equal(systemIncluded("1 Prolonged war; 3 Supply chains", 3, false), true);
+  assert.equal(systemIncluded("", 1, false), false);
+  assert.equal(systemIncluded("yes", 1, true), true);
+  assert.equal(systemIncluded("no", 1, true), false);
+  assert.equal(systemIncluded(undefined, 1, true), null);
+});
