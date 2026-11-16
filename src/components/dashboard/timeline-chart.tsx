@@ -16,7 +16,7 @@ import {
 
 import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
-import { countChange, formatDayLabel, type DateWindow } from "@/lib/period";
+import { countChange, formatDayLabel, prevRangeLabel, type DateWindow } from "@/lib/period";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { RefreshLine } from "@/components/ui/refresh-line";
@@ -40,7 +40,7 @@ const TICK_STYLE = {
  * Articles per bucket as bars (counts are discrete — a smoothed curve drew
  * peaks between days that aren't in the data). Header carries the period
  * total, its change and the peak, so the chart reads without hovering.
- * The previous window is a dashed step line, aligned by position.
+ * The previous window is a pale bar paired with each day, aligned by position.
  *
  * Bars count every source. The header change is like-for-like (campaign
  * headline: only sources that covered the previous window too), the same
@@ -58,7 +58,7 @@ export function TimelineChart({
   scope: ScopeParam | null;
   /** The period window — NOT narrowed by the day drill-down. */
   win: DateWindow;
-  /** Overlay the previous equal-length window as a dashed line. */
+  /** Pair each bar with the previous equal-length window. */
   compare: boolean;
   country: string | null;
   selectedDay: string | null;
@@ -92,8 +92,8 @@ export function TimelineChart({
   const { isLoading, error, refetch } = current;
   const refreshing = current.isPlaceholderData;
 
-  // Previous window is aligned by position (day 1 ↔ day 1), so the dashed
-  // line reads as "same point last period". Its own date goes in the tooltip.
+  // Previous window is aligned by position (day 1 ↔ day 1), so each pair
+  // reads as "same point last period". Its own date goes in the tooltip.
   // Memoised: Recharts replays the bar animation whenever `data` is a new
   // array, and a re-render (a day click) must not do that.
   const currentData = current.data;
@@ -157,9 +157,10 @@ export function TimelineChart({
 
   // Selected day at full strength, the rest dimmed; nothing selected → all even.
   const barOpacity = (date: string) => (showSelected ? (date === selectedDay ? 1 : 0.5) : 1);
-  // Share of a day's slot the bar takes; the rest shows the previous period
-  // behind it.
+  // Share of a day's slot the bar takes. With the previous period on, the
+  // slot holds a pair instead: previous on the left, this period on the right.
   const barShare = granularity === "hour" ? 0.6 : 0.45;
+  const pairShare = granularity === "hour" ? 0.8 : 0.7;
 
   return (
     <div className="relative bg-card p-5" data-refreshing={refreshing || undefined}>
@@ -195,13 +196,14 @@ export function TimelineChart({
         <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-text-tertiary">
           {showPrev && (
             <>
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5" title={win.label}>
                 <span aria-hidden className="inline-block size-2.5 bg-text-secondary" />
-                This period
+                This period · <span className="tabular-nums">{total.toLocaleString()}</span>
               </span>
-              <span className="flex items-center gap-1.5">
-                <span aria-hidden className="inline-block h-2.5 w-4 border-t-[1.5px] border-chart-5 bg-overlay" />
-                {win.prevLabel}
+              <span className="flex items-center gap-1.5" title={prevRangeLabel(win)}>
+                <span aria-hidden className="inline-block size-2.5 bg-text-secondary opacity-30" />
+                {win.prevLabel} ·{" "}
+                <span className="tabular-nums">{(prevTotal ?? 0).toLocaleString()}</span>
               </span>
             </>
           )}
@@ -271,8 +273,8 @@ export function TimelineChart({
                 minTickGap={granularity === "hour" ? 24 : 16}
                 tickFormatter={(v: string) => formatTick(v, granularity)}
               />
-              {/* Same days, hidden: lets the previous-period shade overlap
-                  the bars (two bars on one axis sit side by side). */}
+              {/* Same days, hidden: both series get the whole day slot, and
+                  the shapes below lay them out as a pair. */}
               <XAxis xAxisId="prev" dataKey="date" hide />
               <YAxis
                 tick={TICK_STYLE}
@@ -290,27 +292,38 @@ export function TimelineChart({
                   not Recharts' JS animation: a CSS animation ends in the
                   natural state, so the bars are there even when no
                   animation frame ever runs. */}
-              {/* Previous period: a quiet silhouette behind the bars, drawn on
-                  its own hidden x-axis so it overlaps them instead of sitting
-                  beside. A line over the bars got lost against them. */}
+              {/* Previous period: a pale bar paired to the left of each
+                  day's bar (same position in the previous window). */}
               {showPrev && (
                 <Bar
                   dataKey="prev"
                   xAxisId="prev"
-                  // Explicitly under the bars (300) and the hover band (200):
-                  // without it the order follows mount order, and the shade,
-                  // which mounts later, would cover the bars.
-                  zIndex={150}
                   isAnimationActive={false}
-                  shape={(p: BarShape) => <PreviousShade {...p} dim={!!showSelected} />}
+                  shape={(p: BarShape) => (
+                    <PairedBar
+                      {...p}
+                      share={pairShare}
+                      side="left"
+                      fillOpacity={0.3 * barOpacity(p.payload?.date ?? "")}
+                    />
+                  )}
                 />
               )}
               <Bar
                 dataKey="count"
                 isAnimationActive={false}
-                shape={(p: BarShape) => (
-                  <CurrentBar {...p} share={barShare} opacity={barOpacity(p.payload?.date ?? "")} />
-                )}
+                shape={(p: BarShape) =>
+                  showPrev ? (
+                    <PairedBar
+                      {...p}
+                      share={pairShare}
+                      side="right"
+                      fillOpacity={barOpacity(p.payload?.date ?? "")}
+                    />
+                  ) : (
+                    <CurrentBar {...p} share={barShare} opacity={barOpacity(p.payload?.date ?? "")} />
+                  )
+                }
               />
               {showDataMarker && firstDataDate && (
                 <ReferenceLine
@@ -343,17 +356,27 @@ function finite<T extends BarShape>(p: T): p is T & Required<Pick<BarShape, "x" 
   return [p.x, p.y, p.width, p.height].every((v) => typeof v === "number" && Number.isFinite(v));
 }
 
-/** One day of the previous period: a full-slot block with a lit top edge. */
-function PreviousShade(p: BarShape & { dim?: boolean }) {
+/**
+ * One half of a day's pair: the previous period on the left, this period on
+ * the right, together `share` of the slot with a 2px gap between them.
+ */
+function PairedBar(
+  p: BarShape & { share: number; side: "left" | "right"; fillOpacity: number },
+) {
   if (!finite(p) || p.height <= 0) return null;
-  // +0.5px so neighbouring days join without a hairline seam.
-  const right = p.x + p.width + 0.5;
+  const gap = 2;
+  const pair = p.width * p.share;
+  const width = Math.max(1.5, (pair - gap) / 2);
+  const left = p.x + (p.width - pair) / 2;
   return (
-    // Dimmed while a day is picked, so the faded bars do not merge with it.
-    <g opacity={p.dim ? 0.5 : 1}>
-      <rect x={p.x} y={p.y} width={right - p.x} height={p.height} fill={theme.bgOverlay} />
-      <line x1={p.x} x2={right} y1={p.y} y2={p.y} style={{ stroke: "var(--chart-5)" }} strokeWidth={1.5} />
-    </g>
+    <rect
+      x={p.side === "left" ? left : left + width + gap}
+      y={p.y}
+      width={width}
+      height={p.height}
+      fill={theme.textSecondary}
+      fillOpacity={p.fillOpacity}
+    />
   );
 }
 
