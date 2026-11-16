@@ -7,9 +7,11 @@ export type Draft = {
   verdict: VerdictValue | null;
   subtopic: number | null;
   comment: string;
+  /** Topic id of another query the article fits better (only with No / Borderline). */
+  betterFit?: number | null;
 };
 
-export const EMPTY_DRAFT: Draft = { verdict: null, subtopic: null, comment: "" };
+export const EMPTY_DRAFT: Draft = { verdict: null, subtopic: null, comment: "", betterFit: null };
 
 export const VERDICT_LABEL: Record<VerdictValue, string> = {
   yes: "Yes",
@@ -68,7 +70,12 @@ export function canSave(drafts: Record<number, Draft>, topicIds: number[]): bool
 
 /** Choosing "no" clears the subtopic: a subtopic only describes a yes/border. */
 export function applyVerdict(draft: Draft, verdict: VerdictValue): Draft {
-  return { ...draft, verdict, subtopic: verdict === "no" ? null : draft.subtopic };
+  return {
+    ...draft,
+    verdict,
+    subtopic: verdict === "no" ? null : draft.subtopic,
+    betterFit: verdict === "yes" ? null : (draft.betterFit ?? null),
+  };
 }
 
 /** Pressing the same subtopic again clears it. */

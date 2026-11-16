@@ -1000,6 +1000,8 @@ export type ReviewItem = {
 
 export type ReviewLabel = {
   topic_id: number;
+  /** Set when this Yes came from "fits this query better" in another query's task. */
+  via_topic_id?: number | null;
   verdict: Verdict;
   subtopic: number | null;
   comment: string | null;

@@ -32,7 +32,7 @@ type Props = { editor: string; batchId: number; queryNumber: number; part: numbe
 /** What is on screen: the next article in the queue, or one the editor went back to. */
 type Current = {
   item: ReviewItem;
-  saved: { mine: ReviewLabel; reveal: ReviewReveal } | null;
+  saved: { mine: ReviewLabel; reveal: ReviewReveal; betterFit: number | null } | null;
   editing: boolean; // true = the question is open (new article, or "Change my answer")
 };
 
@@ -41,6 +41,12 @@ export function Labelling({ editor, batchId, queryNumber, part }: Props) {
   const queriesQ = useQuery({ queryKey: ["review-queries"], queryFn: apiClient.reviewQueries });
   const query = queriesQ.data?.queries.find((q) => q.number === queryNumber && q.topic_id !== null);
   const topicId = query?.topic_id ?? null;
+  const otherQueries = (queriesQ.data?.queries ?? []).filter(
+    (q) => q.topic_id !== null && q.number !== queryNumber,
+  );
+  /** The query this editor said fits better, from their saved labels. */
+  const betterFitOf = (labels: ReviewLabel[]) =>
+    labels.find((l) => l.via_topic_id === topicId)?.topic_id ?? null;
 
   const batchesQ = useQuery({
     queryKey: ["review-batches", editor, [topicId]],
@@ -84,11 +90,18 @@ export function Labelling({ editor, batchId, queryNumber, part }: Props) {
           subtopic: draft.verdict === "no" ? null : draft.subtopic,
           comment: draft.comment.trim() || null,
         },
-      ]),
+      ], {
+        taskTopicId: topicId as number,
+        betterFitTopicId: draft.verdict === "yes" ? null : (draft.betterFit ?? null),
+      }),
     onSuccess: (result) => {
       const mine = result.mine.find((l) => l.topic_id === topicId);
       if (!current || !mine) return;
-      setCurrent({ item: current.item, saved: { mine, reveal: result.reveal }, editing: false });
+      setCurrent({
+        item: current.item,
+        saved: { mine, reveal: result.reveal, betterFit: betterFitOf(result.mine) },
+        editing: false,
+      });
       setHistory((h) => (h.includes(current.item.id) ? h : [...h, current.item.id]));
       qc.invalidateQueries({ queryKey: ["review-batches"] });
     },
@@ -119,14 +132,23 @@ export function Labelling({ editor, batchId, queryNumber, part }: Props) {
     const detail = await apiClient.reviewItem(id, editor);
     const mine = detail.mine.find((l) => l.topic_id === topicId);
     if (mine && detail.reveal) {
-      setCurrent({ item: detail.item, saved: { mine, reveal: detail.reveal }, editing: false });
+      setCurrent({
+        item: detail.item,
+        saved: { mine, reveal: detail.reveal, betterFit: betterFitOf(detail.mine) },
+        editing: false,
+      });
     }
   }, [current, history, editor, topicId]);
 
   const changeAnswer = useCallback(() => {
     if (!current?.saved) return;
     const m = current.saved.mine;
-    setDraft({ verdict: m.verdict, subtopic: m.subtopic, comment: m.comment ?? "" });
+    setDraft({
+      verdict: m.verdict,
+      subtopic: m.subtopic,
+      comment: m.comment ?? "",
+      betterFit: current.saved.betterFit,
+    });
     setCurrent({ ...current, editing: true });
   }, [current]);
 
@@ -228,6 +250,7 @@ export function Labelling({ editor, batchId, queryNumber, part }: Props) {
               {current.editing ? (
                 <QuestionCard
                   query={query}
+                  otherQueries={otherQueries}
                   draft={draft}
                   setDraft={setDraft}
                   onSave={() => save.mutate()}
@@ -245,6 +268,7 @@ export function Labelling({ editor, batchId, queryNumber, part }: Props) {
                     monthly={batch?.kind === "monthly"}
                     mine={current.saved.mine}
                     reveal={current.saved.reveal}
+                    betterFit={otherQueries.find((q) => q.topic_id === current.saved!.betterFit) ?? null}
                     onNext={goNext}
                     onChange={changeAnswer}
                     onPrevious={canGoBack ? goPrevious : null}
@@ -295,6 +319,7 @@ function ArticleCard({ item }: { item: ReviewItem }) {
 
 function QuestionCard({
   query,
+  otherQueries,
   draft,
   setDraft,
   onSave,
@@ -306,6 +331,7 @@ function QuestionCard({
   isChange,
 }: {
   query: ReviewQuery;
+  otherQueries: ReviewQuery[];
   draft: Draft;
   setDraft: (fn: (d: Draft) => Draft) => void;
   onSave: () => void;
@@ -392,6 +418,48 @@ function QuestionCard({
         </div>
       )}
 
+      {(draft.verdict === "no" || draft.verdict === "border") && otherQueries.length > 0 && (
+        <div>
+          <p className="text-sm text-text-secondary">
+            Does it fit another query better? <span className="text-text-tertiary">(optional)</span>
+          </p>
+          <div className="mt-2 space-y-1" role="radiogroup" aria-label="Fits another query better">
+            {[...otherQueries.map((q) => ({ id: q.topic_id as number, label: `Query ${q.number}: ${q.title}` })),
+              { id: null as number | null, label: "No, none of them" }].map((opt) => {
+              const on = (draft.betterFit ?? null) === opt.id;
+              return (
+                <button
+                  key={opt.id ?? "none"}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setDraft((d) => ({ ...d, betterFit: opt.id }))}
+                  className={cn(
+                    "flex w-full items-start gap-3 border px-3 py-2 text-left text-sm transition-colors",
+                    on
+                      ? "border-text-secondary bg-elevated text-foreground"
+                      : "border-border text-text-secondary hover:border-text-tertiary",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border",
+                      on ? "border-foreground" : "border-text-tertiary",
+                    )}
+                  >
+                    {on && <span className="size-2 rounded-full bg-foreground" />}
+                  </span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-xs text-text-tertiary">
+            We save it as a Yes for that query, so you will not see this article again there.
+          </p>
+        </div>
+      )}
+
       <label className="block">
         <span className="text-sm text-text-secondary">
           Comment <span className="text-text-tertiary">(optional)</span>
@@ -443,6 +511,7 @@ function SavedCard({
   monthly,
   mine,
   reveal,
+  betterFit,
   onNext,
   onChange,
   onPrevious,
@@ -451,6 +520,7 @@ function SavedCard({
   monthly: boolean;
   mine: ReviewLabel;
   reveal: ReviewReveal;
+  betterFit: ReviewQuery | null;
   onNext: () => void;
   onChange: () => void;
   onPrevious: (() => void) | null;
@@ -474,6 +544,11 @@ function SavedCard({
             Your answer: <strong className="font-medium text-foreground">{VERDICT_CHOICE[mine.verdict]}</strong>
             {mine.subtopic ? ` — ${query.subtopics[mine.subtopic - 1]}` : ""}
           </p>
+          {betterFit && (
+            <p className="mt-1 text-sm text-text-secondary">
+              Fits better: <strong className="font-medium text-foreground">Query {betterFit.number}</strong> — {betterFit.title}
+            </p>
+          )}
           {mine.comment && <p className="mt-1 text-sm text-text-tertiary">“{mine.comment}”</p>}
         </div>
       </div>
