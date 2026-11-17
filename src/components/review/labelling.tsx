@@ -16,6 +16,7 @@ import {
   applyVerdict,
   articleNumber,
   isTypingTarget,
+  judgeLabel,
   keyToAction,
   progressPercent,
   queryKey,
@@ -530,7 +531,7 @@ function SavedCard({
   const auditor = ref.auditor?.[queryKey(query.number)] as VerdictValue | undefined;
   const auditorSub = ref.auditor_subtopic?.[queryKey(query.number)];
   const others = reveal.others.filter((o) => o.topic_id === mine.topic_id);
-  const judge = ref.judge?.verdict;
+  const judge = judgeLabel(ref.judge?.verdict);
 
   return (
     <section className="space-y-4 border border-border bg-card p-5">
@@ -572,8 +573,8 @@ function SavedCard({
         {judge && (
           <Compare
             who="AI judge"
-            text={judge.belongs ? "it belongs" : "it does not belong"}
-            agrees={(mine.verdict !== "no") === judge.belongs}
+            text={VERDICT_CHOICE[judge]}
+            agrees={judge === mine.verdict}
           />
         )}
         {others.map((o) => (

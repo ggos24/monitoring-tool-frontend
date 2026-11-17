@@ -1019,7 +1019,11 @@ export type ReviewReference = {
   sample_group?: string;
   method?: string | null;
   reason?: string | null;
-  judge?: { model?: string | null; verdict?: { belongs?: boolean; subtopic?: string; reason?: string } | null };
+  judge?: {
+    model?: string | null;
+    // label: yes / border / no (labels format); belongs: legacy belongs-only verdicts (null for border).
+    verdict?: { label?: "yes" | "border" | "no"; belongs?: boolean | null; subtopic?: string | number; reason?: string } | null;
+  };
 };
 
 export type ReviewReveal = { reference: ReviewReference; others: ReviewLabel[] };

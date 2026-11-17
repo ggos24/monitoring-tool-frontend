@@ -99,7 +99,7 @@ test("editor storage survives broken storage", () => {
 });
 
 // @ts-ignore Node's built-in TypeScript stripping requires the source suffix.
-import { articleNumber, parseTask, systemIncluded, taskHref, taskState } from "./review.ts";
+import { articleNumber, judgeLabel, parseTask, systemIncluded, taskHref, taskState } from "./review.ts";
 
 test("task links round-trip", () => {
   const href = taskHref(3, 2);
@@ -131,4 +131,12 @@ test("Yes clears the better-fit query, No and Borderline keep it", () => {
   const d = { ...applyVerdict(EMPTY_DRAFT, "no"), betterFit: 13 };
   assert.equal(applyVerdict(d, "border").betterFit, 13);
   assert.equal(applyVerdict(d, "yes").betterFit, null);
+});
+
+test("judgeLabel reads the labels format and legacy verdicts", () => {
+  assert.equal(judgeLabel({ label: "border", belongs: null }), "border");
+  assert.equal(judgeLabel({ belongs: true }), "yes");
+  assert.equal(judgeLabel({ belongs: false }), "no");
+  assert.equal(judgeLabel({}), null);
+  assert.equal(judgeLabel(null), null);
 });
