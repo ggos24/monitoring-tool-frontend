@@ -3,6 +3,8 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api";
+import { activeFilterLabels, type SourceFilter } from "@/lib/article-filters";
+import { ActiveFilters } from "@/components/dashboard/active-filters";
 import {
   FAVORABILITY_TOOLTIP,
   favorabilityReadiness,
@@ -42,14 +44,20 @@ export function useFavorability(
   to: string,
   country: string | null,
   enabled = true,
+  // Article-list filters (collector, outlet); the KPI grid passes none.
+  filters: { source?: SourceFilter; domain?: string | null } = {},
 ) {
+  const source = filters.source && filters.source !== "all" ? filters.source : undefined;
+  const domain = filters.domain ?? null;
   return useQuery({
-    queryKey: ["favorability", scope, country, from, to],
+    queryKey: ["favorability", scope, country, source ?? "all", domain, from, to],
     queryFn: () =>
       apiClient.favorability(scope!, {
         date_from: from,
         date_to: to,
         country_iso2: country,
+        source,
+        source_domain: domain,
       }),
     enabled: scope !== null && enabled,
     placeholderData: enabled ? keepPreviousData : undefined,
@@ -78,6 +86,8 @@ export function FavorabilityPanel({
   win,
   compare,
   country,
+  source = "all",
+  domain = null,
   selected,
   onSelect,
   dayLabel = null,
@@ -86,6 +96,10 @@ export function FavorabilityPanel({
   win: DateWindow;
   compare: boolean;
   country: string | null;
+  /** Collector filter of the article list. */
+  source?: SourceFilter;
+  /** Outlet picked in Top media. */
+  domain?: string | null;
   /** Tone the article list is filtered by ("all" = none). */
   selected: StanceLabel | "all";
   /** Row click: filter the article list by that tone (again = clear). */
@@ -93,8 +107,13 @@ export function FavorabilityPanel({
   /** The day picked on the chart ("Oct 31"); the panel then covers only it. */
   dayLabel?: string | null;
 }) {
-  const current = useFavorability(scope, win.from, win.to, country);
-  const previous = useFavorability(scope, win.prevFrom, win.prevTo, country, compare);
+  // The tone filter itself is NOT applied: this panel is the breakdown it
+  // picks from, so its selected row is highlighted instead.
+  const current = useFavorability(scope, win.from, win.to, country, true, { source, domain });
+  const previous = useFavorability(scope, win.prevFrom, win.prevTo, country, compare, {
+    source,
+    domain,
+  });
 
   const counts = current.data?.counts;
   const readiness = statsReadiness(current.data);
@@ -158,6 +177,7 @@ export function FavorabilityPanel({
         Tone toward Ukraine
         {dayLabel && <span className="text-text-secondary"> · {dayLabel}</span>}
       </KickerLabel>
+      <ActiveFilters labels={activeFilterLabels({ source, domain })} className="mt-2" />
 
       {scope === null || current.isLoading ? (
         // Same shape as the loaded panel: figure, bar, four rows.

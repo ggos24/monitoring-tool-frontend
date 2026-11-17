@@ -213,11 +213,20 @@ export const apiClient = {
     granularity: "hour" | "day" = "day",
     country_iso2?: string | null,
     range?: { date_from: string; date_to: string },
+    // The article-list filters, so the chart counts what the list shows.
+    filters?: {
+      stance_label?: StanceLabel;
+      source?: "gn" | "gdelt" | "firehose" | "rss";
+      source_domain?: string | null;
+    },
   ) => {
     const qs = scopeQuery(scope);
     qs.set("days", String(days));
     qs.set("granularity", granularity);
     if (country_iso2) qs.set("country_iso2", country_iso2);
+    if (filters?.stance_label) qs.set("stance_label", filters.stance_label);
+    if (filters?.source) qs.set("source", filters.source);
+    if (filters?.source_domain) qs.set("source_domain", filters.source_domain);
     // Explicit range overrides `days` (one point per day/hour it touches).
     if (range) {
       qs.set("date_from", range.date_from);
@@ -252,6 +261,7 @@ export const apiClient = {
     country_iso2?: string | null,
     extra?: {
       source?: "gn" | "gdelt" | "firehose" | "rss";
+      stance_label?: StanceLabel;
       score_band?: ScoreBand;
       // "mentions" (default) — volume order; "priority" — trust-gated,
       // reach-ranked "who to watch" order (Decision 34 follow-up).
@@ -267,6 +277,7 @@ export const apiClient = {
     if (extra?.exclude_gkg) qs.set("exclude_gkg", "true");
     if (country_iso2) qs.set("country_iso2", country_iso2);
     if (extra?.source) qs.set("source", extra.source);
+    if (extra?.stance_label) qs.set("stance_label", extra.stance_label);
     if (extra?.score_band) qs.set("score_band", extra.score_band);
     if (extra?.sort && extra.sort !== "mentions") qs.set("sort", extra.sort);
     if (extra?.date_from) qs.set("date_from", extra.date_from);

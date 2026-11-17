@@ -56,13 +56,14 @@ export default function Home() {
     if (stored.period) setPeriod(stored.period);
     if (stored.country !== undefined) setCountry(stored.country);
     if (stored.source) setSource(stored.source);
+    if (stored.stance) setStance(stored.stance);
     if (stored.compare !== undefined) setCompare(stored.compare);
     setRestored(true);
   }, []);
   useEffect(() => {
     if (!restored) return;
-    saveFilters({ scope: scopeSel, period, country, source, compare });
-  }, [restored, scopeSel, period, country, source, compare]);
+    saveFilters({ scope: scopeSel, period, country, source, stance, compare });
+  }, [restored, scopeSel, period, country, source, stance, compare]);
 
   // `periodWin` drives the timeline (whole period, so a drilled day stays
   // in context); `win` drives every other panel (narrowed to the day).
@@ -124,6 +125,7 @@ export default function Home() {
     setSelectedDomain(null);
     setSelectedDay(null);
     setSource("all");
+    setStance("all");
   };
 
   const handleSelectCountry = (iso2: string | null) => {
@@ -236,6 +238,9 @@ export default function Home() {
                   win={periodWin}
                   compare={compare}
                   country={country}
+                  stance={stance}
+                  source={source}
+                  domain={selectedDomain}
                   selectedDay={selectedDay}
                   onSelectDay={handleSelectDay}
                 />
@@ -246,6 +251,8 @@ export default function Home() {
                   win={win}
                   compare={compare}
                   country={country}
+                  source={source}
+                  domain={selectedDomain}
                   selected={stance}
                   onSelect={toggleStance}
                   dayLabel={selectedDay ? formatDayLabel(selectedDay) : null}
@@ -266,6 +273,7 @@ export default function Home() {
                   compare={compare && source !== "gn" && source !== "rss"}
                   country={country}
                   source={source}
+                  stance={stance}
                   selectedDomain={selectedDomain}
                   onToggleDomain={toggleDomain}
                 />

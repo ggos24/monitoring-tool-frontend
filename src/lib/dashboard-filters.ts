@@ -1,4 +1,4 @@
-import type { SourceFilter } from "@/components/dashboard/mentions-list";
+import { STANCE_FILTERS, type SourceFilter, type StanceFilter } from "./article-filters";
 import type { ScopeSelection } from "./types";
 import { resolveWindow, type Period } from "./period";
 
@@ -13,6 +13,7 @@ export type StoredFilters = {
   period: Period;
   country: string | null;
   source: SourceFilter;
+  stance: StanceFilter;
   compare: boolean;
 };
 
@@ -43,6 +44,9 @@ export function loadFilters(): Partial<StoredFilters> {
   if (typeof r.country === "string" && /^[A-Z]{2}$/.test(r.country)) out.country = r.country;
   if (typeof r.source === "string" && SOURCES.includes(r.source as SourceFilter)) {
     out.source = r.source as SourceFilter;
+  }
+  if (typeof r.stance === "string" && STANCE_FILTERS.includes(r.stance as StanceFilter)) {
+    out.stance = r.stance as StanceFilter;
   }
   if (typeof r.compare === "boolean") out.compare = r.compare;
   return out;
