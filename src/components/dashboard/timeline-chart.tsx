@@ -45,7 +45,9 @@ import {
 } from "./campaign-data";
 
 /** Plot-area geometry shared by the chart and the drag overlay. */
-const CHART_MARGIN = { top: 8, right: 4, left: 4, bottom: 0 };
+// Right margin leaves room for half of the last date tick ("Nov 17"): on
+// 30d/90d a day slot is narrower than the label and the tick got clipped.
+const CHART_MARGIN = { top: 8, right: 18, left: 4, bottom: 0 };
 const Y_AXIS_WIDTH = 36;
 const X_AXIS_HEIGHT = 30; // Recharts' default XAxis height.
 /** How close (px) to a band edge a press grabs that edge. */
@@ -323,16 +325,120 @@ export function TimelineChart({
     active && data ? formatSpanLabel({ from: data[active[0]].date, to: data[active[1]].date }) : null;
   const activeCount = active ? sumOver(active, "count") : 0;
 
-  // Picked days at full strength, the rest dimmed; nothing picked → all even.
-  const barOpacity = (date: string) => {
-    if (!active) return 1;
-    const i = indexOf.get(date);
-    return i !== undefined && i >= active[0] && i <= active[1] ? 1 : 0.5;
-  };
   // Share of a day's slot the bar takes. With the previous period on, the
   // slot holds a pair instead: previous on the left, this period on the right.
   const barShare = granularity === "hour" ? 0.6 : 0.45;
   const pairShare = granularity === "hour" ? 0.8 : 0.7;
+
+  // The chart itself never re-renders for hover, drag or a new selection:
+  // Recharts re-creates its bars on every render, which replays the CSS
+  // grow animation and made the bars jump while the pointer moved. Picked
+  // days are shown by the overlay (SelectionBand) instead of bar opacity.
+  const chartEl = useMemo(
+    () => (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={data}
+                margin={CHART_MARGIN}
+                // Every series gets the whole day slot; the shapes below decide
+                // how much of it they paint.
+                barCategoryGap={0}
+                barGap={0}
+              >
+                <CartesianGrid
+                  horizontal
+                  vertical={false}
+                  stroke={theme.borderDefault}
+                  strokeDasharray="0"
+                />
+                {showDataMarker && firstBucket && firstDataDate && (
+                  <ReferenceArea
+                    x1={firstBucket}
+                    x2={firstDataDate}
+                    fill={theme.textMuted}
+                    fillOpacity={0.07}
+                    stroke="none"
+                    ifOverflow="extendDomain"
+                  />
+                )}
+                <XAxis
+                  dataKey="date"
+                  tick={TICK_STYLE}
+                  axisLine={false}
+                  tickLine={false}
+                  interval="preserveStartEnd"
+                  tickMargin={6}
+                  minTickGap={granularity === "hour" ? 24 : 16}
+                  tickFormatter={(v: string) => formatTick(v, granularity)}
+                />
+                {/* Same days, hidden: both series get the whole day slot, and
+                    the shapes below lay them out as a pair. */}
+                <XAxis xAxisId="prev" dataKey="date" hide />
+                <YAxis
+                  tick={TICK_STYLE}
+                  axisLine={false}
+                  tickLine={false}
+                  width={Y_AXIS_WIDTH}
+                  tickMargin={6}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  content={<TimelineTooltip granularity={granularity} showPrev={showPrev} />}
+                  cursor={{ fill: theme.textPrimary, fillOpacity: 0.04 }}
+                />
+                {/* Bars grow from the axis via CSS (`.chart-grow`, globals.css),
+                    not Recharts' JS animation: a CSS animation ends in the
+                    natural state, so the bars are there even when no
+                    animation frame ever runs. */}
+                {/* Previous period: a pale bar paired to the left of each
+                    day's bar (same position in the previous window). */}
+                {showPrev && (
+                  <Bar
+                    dataKey="prev"
+                    xAxisId="prev"
+                    isAnimationActive={false}
+                    shape={(p: BarShape) => (
+                      <PairedBar
+                        {...p}
+                        share={pairShare}
+                        side="left"
+                        fillOpacity={0.3}
+                      />
+                    )}
+                  />
+                )}
+                <Bar
+                  dataKey="count"
+                  isAnimationActive={false}
+                  shape={(p: BarShape) =>
+                    showPrev ? (
+                      <PairedBar
+                        {...p}
+                        share={pairShare}
+                        side="right"
+                        fillOpacity={1}
+                      />
+                    ) : (
+                      <CurrentBar {...p} share={barShare} opacity={1} />
+                    )
+                  }
+                />
+                {showDataMarker && firstDataDate && (
+                  <ReferenceLine
+                    x={firstDataDate}
+                    stroke={theme.borderStrong}
+                    strokeDasharray="3 3"
+                    ifOverflow="extendDomain"
+                    label={renderMarkerLabel(
+                      `data since ${formatDayLabel(firstDataDate)}`,
+                    )}
+                  />
+                )}
+              </ComposedChart>
+            </ResponsiveContainer>
+    ),
+    [data, showPrev, granularity, showDataMarker, firstBucket, firstDataDate, barShare, pairShare],
+  );
 
   return (
     <div className="relative bg-card p-5" data-refreshing={refreshing || undefined}>
@@ -408,6 +514,8 @@ export function TimelineChart({
         className={cn(
           "chart-grow relative h-64 touch-pan-y select-none [&_.recharts-wrapper_*]:outline-none",
           canDrill && (drag || edgeHover ? "cursor-ew-resize" : "cursor-crosshair"),
+          // The drag shows its own summary; hide the per-day tooltip meanwhile.
+          drag && "[&_.recharts-tooltip-wrapper]:invisible [&_.recharts-tooltip-cursor]:invisible",
         )}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -422,111 +530,12 @@ export function TimelineChart({
         ) : !data || data.length === 0 ? (
           <EmptyState message="No data in selected period." />
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
-              data={data}
-              margin={CHART_MARGIN}
-              // Every series gets the whole day slot; the shapes below decide
-              // how much of it they paint.
-              barCategoryGap={0}
-              barGap={0}
-            >
-              <CartesianGrid
-                horizontal
-                vertical={false}
-                stroke={theme.borderDefault}
-                strokeDasharray="0"
-              />
-              {showDataMarker && firstBucket && firstDataDate && (
-                <ReferenceArea
-                  x1={firstBucket}
-                  x2={firstDataDate}
-                  fill={theme.textMuted}
-                  fillOpacity={0.07}
-                  stroke="none"
-                  ifOverflow="extendDomain"
-                />
-              )}
-              <XAxis
-                dataKey="date"
-                tick={TICK_STYLE}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-                tickMargin={6}
-                minTickGap={granularity === "hour" ? 24 : 16}
-                tickFormatter={(v: string) => formatTick(v, granularity)}
-              />
-              {/* Same days, hidden: both series get the whole day slot, and
-                  the shapes below lay them out as a pair. */}
-              <XAxis xAxisId="prev" dataKey="date" hide />
-              <YAxis
-                tick={TICK_STYLE}
-                axisLine={false}
-                tickLine={false}
-                width={Y_AXIS_WIDTH}
-                tickMargin={6}
-                allowDecimals={false}
-              />
-              <Tooltip
-                // The drag shows its own summary; hide the per-day one meanwhile.
-                active={drag ? false : undefined}
-                content={<TimelineTooltip granularity={granularity} showPrev={showPrev} />}
-                cursor={{ fill: theme.textPrimary, fillOpacity: 0.04 }}
-              />
-              {/* Bars grow from the axis via CSS (`.chart-grow`, globals.css),
-                  not Recharts' JS animation: a CSS animation ends in the
-                  natural state, so the bars are there even when no
-                  animation frame ever runs. */}
-              {/* Previous period: a pale bar paired to the left of each
-                  day's bar (same position in the previous window). */}
-              {showPrev && (
-                <Bar
-                  dataKey="prev"
-                  xAxisId="prev"
-                  isAnimationActive={false}
-                  shape={(p: BarShape) => (
-                    <PairedBar
-                      {...p}
-                      share={pairShare}
-                      side="left"
-                      fillOpacity={0.3 * barOpacity(p.payload?.date ?? "")}
-                    />
-                  )}
-                />
-              )}
-              <Bar
-                dataKey="count"
-                isAnimationActive={false}
-                shape={(p: BarShape) =>
-                  showPrev ? (
-                    <PairedBar
-                      {...p}
-                      share={pairShare}
-                      side="right"
-                      fillOpacity={barOpacity(p.payload?.date ?? "")}
-                    />
-                  ) : (
-                    <CurrentBar {...p} share={barShare} opacity={barOpacity(p.payload?.date ?? "")} />
-                  )
-                }
-              />
-              {showDataMarker && firstDataDate && (
-                <ReferenceLine
-                  x={firstDataDate}
-                  stroke={theme.borderStrong}
-                  strokeDasharray="3 3"
-                  ifOverflow="extendDomain"
-                  label={renderMarkerLabel(
-                    `data since ${formatDayLabel(firstDataDate)}`,
-                  )}
-                />
-              )}
-            </ComposedChart>
-          </ResponsiveContainer>
+          chartEl
         )}
         {active && slot > 0 && data && (
           <SelectionBand
+            plotLeft={plotLeft}
+            plotRight={plotLeft + n * slot}
             left={plotLeft + active[0] * slot}
             width={(active[1] - active[0] + 1) * slot}
             hostWidth={hostWidth}
@@ -553,12 +562,16 @@ export function TimelineChart({
  * visual — the host div owns the pointer.
  */
 function SelectionBand({
+  plotLeft,
+  plotRight,
   left,
   width,
   hostWidth,
   handles,
   summary,
 }: {
+  plotLeft: number;
+  plotRight: number;
   left: number;
   width: number;
   hostWidth: number;
@@ -573,6 +586,12 @@ function SelectionBand({
   const tipLeft = left + width + 6 + TIP_W > hostWidth ? Math.max(0, left - TIP_W - 6) : left + width + 6;
   return (
     <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {/* Days outside the pick are dimmed by a half-opaque card wash. */}
+      <div className="absolute bg-card/50" style={{ left: plotLeft, width: Math.max(0, left - plotLeft), top, bottom }} />
+      <div
+        className="absolute bg-card/50"
+        style={{ left: left + width, width: Math.max(0, plotRight - left - width), top, bottom }}
+      />
       <div
         className="absolute border-x border-text-secondary bg-foreground/[0.06]"
         style={{ left, width, top, bottom }}
