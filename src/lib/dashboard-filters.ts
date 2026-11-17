@@ -1,6 +1,6 @@
 import { STANCE_FILTERS, type SourceFilter, type StanceFilter } from "./article-filters";
 import type { ScopeSelection } from "./types";
-import { resolveWindow, type Period } from "./period";
+import { resolveWindow, type DaySpan, type Period } from "./period";
 
 /**
  * The operator's last-picked query + filters, kept in localStorage so the
@@ -15,6 +15,8 @@ export type StoredFilters = {
   source: SourceFilter;
   stance: StanceFilter;
   compare: boolean;
+  /** Days picked on the timeline; dropped on restore once outside the period. */
+  days: DaySpan | null;
 };
 
 const KEY = "u24.dashboard-filters.v1";
@@ -49,6 +51,11 @@ export function loadFilters(): Partial<StoredFilters> {
     out.stance = r.stance as StanceFilter;
   }
   if (typeof r.compare === "boolean") out.compare = r.compare;
+  if (r.days === null) out.days = null;
+  else {
+    const days = parseSpan(r.days);
+    if (days) out.days = days;
+  }
   return out;
 }
 
@@ -66,6 +73,21 @@ function parseScope(v: unknown): ScopeSelection | null {
   const s = v as Record<string, unknown>;
   if ((s.kind === "topic" || s.kind === "group") && Number.isInteger(s.id) && (s.id as number) > 0) {
     return { kind: s.kind, id: s.id as number };
+  }
+  return null;
+}
+
+function parseSpan(v: unknown): DaySpan | null {
+  if (!v || typeof v !== "object") return null;
+  const d = v as Record<string, unknown>;
+  if (
+    typeof d.from === "string" &&
+    typeof d.to === "string" &&
+    ISO_DAY.test(d.from) &&
+    ISO_DAY.test(d.to) &&
+    d.from <= d.to
+  ) {
+    return { from: d.from, to: d.to };
   }
   return null;
 }

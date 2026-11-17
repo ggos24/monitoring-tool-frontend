@@ -104,7 +104,7 @@ export function FavorabilityPanel({
   selected: StanceLabel | "all";
   /** Row click: filter the article list by that tone (again = clear). */
   onSelect: (stance: StanceLabel) => void;
-  /** The day picked on the chart ("Oct 31"); the panel then covers only it. */
+  /** Days picked on the chart ("Oct 31", "Nov 7 – Nov 12"); the panel covers only them. */
   dayLabel?: string | null;
 }) {
   // The tone filter itself is NOT applied: this panel is the breakdown it
