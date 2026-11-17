@@ -9,7 +9,7 @@ import { TopBar } from "@/components/dashboard/top-bar";
 import { Footer } from "@/components/dashboard/footer";
 import { QuerySelector } from "@/components/dashboard/query-selector";
 import type { ScopeParam, ScopeSelection } from "@/lib/types";
-import { formatDayLabel, resolveWindow, type Period } from "@/lib/period";
+import { formatSpanLabel, resolveWindow, spanWithin, type DaySpan, type Period } from "@/lib/period";
 import { FavorabilityPanel } from "@/components/dashboard/favorability-panel";
 import { PeriodToggle } from "@/components/dashboard/period-toggle";
 import { CountryFilter } from "@/components/dashboard/country-filter";
@@ -32,9 +32,9 @@ export default function Home() {
   const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
   const [country, setCountry] = useState<string | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
-  // Drill-down: a single day (YYYY-MM-DD) clicked on the timeline. When set,
-  // every panel scopes to that day instead of the rolling period.
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  // Drill-down: the days clicked or dragged on the timeline. When set, every
+  // panel but the timeline scopes to them instead of the whole period.
+  const [selectedDays, setSelectedDays] = useState<DaySpan | null>(null);
   // Tone filter of the article list; the tone block's rows toggle it.
   const [stance, setStance] = useState<StanceFilter>("all");
   const toggleStance = (label: StanceFilter) => {
@@ -58,18 +58,22 @@ export default function Home() {
     if (stored.source) setSource(stored.source);
     if (stored.stance) setStance(stored.stance);
     if (stored.compare !== undefined) setCompare(stored.compare);
+    // A rolling period moves on: picked days that fell out of it are dropped.
+    if (stored.days && spanWithin(stored.days, resolveWindow(stored.period ?? DEFAULT_PERIOD, null))) {
+      setSelectedDays(stored.days);
+    }
     setRestored(true);
   }, []);
   useEffect(() => {
     if (!restored) return;
-    saveFilters({ scope: scopeSel, period, country, source, stance, compare });
-  }, [restored, scopeSel, period, country, source, stance, compare]);
+    saveFilters({ scope: scopeSel, period, country, source, stance, compare, days: selectedDays });
+  }, [restored, scopeSel, period, country, source, stance, compare, selectedDays]);
 
-  // `periodWin` drives the timeline (whole period, so a drilled day stays
-  // in context); `win` drives every other panel (narrowed to the day).
+  // `periodWin` drives the timeline (whole period, so picked days stay in
+  // context); `win` drives every other panel (narrowed to the picked days).
   // Resolved once per render; preset bounds are hour-snapped, so stable.
   const periodWin = resolveWindow(period, null);
-  const win = resolveWindow(period, selectedDay);
+  const win = resolveWindow(period, selectedDays);
 
   // The API scope param: single topic or a group union.
   const scope: ScopeParam | null = scopeSel
@@ -123,7 +127,7 @@ export default function Home() {
     setScopeSel(next);
     setCountry(null);
     setSelectedDomain(null);
-    setSelectedDay(null);
+    setSelectedDays(null);
     setSource("all");
     setStance("all");
   };
@@ -133,14 +137,10 @@ export default function Home() {
     setSelectedDomain(null);
   };
 
-  // Picking a period exits the day drill-down; picking the same day again
-  // toggles it off.
+  // Picking a period exits the day drill-down.
   const handleSelectPeriod = (next: Period) => {
     setPeriod(next);
-    setSelectedDay(null);
-  };
-  const handleSelectDay = (day: string) => {
-    setSelectedDay((prev) => (prev === day ? null : day));
+    setSelectedDays(null);
   };
 
   const toggleDomain = (domain: string) => {
@@ -175,15 +175,15 @@ export default function Home() {
               onChange={handleSelectCountry}
             />
           )}
-          {selectedDay && (
+          {selectedDays && (
             <button
               type="button"
-              onClick={() => setSelectedDay(null)}
+              onClick={() => setSelectedDays(null)}
               title="Clear day filter — back to the full period"
               className={cn(CONTROL, "border-strong bg-elevated text-foreground")}
             >
               <span className="size-1.5 bg-success" aria-hidden />
-              <span>{formatDayLabel(selectedDay)}</span>
+              <span>{formatSpanLabel(selectedDays)}</span>
               <X className="size-3 text-text-tertiary" />
             </button>
           )}
@@ -241,8 +241,8 @@ export default function Home() {
                   stance={stance}
                   source={source}
                   domain={selectedDomain}
-                  selectedDay={selectedDay}
-                  onSelectDay={handleSelectDay}
+                  selection={selectedDays}
+                  onSelect={setSelectedDays}
                 />
               </div>
               <div className="bg-card">
@@ -255,7 +255,7 @@ export default function Home() {
                   domain={selectedDomain}
                   selected={stance}
                   onSelect={toggleStance}
-                  dayLabel={selectedDay ? formatDayLabel(selectedDay) : null}
+                  dayLabel={selectedDays ? formatSpanLabel(selectedDays) : null}
                 />
               </div>
             </div>

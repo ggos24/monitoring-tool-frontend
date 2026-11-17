@@ -28,6 +28,27 @@ export function formatDayLabel(day: string): string {
   });
 }
 
+/** Inclusive UTC calendar days picked on the timeline, `YYYY-MM-DD`. */
+export type DaySpan = { from: string; to: string };
+
+/** "Nov 7" for one day, "Nov 7 – Nov 12" for several. */
+export function formatSpanLabel(span: DaySpan): string {
+  return span.from === span.to
+    ? formatDayLabel(span.from)
+    : `${formatDayLabel(span.from)} – ${formatDayLabel(span.to)}`;
+}
+
+/** Calendar days in a span, both ends counted. */
+export function spanDays(span: DaySpan): number {
+  const ms = new Date(`${span.to}T00:00:00Z`).getTime() - new Date(`${span.from}T00:00:00Z`).getTime();
+  return Math.round(ms / DAY_MS) + 1;
+}
+
+/** Whether every day of the span lies inside the window's calendar days. */
+export function spanWithin(span: DaySpan, win: DateWindow): boolean {
+  return span.from >= win.from.slice(0, 10) && span.to <= win.to.slice(0, 10);
+}
+
 /** What the operator picked: a rolling preset or an explicit UTC date range. */
 export type Period =
   | { kind: "preset"; days: number }
@@ -56,10 +77,20 @@ export type DateWindow = {
 
 export const PREVIOUS_PERIOD = "Previous period";
 
-export function resolveWindow(period: Period, day: string | null): DateWindow {
-  if (day) {
-    const { from, to } = dayRange(day);
-    return withPrevious(from, to, 1, "day", formatDayLabel(day));
+/**
+ * `span` = days picked on the timeline: when set, every panel but the
+ * timeline narrows to it; the previous window is the same number of days
+ * right before it.
+ */
+export function resolveWindow(period: Period, span: DaySpan | null): DateWindow {
+  if (span) {
+    return withPrevious(
+      dayRange(span.from).from,
+      dayRange(span.to).to,
+      spanDays(span),
+      "day",
+      formatSpanLabel(span),
+    );
   }
   if (period.kind === "preset") {
     const now = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
