@@ -6,7 +6,9 @@ import { NextResponse, type NextRequest } from "next/server";
 // the CSV export. Only these paths pass; anything else is a 404 here:
 //   PUT  items/{id}/labels
 //   PUT  boundary-questions/{id}/answer
+//   PUT  favorability/items/{id}/label
 //   GET  export.csv[?batch_id=N]
+//   GET  favorability/export.csv
 // Creating monthly batches stays a script / admin call, not a UI action.
 
 export const runtime = "nodejs";
@@ -15,7 +17,11 @@ export const dynamic = "force-dynamic";
 const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL;
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
-const PUT_PATHS = [/^items\/\d+\/labels$/, /^boundary-questions\/\d+\/answer$/];
+const PUT_PATHS = [
+  /^items\/\d+\/labels$/,
+  /^boundary-questions\/\d+\/answer$/,
+  /^favorability\/items\/\d+\/label$/,
+];
 
 function config(): NextResponse | null {
   if (!API_URL) {
@@ -66,7 +72,7 @@ export async function GET(req: NextRequest, context: Ctx) {
   const bad = config();
   if (bad) return bad;
   const path = (await context.params).path.join("/");
-  if (path !== "export.csv") {
+  if (path !== "export.csv" && path !== "favorability/export.csv") {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
   const batch = req.nextUrl.searchParams.get("batch_id");
@@ -74,7 +80,7 @@ export async function GET(req: NextRequest, context: Ctx) {
     return NextResponse.json({ error: "invalid batch_id" }, { status: 400 });
   }
   const upstream = await fetch(
-    `${API_URL}/api/review/export.csv${batch ? `?batch_id=${batch}` : ""}`,
+    `${API_URL}/api/review/${path}${batch && path === "export.csv" ? `?batch_id=${batch}` : ""}`,
     { headers: { "X-Admin-Key": ADMIN_API_KEY! } },
   );
   const headers = new Headers({

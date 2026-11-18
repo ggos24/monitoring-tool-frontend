@@ -7,6 +7,11 @@ import type {
   ReviewLabelInput,
   ReviewNext,
   ReviewQuery,
+  FavAnswersOut,
+  FavBatch,
+  FavItemDetail,
+  FavNext,
+  FavSaved,
   ReviewSaved,
   CountryAttribution,
   CountryCount,
@@ -543,6 +548,25 @@ export const apiClient = {
         labels,
         ...(fit ? { task_topic_id: fit.taskTopicId, better_fit_topic_id: fit.betterFitTopicId } : {}),
       },
+    }),
+  favBatches: (editor: string) =>
+    api<FavBatch[]>(`/api/review/favorability/batches?${new URLSearchParams({ editor })}`),
+  favNext: (batchId: number, editor: string, after = -1) =>
+    api<FavNext>(
+      `/api/review/favorability/batches/${batchId}/next?${new URLSearchParams({
+        editor,
+        after: String(after),
+      })}`,
+    ),
+  favItem: (itemId: number, editor: string) =>
+    api<FavItemDetail>(`/api/review/favorability/items/${itemId}?${new URLSearchParams({ editor })}`),
+  saveFavLabel: (
+    itemId: number,
+    body: FavAnswersOut & { editor: string; comment: string | null },
+  ) =>
+    localApi<FavSaved>(`/api/admin/review/favorability/items/${itemId}/label`, {
+      method: "PUT",
+      body,
     }),
   boundaryQuestions: (editor: string) =>
     api<BoundaryQuestion[]>(

@@ -2,10 +2,11 @@ import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
-type Section = "articles" | "boundaries";
+type Section = "articles" | "favorability" | "boundaries";
 
 const SECTIONS: Array<{ id: Section; label: string; href: string }> = [
   { id: "articles", label: "Label articles", href: "/review" },
+  { id: "favorability", label: "Good or bad for Ukraine", href: "/review/favorability" },
   { id: "boundaries", label: "Questions about the queries", href: "/review/boundaries" },
 ];
 

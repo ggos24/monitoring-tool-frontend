@@ -1099,3 +1099,53 @@ export type BoundaryQuestion = {
   mine: BoundaryAnswer | null;
   others: BoundaryAnswer[] | null;
 };
+
+// Review → Favorability (backend /api/review/favorability).
+export type FavBatch = {
+  id: number;
+  name: string;
+  title: string;
+  description: string;
+  progress: { total: number; done: number };
+};
+
+export type FavItem = {
+  id: number;
+  batch_id: number;
+  position: number;
+  outlet: string | null;
+  published_date: string | null;
+  headline: string;
+  url: string;
+  narrative: string | null;
+  opening: string | null;
+};
+
+export type FavAnswersOut = {
+  fact_status: "confirmed" | "announced" | "opinion" | "none";
+  actor: "international" | "russia" | "ukraine" | "none";
+  direction: "helps" | "harms" | "both" | "none";
+  coverage: "favorable" | "neutral" | "unfavorable" | "mixed";
+};
+
+export type FavLabel = FavAnswersOut & {
+  editor: string;
+  comment: string | null;
+  score: number;
+  label: string;
+  updated_at: string | null;
+};
+
+export type FavModelAnswer = FavAnswersOut & {
+  score: number;
+  label: string;
+  event: string | null;
+  evidence: string | null;
+  evidence_verified: boolean | null;
+  reasoning: string | null;
+};
+
+export type FavReveal = { model: FavModelAnswer | null; others: FavLabel[] };
+export type FavNext = { item: FavItem | null; progress: { total: number; done: number } };
+export type FavItemDetail = { item: FavItem; mine: FavLabel | null; reveal: FavReveal | null };
+export type FavSaved = { mine: FavLabel; reveal: FavReveal };
