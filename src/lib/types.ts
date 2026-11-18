@@ -844,6 +844,9 @@ export type FavorabilityCounts = {
 
 export type FavorabilityStats = {
   counts: FavorabilityCounts;
+  /** How the articles present the matter (separate from the event score);
+   *  `n` = articles with that answer. Optional until the backend ships it. */
+  coverage?: { favorable: number; neutral: number; unfavorable: number; mixed: number; n: number };
   /** Mean of the −2…+2 score over scored articles; null when none or
    *  (with the readiness fields) when not sufficient. */
   mean_score: number | null;

@@ -174,7 +174,7 @@ export function FavorabilityPanel({
     >
       <RefreshLine active={current.isPlaceholderData} />
       <KickerLabel>
-        Tone toward Ukraine
+        Good or bad for Ukraine
         {dayLabel && <span className="text-text-secondary"> · {dayLabel}</span>}
       </KickerLabel>
       <ActiveFilters labels={activeFilterLabels({ source, domain })} className="mt-2" />
@@ -246,11 +246,50 @@ export function FavorabilityPanel({
 
           {rows(true)}
 
+          <CoverageBlock coverage={current.data?.coverage} />
+
           <div className="mt-auto pt-4 font-mono text-[11px] text-text-tertiary">
             {total.toLocaleString()} of {analysed.toLocaleString()} articles analysed
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** The second indicator: whose side the presentation takes, whatever
+ *  happened (backend `coverage_label`). Not a filter — read-only. */
+function CoverageBlock({ coverage }: { coverage: FavorabilityStats["coverage"] }) {
+  if (!coverage || coverage.n === 0) return null;
+  const counts: FavorabilityCounts = { ...coverage, unscored: 0 };
+  return (
+    <div className="mt-5 border-t border-border pt-4">
+      <div
+        className="font-mono text-[11px] uppercase tracking-wide text-text-tertiary"
+        title="A separate answer from the score above: does the article present the matter in Ukraine's favour (Russia responsible, Ukraine's need, rebuts Kremlin claims) or against it — whatever actually happened."
+      >
+        How articles present it
+      </div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="text-[18px] font-medium leading-none tabular-nums text-foreground">
+          {pct(coverage.favorable, coverage.n)}
+        </span>
+        <span className="font-mono text-[11px] text-text-tertiary">favorable presentation</span>
+      </div>
+      <ToneBar counts={counts} total={coverage.n} className="mt-3 h-2" />
+      <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-[11px]">
+        {ROWS.map((r) => (
+          <li key={r.key} className="flex items-center gap-2">
+            <span aria-hidden className={cn("size-2 shrink-0", r.bar)} style={r.style} />
+            <span className="flex-1 text-text-secondary">{r.label}</span>
+            <span className="tabular-nums text-foreground">{coverage[r.key].toLocaleString()}</span>
+            <span className="w-8 text-right tabular-nums text-text-tertiary">{pct(coverage[r.key], coverage.n)}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 font-mono text-[11px] text-text-tertiary">
+        {coverage.n.toLocaleString()} articles with this answer
+      </div>
     </div>
   );
 }
