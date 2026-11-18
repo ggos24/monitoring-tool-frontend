@@ -22,6 +22,10 @@ import { cn } from "@/lib/utils";
 
 type Scored = Exclude<keyof FavorabilityCounts, "unscored">;
 
+// "How articles present it" (coverage) under the score: hidden for now
+// (owner, 2026-11-18); set to true to show it again.
+const SHOW_COVERAGE = false;
+
 // Only the two poles carry a saturated colour. Neutral is plain grey and
 // Mixed hatched grey — a yellow "mixed" read as a warning and competed
 // with the red. Order is fixed: favorable left, unfavorable right.
@@ -246,7 +250,7 @@ export function FavorabilityPanel({
 
           {rows(true)}
 
-          <CoverageBlock coverage={current.data?.coverage} />
+          {SHOW_COVERAGE && <CoverageBlock coverage={current.data?.coverage} />}
 
           <div className="mt-auto pt-4 font-mono text-[11px] text-text-tertiary">
             {total.toLocaleString()} of {analysed.toLocaleString()} articles analysed
