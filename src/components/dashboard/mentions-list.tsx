@@ -20,6 +20,15 @@ import type {
 } from "@/lib/types";
 import type { DateWindow } from "@/lib/period";
 import { FAVORABILITY_LABEL, FAVORABILITY_TOOLTIP } from "@/lib/favorability";
+import {
+  ACTOR_TEXT,
+  COVERAGE_TEXT,
+  DIRECTION_TEXT,
+  FACT_STATUS_TEXT,
+  explainScore,
+  signed,
+  type ScoreExplanation,
+} from "@/lib/score-explanation";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -519,15 +528,19 @@ function StanceBadge({ mention }: { mention: Mention }) {
     return <SentimentPill variant="muted">Not analysed</SentimentPill>;
   }
   const { variant, label } = STANCE_PILL[mention.stance_label];
-  const confidence =
-    mention.stance_confidence !== null
-      ? `${Math.round(mention.stance_confidence * 100)}% confidence`
-      : "no confidence score";
-  const framing = mention.framing_label ?? null;
+  const explanation = explainScore({
+    stance: mention.stance,
+    stance_label: mention.stance_label,
+    fact_status: mention.fact_status ?? null,
+    coverage_label: mention.coverage_label ?? null,
+    stance_detail: mention.stance_detail ?? null,
+  });
+  // `title` fallback for keyboard users and occluded popups: the score
+  // and the rule in one line.
   const tip =
-    `${label} — ${FAVORABILITY_TOOLTIP} · ${confidence}` +
-    (framing ? ` · framing: ${framing}` : "");
-  const card = mention.claim_card;
+    explanation.version === "v2"
+      ? `${label} ${signed(explanation.score)} — ${explanation.rule}`
+      : `${label} — old method: ${FAVORABILITY_TOOLTIP}`;
 
   return (
     <Tooltip.Root>
@@ -535,9 +548,6 @@ function StanceBadge({ mention }: { mention: Mention }) {
         delay={150}
         closeDelay={100}
         render={
-          // `title` attr fallback for keyboard users + the few cases
-          // where the styled popup is occluded; intentionally lossy
-          // (no claim card content) — popup is the canonical surface.
           <span title={tip}>
             <SentimentPill variant={variant}>{label}</SentimentPill>
           </span>
@@ -547,22 +557,118 @@ function StanceBadge({ mention }: { mention: Mention }) {
         <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top" align="end">
           <Tooltip.Popup
             className={cn(
-              // Wider cap when card present so 3-5 bullets aren't squished;
-              // legacy tip-only path keeps the original max-w-xs width.
-              card ? "max-w-md" : "max-w-xs",
-              "z-50 border border-border bg-overlay px-2.5 py-2",
+              "max-w-md",
+              "z-50 border border-border bg-overlay px-3 py-2.5",
               "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
           >
-            <div>{tip}</div>
-            {card && <ClaimCardBlock card={card} />}
+            {explanation.version === "v2" ? (
+              <ScoreExplanationBlock
+                label={label}
+                explanation={explanation}
+                mention={mention}
+              />
+            ) : (
+              <>
+                <div className="text-foreground">
+                  {label}
+                  {mention.stance !== null && ` ${signed(mention.stance)}`}
+                </div>
+                <div className="mt-1">
+                  Scored with the old method: {FAVORABILITY_TOOLTIP.toLowerCase()},
+                  not whether other states decided something for or against
+                  Ukraine. It changes when the article is re-analysed.
+                </div>
+                <BasisLine mention={mention} />
+                {mention.claim_card && <ClaimCardBlock card={mention.claim_card} />}
+              </>
+            )}
           </Tooltip.Popup>
         </Tooltip.Positioner>
       </Tooltip.Portal>
     </Tooltip.Root>
   );
+}
+
+function ScoreExplanationBlock({
+  label,
+  explanation: e,
+  mention,
+}: {
+  label: string;
+  explanation: Extract<ScoreExplanation, { version: "v2" }>;
+  mention: Mention;
+}) {
+  const coverage = e.coverage ? COVERAGE_TEXT[e.coverage] : null;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[12px] uppercase tracking-[0.08em] text-foreground">
+          {label} {signed(e.score)}
+        </span>
+        <span className="text-text-tertiary">event score</span>
+      </div>
+
+      <dl className="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-1">
+        <dt className="text-text-tertiary">What happened</dt>
+        <dd className="text-foreground">{e.event ?? "—"}</dd>
+        <dt className="text-text-tertiary">Who acted</dt>
+        <dd>{ACTOR_TEXT[e.actor]}</dd>
+        <dt className="text-text-tertiary">Status</dt>
+        <dd>
+          {FACT_STATUS_TEXT[e.status].label}
+          <span className="text-text-tertiary"> — {FACT_STATUS_TEXT[e.status].meaning}</span>
+        </dd>
+        <dt className="text-text-tertiary">Effect</dt>
+        <dd>{DIRECTION_TEXT[e.direction]}</dd>
+        <dt className="text-text-tertiary">Rule</dt>
+        <dd className="text-foreground">{e.rule}</dd>
+      </dl>
+
+      {e.downgrade && <div className="text-warning">{e.downgrade}</div>}
+
+      {e.evidence && (
+        <div>
+          <div className="border-l-2 border-strong pl-2 italic">“{e.evidence}”</div>
+          <div className={cn("mt-0.5 pl-2.5", e.evidenceFound ? "text-success" : "text-warning")}>
+            {e.evidenceFound ? "✓ quote found in the article" : "✗ quote not found in the article"}
+          </div>
+        </div>
+      )}
+
+      {coverage && (
+        <div className="border-t border-border pt-2">
+          <span className="text-text-tertiary">Coverage (separate): </span>
+          <span className="text-foreground">{coverage.label}</span>
+          <span className="text-text-tertiary"> — {coverage.meaning}</span>
+        </div>
+      )}
+
+      {e.reasoning && (
+        <div>
+          <span className="text-text-tertiary">Model's reasoning: </span>
+          {e.reasoning}
+        </div>
+      )}
+
+      <BasisLine mention={mention} />
+    </div>
+  );
+}
+
+function BasisLine({ mention }: { mention: Mention }) {
+  const parts = [
+    mention.enrichment_basis === "title_only"
+      ? "based on the headline only (paywall)"
+      : "based on the article text",
+    mention.stance_confidence !== null
+      ? `${Math.round(mention.stance_confidence * 100)}% confidence`
+      : null,
+    mention.framing_label ? `lens: ${mention.framing_label}` : null,
+  ].filter(Boolean);
+  return <div className="text-[11px] text-text-tertiary">{parts.join(" · ")}</div>;
 }
 
 function ClaimCardBlock({ card }: { card: NonNullable<Mention["claim_card"]> }) {

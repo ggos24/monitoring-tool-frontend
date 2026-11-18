@@ -181,6 +181,23 @@ export type Mention = {
   // What the favorability score rests on. "title_only" = paywalled
   // outlet scored from headline/standfirst; null = not enriched yet.
   enrichment_basis?: "full_text" | "title_only" | null;
+  // Favorability v2 answers the score was computed from (backend
+  // docs/campaign/FAVORABILITY.md). Null on rows scored with the old
+  // method; absent on older backends.
+  fact_status?: string | null;
+  event_type?: string | null;
+  coverage_label?: string | null;
+  stance_detail?: StanceDetail | null;
+};
+
+export type StanceDetail = {
+  event?: string;
+  actor?: string;
+  direction?: string;
+  evidence?: string;
+  evidence_verified?: boolean;
+  rationale?: string;
+  claimed_fact_status?: string;
 };
 
 export type MentionsListResponse = {
