@@ -139,7 +139,6 @@ type Step = {
   label: string;
   value: number;
   note: string;
-  drop?: number;
   tone: "base" | "mid" | "end";
 };
 
@@ -150,14 +149,12 @@ function Funnel({ out }: { out: CampaignAllOutput }) {
       label: "All articles",
       value: out.articles,
       note: "funnel base",
-      drop: out.articles ? 1 - ukraine / out.articles : undefined,
       tone: "base",
     },
     {
       label: "About Ukraine",
       value: ukraine,
       note: out.ukraine_share != null ? `${formatShareFine(out.ukraine_share)} of all` : "—",
-      drop: ukraine ? 1 - out.matched / ukraine : undefined,
       tone: "mid",
     },
     {
@@ -190,17 +187,7 @@ function Funnel({ out }: { out: CampaignAllOutput }) {
             >
               <AnimatedValue value={`${s.tone === "base" ? "≈" : ""}${s.value.toLocaleString()}`} />
             </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 font-mono text-[11px] text-text-tertiary">
-              <span className="truncate">{s.note}</span>
-              {s.drop != null && (
-                <span
-                  className="border border-border px-1.5 py-px tabular-nums"
-                  title="Dropped before the next step"
-                >
-                  ↘ {Math.round(s.drop * 100)}%
-                </span>
-              )}
-            </div>
+            <div className="mt-2 truncate font-mono text-[11px] text-text-tertiary">{s.note}</div>
           </div>
         ))}
       </div>
