@@ -1,7 +1,8 @@
 "use client";
 
 import { FAVORABILITY_TOOLTIP, favorabilityReadiness } from "@/lib/favorability";
-import { countChange, formatDayLabel, formatShare, prevRangeLabel, shareChange, type DateWindow } from "@/lib/period";
+import { countChange, formatDayLabel, formatShare, formatShareFine, prevRangeLabel, shareChange, type DateWindow } from "@/lib/period";
+import { Funnel } from "lucide-react";
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -32,12 +33,17 @@ export function CampaignKpiGrid({
   win,
   country,
   fallback,
+  funnelOpen = false,
+  onToggleFunnel,
 }: {
   compare: boolean;
   scope: ScopeParam | null;
   win: DateWindow;
   country: string | null;
   fallback: React.ReactNode;
+  /** The share card toggles the coverage funnel in the chart slot. */
+  funnelOpen?: boolean;
+  onToggleFunnel?: () => void;
 }) {
   const { coverage, coverageSettled, current, previous } = useCampaignHeadlines(
     scope,
@@ -88,6 +94,14 @@ export function CampaignKpiGrid({
       ? ` Collected through ${formatDayLabel(ingest.through)} so far — the figure can still grow.`
       : "";
 
+  // Share of ALL Tier-1 output (GDELT only); older backend / no counts yet
+  // → the card keeps the share of Ukraine coverage.
+  const allOut =
+    cur?.all_output && cur.all_output.articles > 0 && cur.all_output.share != null
+      ? cur.all_output
+      : null;
+  const prevAllOut = prev?.all_output ?? null;
+
   const fav = favorableShare(h?.favorability);
   const favPrev = favorableShare(ph?.favorability);
   const favCmp = favorableShare(c?.favorability);
@@ -129,22 +143,51 @@ export function CampaignKpiGrid({
         changeTitle={changeNote}
         isLoading={loading}
       />
-      <KpiCard
-        kicker="Share of coverage"
-        title={SHARE_TOOLTIP}
-        value={h?.pool_share == null ? "—" : formatShare(h.pool_share)}
-        context={
-          h?.pool_articles == null
-            ? undefined
-            : `of all ${h.pool_articles.toLocaleString()} articles`
-        }
-        previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
-        previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
-        change={comparable ? shareChange(c?.pool_share, pc?.pool_share) : undefined}
-        changeTitle={changeNote}
-        isLoading={loading}
-      />
+      {allOut ? (
+        <KpiCard
+          kicker="Share of coverage"
+          title={SHARE_ALL_TOOLTIP}
+          value={formatShareFine(allOut.share!)}
+          context={
+            allOut.complete || !allOut.covered_from
+              ? `of ≈${allOut.articles.toLocaleString()} Tier-1 articles`
+              : `of ≈${allOut.articles.toLocaleString()} since ${formatDayLabel(allOut.covered_from)}`
+          }
+          previous={prevValue(
+            prevAllOut?.complete && prevAllOut.share != null ? formatShareFine(prevAllOut.share) : undefined,
+          )}
+          previousLabel={win.prevLabel}
+          previousTitle={prevRangeLabel(win)}
+          change={
+            allOut.complete && prevAllOut?.complete
+              ? shareChange(allOut.share, prevAllOut.share)
+              : undefined
+          }
+          changeTitle={`${changeTitle}, GDELT only`}
+          isLoading={loading}
+          onClick={onToggleFunnel}
+          active={funnelOpen}
+          action={onToggleFunnel ? <Funnel className="size-3.5" strokeWidth={1.75} /> : undefined}
+          actionLabel={funnelOpen ? "hide the funnel" : "show the funnel"}
+        />
+      ) : (
+        <KpiCard
+          kicker="Share of coverage"
+          title={SHARE_TOOLTIP}
+          value={h?.pool_share == null ? "—" : formatShare(h.pool_share)}
+          context={
+            h?.pool_articles == null
+              ? undefined
+              : `of all ${h.pool_articles.toLocaleString()} articles`
+          }
+          previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
+          previousLabel={win.prevLabel}
+          previousTitle={prevRangeLabel(win)}
+          change={comparable ? shareChange(c?.pool_share, pc?.pool_share) : undefined}
+          changeTitle={changeNote}
+          isLoading={loading}
+        />
+      )}
       <KpiCard
         kicker="Favorable to Ukraine"
         title={FAVORABILITY_TOOLTIP}
@@ -181,6 +224,11 @@ export function CampaignKpiGrid({
     </>
   );
 }
+
+const SHARE_ALL_TOOLTIP =
+  "Of everything our Tier-1 media published in this period, on any topic, the share that " +
+  "matches the selected queries. GDELT only: it is the one source that sees all articles " +
+  "(Google News, RSS and sitemaps bring Ukraine articles only). Click for the funnel.";
 
 const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +

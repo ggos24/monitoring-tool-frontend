@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
  *   context            ← always one line (reserved even when empty)
  *   ───────────────
  *   Previous period: x ← pinned to the card bottom, only when comparing
+ *
+ * With `onClick` the whole card is a toggle button: `action` is the icon in
+ * its top-right corner, `active` marks it pressed (a top rule, filled icon).
  */
 export function KpiCard({
   kicker,
@@ -27,6 +30,10 @@ export function KpiCard({
   changeTitle,
   title,
   isLoading,
+  onClick,
+  active,
+  action,
+  actionLabel,
 }: {
   kicker: string;
   /** Hover explanation for the whole card. */
@@ -45,10 +52,53 @@ export function KpiCard({
   /** Hover tooltip on the change badge. */
   changeTitle?: string;
   isLoading?: boolean;
+  /** Makes the card a toggle (see above). */
+  onClick?: () => void;
+  active?: boolean;
+  action?: React.ReactNode;
+  /** Accessible name of the toggle, e.g. "Show the funnel". */
+  actionLabel?: string;
 }) {
+  const interactive = !!onClick;
   return (
-    <div className="flex flex-col bg-card p-5" title={title}>
-      <KickerLabel>{kicker}</KickerLabel>
+    <div
+      className={cn(
+        "relative flex flex-col bg-card p-5",
+        interactive &&
+          "cursor-pointer text-left outline-none transition-colors hover:bg-elevated focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-text-secondary",
+        active && "shadow-[inset_0_2px_0_var(--color-foreground)]",
+      )}
+      title={title}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-pressed={interactive ? !!active : undefined}
+      aria-label={interactive ? `${kicker}: ${actionLabel ?? ""}` : undefined}
+      onClick={onClick}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+    >
+      {action && (
+        <span
+          aria-hidden
+          className={cn(
+            "absolute right-4 top-4 flex size-6 items-center justify-center border transition-colors",
+            active
+              ? "border-foreground bg-foreground text-background"
+              : "border-border text-text-tertiary",
+          )}
+        >
+          {action}
+        </span>
+      )}
+      <KickerLabel className={action ? "pr-8" : undefined}>{kicker}</KickerLabel>
       <div className="mt-3 flex items-baseline gap-2">
         {isLoading ? (
           <Skeleton className="h-8 w-24" />

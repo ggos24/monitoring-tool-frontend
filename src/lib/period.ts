@@ -229,6 +229,11 @@ export function prevRangeLabel(win: DateWindow): string {
 }
 
 /** Share (0–1) as a percentage label, "4.9%". */
+/** formatShare with two decimals below 1% (0.24%, not 0.2%). */
+export function formatShareFine(v: number): string {
+  return v > 0 && v < 0.01 ? `${(v * 100).toFixed(2)}%` : formatShare(v);
+}
+
 export function formatShare(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
