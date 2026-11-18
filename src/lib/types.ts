@@ -936,6 +936,11 @@ export type CampaignAllOutput = {
   covered_through: string | null;
   files: number;
   files_expected: number;
+  /** Outlets GDELT does not see, counted from their own sitemaps (outlet →
+   *  articles). Same set in both windows of a comparison. Older backend: absent. */
+  census_outlets?: Record<string, number>;
+  /** Census outlets not counted for this period yet → first census day. */
+  census_pending?: Record<string, string | null>;
 };
 
 export type CampaignTotals = {

@@ -163,7 +163,7 @@ export function CampaignKpiGrid({
               ? shareChange(allOut.share, prevAllOut.share)
               : undefined
           }
-          changeTitle={`${changeTitle}, GDELT only`}
+          changeTitle={changeTitle}
           isLoading={loading}
           onClick={onToggleFunnel}
           active={funnelOpen}
@@ -227,8 +227,8 @@ export function CampaignKpiGrid({
 
 const SHARE_ALL_TOOLTIP =
   "Of everything our Tier-1 media published in this period, on any topic, the share that " +
-  "matches the selected queries. GDELT only: it is the one source that sees all articles " +
-  "(Google News, RSS and sitemaps bring Ukraine articles only). Click for the funnel.";
+  "matches the selected queries. Totals come from GDELT, and from their own sitemaps for " +
+  "Bloomberg, CNN and FT, which GDELT does not see. Click for the funnel.";
 
 const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
