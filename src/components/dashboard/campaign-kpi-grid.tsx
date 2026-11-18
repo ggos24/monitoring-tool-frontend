@@ -226,7 +226,7 @@ export function CampaignKpiGrid({
 }
 
 const SHARE_ALL_TOOLTIP =
-  "Of everything our Tier-1 media published in this period, on any topic, the share that " +
+  "Of everything our Tier-1 media published in this period (news only: sport, culture and lifestyle left out), the share that " +
   "matches the selected queries. Totals come from GDELT, and from their own sitemaps for " +
   "Bloomberg, CNN and FT, which GDELT does not see. Click for the funnel.";
 

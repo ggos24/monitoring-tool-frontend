@@ -117,7 +117,7 @@ function sourcesNote(out: CampaignAllOutput): string {
     .filter(([, since]) => since)
     .map(([d, since]) => `${outletName(d)} (counted since ${formatDayLabel(since!)})`);
   const parts = [
-    `${out.outlets} Tier-1 media. Counted from GDELT${
+    `${out.outlets} Tier-1 media, news only — sport, culture and lifestyle sections are left out on every step. Counted from GDELT${
       census.length ? `, and from their own sitemaps for ${census.join(", ")}` : ""
     } — the sources that list everything an outlet publishes; Google News and RSS bring Ukraine articles only.`,
   ];
