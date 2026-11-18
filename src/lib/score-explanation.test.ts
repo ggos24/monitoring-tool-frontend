@@ -68,10 +68,19 @@ test("unknown values fall back safely", () => {
   assert.equal(e.event, null);
 });
 
-test("strike is a war event: 0 with the reason", () => {
-  const e = explainScore(v2({ stance: 0, stance_label: "neutral" }, { actor: "russia" }));
+test("confirmed strike is a war event: −1 with the reason", () => {
+  const e = explainScore(
+    v2({ stance: -1, stance_label: "critical" }, { actor: "russia", direction: "harms" }),
+  );
   if (e.version !== "v2") throw new Error("expected v2");
   assert.equal(e.actor, "russia");
-  assert.equal(e.rule, "A war event or Ukrainian domestic news, not a decision by another state → 0");
+  assert.equal(
+    e.rule,
+    "Confirmed + harms Ukraine → −1 (a war event or Ukrainian news, not a decision by another state, so at most ±1)",
+  );
   assert.equal(e.coverage, "favorable");
+});
+
+test("unconfirmed war event is 0", () => {
+  assert.equal(ruleText("opinion", "harms", 0, "russia"), "A war event or Ukrainian news that is not confirmed → 0");
 });

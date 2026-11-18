@@ -3,10 +3,10 @@ import type { Mention } from "./types";
 /**
  * Plain-language explanation of a mention's favorability score for the
  * hover card. Mirrors the backend rules in docs/campaign/FAVORABILITY.md
- * (prompt `ua-fav-v2`): the model answers what happened, who acted, its
+ * (prompt `ua-fav-v3`): the model answers what happened, who acted, its
  * status and its effect on Ukraine; the score comes from a fixed table.
- * Only decisions of other states or international bodies move the score —
- * war events, Russia's own actions and Ukrainian domestic news are 0.
+ * Decisions of other states or international bodies: confirmed ±2, otherwise
+ * ±1. War events, Russia's own actions and Ukrainian news: ±1, confirmed only.
  */
 
 export type FactStatus = "confirmed" | "announced" | "opinion" | "none";
@@ -113,13 +113,18 @@ export function ruleText(
   actor: Actor = "international",
 ): string {
   if (status === "none") return "No Ukraine-relevant development → 0";
-  if (actor === "russia" || actor === "ukraine")
-    return "A war event or Ukrainian domestic news, not a decision by another state → 0";
-  if (actor === "none") return "No state or international body decided anything → 0";
+  if (actor === "none") return "No state, army or government acted → 0";
+  const war = actor === "russia" || actor === "ukraine";
+  if (war && status !== "confirmed")
+    return "A war event or Ukrainian news that is not confirmed → 0";
   if (direction === "none") return "No effect on Ukraine → 0";
   if (direction === "both") return `${FACT_STATUS_TEXT[status].label} + effects both ways → 0, Mixed`;
   const effect = direction === "helps" ? "helps" : "harms";
-  const cap = status === "confirmed" ? "" : " (not confirmed, so at most ±1)";
+  const cap = war
+    ? " (a war event or Ukrainian news, not a decision by another state, so at most ±1)"
+    : status === "confirmed"
+      ? ""
+      : " (not confirmed, so at most ±1)";
   return `${FACT_STATUS_TEXT[status].label} + ${effect} Ukraine → ${signed(score)}${cap}`;
 }
 

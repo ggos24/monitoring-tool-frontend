@@ -401,20 +401,22 @@ function Guide() {
     <aside className="h-fit space-y-3 border border-border bg-card p-4 text-sm text-text-secondary">
       <h3 className="text-sm font-medium text-foreground">How the score works</h3>
       <p>
-        The score only moves when <span className="text-foreground">another state or an
-        international body</span> decides or does something for or against Ukraine.
+        Decisions of <span className="text-foreground">another state or an international
+        body</span> weigh most. Confirmed war events, Russia's actions and Ukrainian news count,
+        but weaker. If the article has a partner's step, that is the main event.
       </p>
       <ul className="space-y-1 text-xs">
         <li>Confirmed and helps: <span className="text-foreground">+2</span></li>
         <li>Announced or opinion, helps: <span className="text-foreground">+1</span></li>
         <li>Announced or opinion, harms: <span className="text-foreground">−1</span></li>
         <li>Confirmed and harms: <span className="text-foreground">−2</span></li>
-        <li>Both ways, or nothing decided: <span className="text-foreground">0</span></li>
-        <li>Strikes, battles, Russia's or Ukraine's own actions: <span className="text-foreground">0</span></li>
+        <li>Confirmed strike, battle, Russia's or Ukraine's own action: <span className="text-foreground">±1</span></li>
+        <li>Unconfirmed war news, both ways, or nothing happened: <span className="text-foreground">0</span></li>
       </ul>
       <p className="text-xs text-text-tertiary">
         Examples: “EU adopts sanctions” +2, “EU to discuss sanctions” +1, “Hungary blocks EU
-        loan” −2, “Russian missiles hit Kyiv” 0 (the article can still present it favorably).
+        loan” −2, “Russian missiles hit Kyiv” −1, the same strike plus “Britain sends new Storm
+        Shadow missiles” +2.
       </p>
       <p className="text-xs text-text-tertiary">
         You see the model's answers only after you save. Answer from the article, not from what
