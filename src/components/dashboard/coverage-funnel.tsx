@@ -109,24 +109,13 @@ const OUTLET_NAMES: Record<string, string> = {
 
 const outletName = (d: string) => OUTLET_NAMES[d] ?? d;
 
-/** Where the totals come from: GDELT, plus outlets counted from their own
- *  sitemaps; outlets whose sitemap count does not cover the period yet. */
+/** One plain line for readers who do not know the data sources. */
 function sourcesNote(out: CampaignAllOutput): string {
-  const census = Object.keys(out.census_outlets ?? {}).map(outletName);
-  const pending = Object.entries(out.census_pending ?? {})
-    .filter(([, since]) => since)
-    .map(([d, since]) => `${outletName(d)} (counted since ${formatDayLabel(since!)})`);
-  const parts = [
-    `${out.outlets} Tier-1 media, news only — sport, culture and lifestyle sections are left out on every step. Counted from GDELT${
-      census.length ? `, and from their own sitemaps for ${census.join(", ")}` : ""
-    } — the sources that list everything an outlet publishes; Google News and RSS bring Ukraine articles only.`,
-  ];
+  const pending = Object.keys(out.census_pending ?? {}).map(outletName);
+  const parts = [`${out.outlets} Tier-1 media, news only: sport, culture and lifestyle are not counted.`];
   if (pending.length) {
-    parts.push(
-      `Not in this period yet: ${pending.join(", ")} — they join once their count covers it and the previous period.`,
-    );
+    parts.push(`${pending.join(" and ")} ${pending.length > 1 ? "are" : "is"} not included yet.`);
   }
-  parts.push("An article GDELT repeats later counts again (≈5%). Bar heights on a log scale.");
   return parts.join(" ");
 }
 
