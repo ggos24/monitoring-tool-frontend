@@ -8,7 +8,10 @@ test("score follows the prompt table", () => {
   assert.equal(favScore({ fact_status: "confirmed", actor: "international", direction: "helps" }), 2);
   assert.equal(favScore({ fact_status: "announced", actor: "international", direction: "harms" }), -1);
   assert.equal(favScore({ fact_status: "opinion", actor: "international", direction: "both" }), 0);
-  assert.equal(favScore({ fact_status: "confirmed", actor: "russia", direction: "harms" }), 0);
+  assert.equal(favScore({ fact_status: "confirmed", actor: "russia", direction: "harms" }), -1);
+  assert.equal(favScore({ fact_status: "confirmed", actor: "ukraine", direction: "helps" }), 1);
+  assert.equal(favScore({ fact_status: "announced", actor: "russia", direction: "harms" }), 0);
+  assert.equal(favScore({ fact_status: "confirmed", actor: "none", direction: "harms" }), 0);
   assert.equal(favScore({ fact_status: "none", actor: "international", direction: "helps" }), 0);
 });
 

@@ -35,7 +35,7 @@ export const QUESTIONS: Question[] = [
   {
     key: "actor",
     title: "Who decided or acted?",
-    help: "Only decisions of other states and international bodies move the score. War events and Ukrainian domestic news are 0.",
+    help: "Decisions of other states and international bodies weigh most (±2). Confirmed war events, Russia's actions and Ukrainian news count ±1. If the article has a partner's step, pick that.",
     options: [
       { value: "international", label: "Another state or international body", hint: "US, EU, Hungary, NATO, G7, UN, a court; also China or North Korea" },
       { value: "russia", label: "Russia", hint: "strikes, advances, mobilisation, war budget" },
@@ -79,12 +79,18 @@ export const QUESTIONS: Question[] = [
 ];
 
 const WEIGHT: Record<FactStatus, number> = { confirmed: 2, announced: 1, opinion: 1, none: 0 };
+const WAR_WEIGHT: Record<FactStatus, number> = { confirmed: 1, announced: 0, opinion: 0, none: 0 };
 
-/** Score −2..+2 from answers — the prompt's table (only another state or
- * international body moves it). */
+/** Score −2..+2 from answers — the prompt's table: another state or
+ * international body up to ±2; Russia / Ukraine ±1 when confirmed. */
 export function favScore(a: Pick<FavAnswers, "fact_status" | "actor" | "direction">): number {
-  const w = WEIGHT[a.fact_status];
-  if (a.actor !== "international" || w === 0) return 0;
+  const w =
+    a.actor === "international"
+      ? WEIGHT[a.fact_status]
+      : a.actor === "russia" || a.actor === "ukraine"
+        ? WAR_WEIGHT[a.fact_status]
+        : 0;
+  if (w === 0) return 0;
   if (a.direction === "helps") return w;
   if (a.direction === "harms") return -w;
   return 0;
