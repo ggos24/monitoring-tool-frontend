@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 // @ts-ignore Node's built-in TypeScript stripping requires the source suffix.
-import { countChange, diffChange, resolveWindow, spanWithin } from "./period.ts";
+import { countChange, diffChange, formatShareFine, resolveWindow, spanWithin } from "./period.ts";
 
 test("list rows always show the plain difference, whatever the base", () => {
   assert.equal(diffChange(46, 2)?.text, "+44");
@@ -40,4 +40,10 @@ test("a picked span counts only while it sits inside the period", () => {
   assert.equal(spanWithin({ from: "2026-10-18", to: "2026-11-17" }, win), true);
   assert.equal(spanWithin({ from: "2026-10-17", to: "2026-10-20" }, win), false);
   assert.equal(spanWithin({ from: "2026-11-10", to: "2026-11-18" }, win), false);
+});
+
+test("formatShareFine keeps two decimals below 1%", () => {
+  assert.equal(formatShareFine(0.0022), "0.22%");
+  assert.equal(formatShareFine(0.048), "4.8%");
+  assert.equal(formatShareFine(0), "0.0%");
 });

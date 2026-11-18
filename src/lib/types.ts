@@ -915,6 +915,27 @@ export type CampaignHeadline = {
   };
   /** WS-4 adding. Newest GKG file ingested; null = nothing ingested yet. */
   last_ingested_at?: string | null;
+  /** Share of ALL Tier-1 output (GDELT lane only on both sides). Absent on
+   *  an older backend, null until the output counts exist. */
+  all_output?: CampaignAllOutput | null;
+};
+
+export type CampaignAllOutput = {
+  /** Every article GDELT saw from Tier-1 media, any topic (approximate). */
+  articles: number;
+  outlets: number;
+  /** GDELT articles matching the selected queries (= headline.articles). */
+  matched: number;
+  /** GDELT articles about Ukraine/Russia (= headline.pool_articles). */
+  about_ukraine: number | null;
+  share: number | null;
+  ukraine_share: number | null;
+  /** false: the counts start inside the window or have holes. */
+  complete: boolean;
+  covered_from: string | null;
+  covered_through: string | null;
+  files: number;
+  files_expected: number;
 };
 
 export type CampaignTotals = {
