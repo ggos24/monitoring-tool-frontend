@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
 import type { DateWindow } from "@/lib/period";
 import { CountDelta } from "@/components/dashboard/top-geo-card";
+import { tier1NetworkSize, useCampaignCoverage } from "@/components/dashboard/campaign-data";
 import type { CountryConfidence, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,9 @@ export function SourcesList({
     enabled: enabled && compare,
     placeholderData: enabled && compare ? keepPreviousData : undefined,
   });
+  // Tier-1 network size ("41 of 93 Tier-1 media"), as on the KPI card.
+  const network = tier1NetworkSize(useCampaignCoverage().data);
+
   const prevByDomain = previous.data
     ? new Map(previous.data.map((s) => [s.domain, s.count] as const))
     : null;
@@ -87,7 +91,9 @@ export function SourcesList({
       <ActiveFilters labels={activeFilterLabels({ stance, source })} className="mt-2" />
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
         {data && data.length > 0 && data.length < LIMIT
-          ? `All ${data.length} media by number of articles`
+          ? network !== null
+            ? `${data.length} of ${network} Tier-1 media, by number of articles`
+            : `All ${data.length} media by number of articles`
           : `Top ${LIMIT} media by number of articles`}
       </div>
 

@@ -15,6 +15,7 @@ import {
   excludedLanesText,
   isNotFound,
   shownTotals,
+  tier1NetworkSize,
   useCampaignHeadlines,
 } from "./campaign-data";
 
@@ -108,10 +109,7 @@ export function CampaignKpiGrid({
   // Previous-period row: absent when not comparing, "—" when the value is missing.
   const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? "…" : prev ? (v ?? null) : null);
   // Size of the Tier-1 network the outlets are counted out of.
-  const cov = coverage.data;
-  const network = cov?.available
-    ? (cov.counts.visible ?? 0) + (cov.counts.sparse ?? 0) + (cov.counts.invisible ?? 0)
-    : null;
+  const network = tier1NetworkSize(coverage.data);
   const changeNote = excluded.length
     ? `${changeTitle}, without ${excludedLanesText(excluded)}`
     : changeTitle;
