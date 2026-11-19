@@ -16,6 +16,13 @@ export function isNotFound(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
 }
 
+/** Size of the Tier-1 network ("of 93 Tier-1 media"); null when unknown. */
+export function tier1NetworkSize(cov: ReturnType<typeof useCampaignCoverage>["data"]): number | null {
+  return cov?.available
+    ? (cov.counts.visible ?? 0) + (cov.counts.sparse ?? 0) + (cov.counts.invisible ?? 0)
+    : null;
+}
+
 /**
  * GET /api/campaign/coverage — shared by the footnote and the KPI grid
  * (its `selector_version` is passed verbatim to both headline windows).
