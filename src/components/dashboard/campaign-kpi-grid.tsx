@@ -14,7 +14,6 @@ import {
   excludedLanes,
   excludedLanesText,
   isNotFound,
-  laneLabel,
   shownTotals,
   useCampaignHeadlines,
 } from "./campaign-data";
@@ -87,7 +86,6 @@ export function CampaignKpiGrid({
   const pc = comparableTotals(prev);
   const comparable = !!prev && !!c && !!pc;
   const excluded = prev ? excludedLanes(cur) : [];
-  const lanes = (cur?.all_sources?.by_source ?? []).filter((l) => l.articles > 0);
   const changeTitle = win.prevLabel;
   const partial =
     ingest.kind === "partial"
@@ -131,11 +129,7 @@ export function CampaignKpiGrid({
         kicker="Articles"
         title={"Articles from our Tier-1 media matching the selected queries. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
-        context={
-          lanes.length > 1
-            ? lanes.map((l) => `${l.articles.toLocaleString()} ${laneLabel(l.code)}`).join(" · ")
-            : "in Tier-1 media"
-        }
+        context="in Tier-1 media"
         previous={prevValue(ph?.articles.toLocaleString())}
         previousLabel={win.prevLabel}
         previousTitle={prevRangeLabel(win)}
