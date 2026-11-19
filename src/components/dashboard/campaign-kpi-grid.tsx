@@ -193,7 +193,7 @@ export function CampaignKpiGrid({
         isLoading={loading}
       />
       <KpiCard
-        kicker="Media reached"
+        kicker="Media covering"
         title="How many different Tier-1 media published at least one of these articles."
         value={(h?.outlets ?? 0).toLocaleString()}
         context={network === null ? "with at least one article" : `of ${network} Tier-1 media`}
