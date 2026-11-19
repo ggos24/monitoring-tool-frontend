@@ -48,6 +48,8 @@ export default function Home() {
   const [compare, setCompare] = useState(true);
   // Share of coverage card ↔ funnel in the chart slot.
   const [funnelOpen, setFunnelOpen] = useState(false);
+  const [funnelMounted, setFunnelMounted] = useState(false);
+  if (funnelOpen && !funnelMounted) setFunnelMounted(true);
 
   // The picked query + filters survive reloads and the Reports round trip
   // (localStorage). Restored after mount so SSR markup stays deterministic;
@@ -237,16 +239,16 @@ export default function Home() {
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
-              <div className="bg-card lg:col-span-2">
-                {funnelOpen ? (
-                  <CoverageFunnel
-                    scope={scope}
-                    win={win}
-                    country={country}
-                    compare={compare}
-                    onClose={() => setFunnelOpen(false)}
-                  />
-                ) : (
+              {/* Chart and funnel share one grid cell, so the slot keeps the
+                  height of the taller one and toggling never shifts the page.
+                  The funnel mounts on first open (its queries are the KPI
+                  row's, so it costs no request) and then stays mounted. */}
+              <div className="grid bg-card lg:col-span-2 [&>*]:col-start-1 [&>*]:row-start-1">
+                <div
+                  className={funnelOpen ? "invisible" : "animate-reveal"}
+                  aria-hidden={funnelOpen || undefined}
+                  inert={funnelOpen || undefined}
+                >
                   <TimelineChart
                     scope={scope}
                     win={periodWin}
@@ -258,6 +260,22 @@ export default function Home() {
                     selection={selectedDays}
                     onSelect={setSelectedDays}
                   />
+                </div>
+                {funnelMounted && (
+                  <div
+                    className={funnelOpen ? "animate-reveal" : "invisible"}
+                    data-funnel-open={funnelOpen || undefined}
+                    aria-hidden={!funnelOpen || undefined}
+                    inert={!funnelOpen || undefined}
+                  >
+                    <CoverageFunnel
+                      scope={scope}
+                      win={win}
+                      country={country}
+                      compare={compare}
+                      onClose={() => setFunnelOpen(false)}
+                    />
+                  </div>
                 )}
               </div>
               <div className="bg-card">
