@@ -41,7 +41,7 @@ export function CoverageFunnel({
   return (
     <div className="relative bg-card p-5" data-refreshing={current.isPlaceholderData || undefined}>
       <RefreshLine active={current.isPlaceholderData} />
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div>
           <KickerLabel>Share of coverage</KickerLabel>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -75,7 +75,7 @@ export function CoverageFunnel({
       </div>
 
       {loading ? (
-        <Skeleton className="h-[220px] w-full" />
+        <Skeleton className="h-[257px] w-full" />
       ) : !ready ? (
         <p className="py-16 text-center font-mono text-xs text-text-tertiary">
           {current.data?.all_output === undefined
@@ -180,21 +180,24 @@ function Funnel({ out }: { out: CampaignAllOutput }) {
           </div>
         ))}
       </div>
-      <div className="mt-5 flex h-[150px] items-end" aria-hidden>
+      {/* Sized so the whole funnel fits the chart's height (h-64 + header):
+          the two share one slot and must not change its height. */}
+      <div className="mt-5 flex h-[116px] items-end" aria-hidden>
         {steps.map((s, i) => (
           <div key={s.label} className="flex h-full flex-1 items-end">
             <div
               className={cn(
-                "h-full flex-[3]",
+                "funnel-bar h-full flex-[3]",
                 s.tone === "end" ? "bg-success" : "bg-text-secondary",
                 s.tone === "mid" && "opacity-70",
               )}
-              style={{ height: `${heights[i]}%` }}
+              style={{ height: `${heights[i]}%`, animationDelay: `${i * 90}ms` }}
             />
             {i < steps.length - 1 ? (
               <div
-                className="h-full flex-[1.3] bg-text-secondary opacity-25"
+                className="funnel-link h-full flex-[1.3] bg-text-secondary opacity-25"
                 style={{
+                  animationDelay: `${i * 90 + 160}ms`,
                   clipPath: `polygon(0 ${100 - heights[i]}%, 100% ${100 - heights[i + 1]}%, 100% 100%, 0 100%)`,
                 }}
               />

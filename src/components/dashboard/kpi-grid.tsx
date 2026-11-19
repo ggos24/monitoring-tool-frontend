@@ -6,7 +6,7 @@ import { apiClient } from "@/lib/api";
 import type { ScopeParam } from "@/lib/types";
 import { countChange, formatShare, shareChange, type DateWindow } from "@/lib/period";
 import { FAVORABILITY_TOOLTIP } from "@/lib/favorability";
-import { KpiCard } from "./kpi-card";
+import { KpiCard, PREVIOUS_LOADING } from "./kpi-card";
 import { TopGeoCard } from "./top-geo-card";
 import { favorableShare, scoredTotal, useFavorability } from "./favorability-panel";
 
@@ -76,7 +76,7 @@ export function KpiGrid({
   // Previous-period row under each card: the change always reads against a
   // visible base. undefined = not comparing; null = no value ("—").
   const prevValue = (q: { isLoading: boolean }, v: string | undefined) =>
-    !compare ? undefined : q.isLoading ? "…" : (v ?? null);
+    !compare ? undefined : q.isLoading ? PREVIOUS_LOADING : (v ?? null);
 
   const tier1 = ratio(currentMentions.data?.total, currentPool.data?.total);
   const tier1Prev = ratio(previousMentions.data?.total, previousPool.data?.total);

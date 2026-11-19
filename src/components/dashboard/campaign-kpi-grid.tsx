@@ -7,7 +7,8 @@ import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/t
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { RefreshLine } from "@/components/ui/refresh-line";
-import { KpiCard } from "./kpi-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { KpiCard, PREVIOUS_LOADING } from "./kpi-card";
 import { CountDelta } from "./top-geo-card";
 import {
   comparableTotals,
@@ -106,8 +107,12 @@ export function CampaignKpiGrid({
   const favCmp = favorableShare(c?.favorability);
   const favCmpPrev = favorableShare(pc?.favorability);
   const countries = h?.countries;
+  // While loading, reserve the Top countries column: the backend sends
+  // countries in every campaign response, so a 4-column skeleton would
+  // reflow into 5 columns the moment the data lands.
+  const showCountries = loading || !!countries;
   // Previous-period row: absent when not comparing, "—" when the value is missing.
-  const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? "…" : prev ? (v ?? null) : null);
+  const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? PREVIOUS_LOADING : prev ? (v ?? null) : null);
   // Size of the Tier-1 network the outlets are counted out of.
   const network = tier1NetworkSize(coverage.data);
   const changeNote = excluded.length
@@ -119,7 +124,7 @@ export function CampaignKpiGrid({
     // narrow screens so the grid never ends with an empty cell.
     <>
     <div
-      className={`relative grid grid-cols-2 gap-px border border-border bg-border ${countries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}
+      className={`relative grid grid-cols-2 gap-px border border-border bg-border ${showCountries ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}
       data-refreshing={current.isPlaceholderData || undefined}
     >
       <RefreshLine active={current.isPlaceholderData} />
@@ -204,7 +209,9 @@ export function CampaignKpiGrid({
         changeTitle={changeNote}
         isLoading={loading}
       />
-      {countries && (
+      {loading ? (
+        <CountriesSkeleton />
+      ) : countries && (
         <CountriesCard
           rows={countries}
           current={comparable ? c?.countries : undefined}
@@ -305,6 +312,24 @@ function CountriesCard({
         </div>
       )}
       
+    </div>
+  );
+}
+
+/** Same shape as CountriesCard: kicker, then four flag · name · count rows. */
+function CountriesSkeleton() {
+  return (
+    <div className="col-span-2 bg-card p-5 xl:col-span-1" aria-hidden>
+      <KickerLabel>Top countries</KickerLabel>
+      <div className="mt-3 space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex h-4 items-center gap-2">
+            <Skeleton className="size-3.5" />
+            <Skeleton className="h-3" style={{ width: `${56 + ((i * 23) % 40)}px` }} />
+            <Skeleton className="ml-auto h-3 w-8" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

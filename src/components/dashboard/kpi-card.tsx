@@ -122,13 +122,21 @@ export function KpiCard({
             title={previousTitle}
           >
             {previousLabel ?? "Previous period"}:{" "}
-            <span className="text-text-secondary">{isLoading ? "…" : (previous ?? "—")}</span>
+            {isLoading || previous === PREVIOUS_LOADING ? (
+              <Skeleton className="inline-block h-3 w-12 align-middle" />
+            ) : (
+              <span className="text-text-secondary">{previous ?? "—"}</span>
+            )}
           </div>
         </div>
       )}
     </div>
   );
 }
+/** Pass as `previous` while the previous period is still loading: the row
+ *  keeps its place and shows a skeleton instead of a value. */
+export const PREVIOUS_LOADING = "\u2026";
+
 /** The one rendering of a "vs previous period" change (see lib/period). */
 export function ChangeBadge({
   change,

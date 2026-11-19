@@ -30,6 +30,7 @@ import {
   type ScoreExplanation,
 } from "@/lib/score-explanation";
 import { KickerLabel } from "@/components/ui/kicker-label";
+import { RefreshLine } from "@/components/ui/refresh-line";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -149,7 +150,7 @@ export function MentionsList({
     curTo,
   ] as const;
 
-  const { data, isLoading, isFetching, error, refetch } = useQuery({
+  const { data, isLoading, isPlaceholderData, error, refetch } = useQuery({
     queryKey,
     queryFn: () =>
       apiClient.mentions({
@@ -280,7 +281,8 @@ export function MentionsList({
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="relative mt-4" data-refreshing={isPlaceholderData || undefined}>
+        <RefreshLine active={isPlaceholderData} />
         {error ? (
           <div className="flex items-center gap-3 font-mono text-[11px] text-text-secondary">
             <span>Failed to load articles</span>
@@ -314,11 +316,7 @@ export function MentionsList({
           </EmptyMessage>
         ) : (
           <ul
-            className={cn(
-              "divide-y divide-border",
-              "transition-opacity duration-[var(--dur-base)]",
-              isFetching && "opacity-50",
-            )}
+            className="divide-y divide-border"
           >
             {items.map((m, i) => (
               <MentionRow
