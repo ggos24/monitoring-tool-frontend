@@ -82,24 +82,13 @@ export function shownTotals(h: CampaignHeadline | undefined): CampaignTotals | u
   return h?.all_sources ?? h?.headline;
 }
 
-/**
- * The figures a window is COMPARED by: only the sources that already
- * covered the earlier window, so a newly added source doesn't read as
- * growth. null = no source covers it (show no change). Older backend:
- * its GKG headline, which is like-for-like by construction.
- */
-export function comparableTotals(
-  h: CampaignHeadline | undefined,
-): CampaignTotals | null | undefined {
-  if (!h) return undefined;
-  return h.all_sources ? h.all_sources.comparable : h.headline;
-}
-
 const LANE_LABEL: Record<string, string> = {
   gkg: "GDELT",
   gdelt: "GDELT search",
   google_news_rss: "Google News",
   rss: "RSS",
+  news_sitemap: "news sitemaps",
+  sitemap_archive: "sitemap archives",
 };
 export function laneLabel(code: string): string {
   return LANE_LABEL[code] ?? code;
@@ -117,4 +106,36 @@ export function excludedLanesText(lanes: CampaignSourceLane[]): string {
   );
   if (parts.length <= 1) return parts.join("");
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+/**
+ * Owner decision 2026-11-25: when a source started collecting inside the
+ * compared range, the previous period has fewer sources and any change
+ * would mislead — show no change at all (badges hidden) instead of a
+ * like-for-like subset that does not match the numbers on screen.
+ * Same queries (and cache) as the KPI grid.
+ */
+export function useSourcesDiffer(
+  scope: ScopeParam | null,
+  win: DateWindow,
+  country: string | null,
+  compare: boolean,
+): { differ: boolean; note: string } {
+  const { current } = useCampaignHeadlines(scope, win, country, compare);
+  const excluded = compare ? excludedLanes(current.data) : [];
+  // Unknown until the headline lands: hide rather than flash a badge.
+  const unknown = compare && !current.data && !current.error;
+  return { differ: unknown || excluded.length > 0, note: sourcesDifferNote(excluded) };
+}
+
+export function sourcesDifferNote(excluded: CampaignSourceLane[]): string {
+  if (!excluded.length) return "";
+  const names = excluded.map((l) => laneLabel(l.code));
+  const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  const since = excluded.map((l) => l.comparable_since).filter(Boolean).sort().at(-1);
+  return (
+    `No change shown: ${list} ${names.length > 1 ? "were" : "was"} added` +
+    (since ? ` on ${formatDayLabel(since)}` : "") +
+    ", so the previous period has fewer sources. The change returns once both periods have the same sources."
+  );
 }
