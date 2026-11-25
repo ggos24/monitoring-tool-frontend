@@ -21,7 +21,6 @@ import {
   type SourceFilter, type StanceFilter } from "@/components/dashboard/mentions-list";
 import { GenerateReportLink } from "@/components/dashboard/generate-report-link";
 import { CampaignKpiGrid } from "@/components/dashboard/campaign-kpi-grid";
-import { CoverageFunnel } from "@/components/dashboard/coverage-funnel";
 import { DEFAULT_PERIOD, loadFilters, saveFilters } from "@/lib/dashboard-filters";
 import { isCampaignGroupName } from "@/lib/narrative-rules";
 import { visibleTopics } from "@/lib/topics";
@@ -46,10 +45,6 @@ export default function Home() {
   // Δ vs the previous equal-length window on KPIs, sources, countries,
   // favorability, plus the dashed previous-period line on the timeline.
   const [compare, setCompare] = useState(true);
-  // Share of coverage card ↔ funnel in the chart slot.
-  const [funnelOpen, setFunnelOpen] = useState(false);
-  const [funnelMounted, setFunnelMounted] = useState(false);
-  if (funnelOpen && !funnelMounted) setFunnelMounted(true);
 
   // The picked query + filters survive reloads and the Reports round trip
   // (localStorage). Restored after mount so SSR markup stays deterministic;
@@ -213,8 +208,6 @@ export default function Home() {
           <>
             <div className="mb-6">
               <CampaignKpiGrid
-                funnelOpen={funnelOpen}
-                onToggleFunnel={() => setFunnelOpen((v) => !v)}
                 compare={compare}
                 scope={scope}
                 win={win}
@@ -239,44 +232,18 @@ export default function Home() {
             </div>
 
             <div className="mb-6 grid grid-cols-1 gap-px border border-border bg-border lg:grid-cols-3">
-              {/* Chart and funnel share one grid cell, so the slot keeps the
-                  height of the taller one and toggling never shifts the page.
-                  The funnel mounts on first open (its queries are the KPI
-                  row's, so it costs no request) and then stays mounted. */}
-              <div className="grid bg-card lg:col-span-2 [&>*]:col-start-1 [&>*]:row-start-1">
-                <div
-                  className={funnelOpen ? "invisible" : "animate-reveal"}
-                  aria-hidden={funnelOpen || undefined}
-                  inert={funnelOpen || undefined}
-                >
-                  <TimelineChart
-                    scope={scope}
-                    win={periodWin}
-                    compare={compare}
-                    country={country}
-                    stance={stance}
-                    source={source}
-                    domain={selectedDomain}
-                    selection={selectedDays}
-                    onSelect={setSelectedDays}
-                  />
-                </div>
-                {funnelMounted && (
-                  <div
-                    className={funnelOpen ? "animate-reveal" : "invisible"}
-                    data-funnel-open={funnelOpen || undefined}
-                    aria-hidden={!funnelOpen || undefined}
-                    inert={!funnelOpen || undefined}
-                  >
-                    <CoverageFunnel
-                      scope={scope}
-                      win={win}
-                      country={country}
-                      compare={compare}
-                      onClose={() => setFunnelOpen(false)}
-                    />
-                  </div>
-                )}
+              <div className="animate-reveal bg-card lg:col-span-2">
+                <TimelineChart
+                  scope={scope}
+                  win={periodWin}
+                  compare={compare}
+                  country={country}
+                  stance={stance}
+                  source={source}
+                  domain={selectedDomain}
+                  selection={selectedDays}
+                  onSelect={setSelectedDays}
+                />
               </div>
               <div className="bg-card">
                 <FavorabilityPanel

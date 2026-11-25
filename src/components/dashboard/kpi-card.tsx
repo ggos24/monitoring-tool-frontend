@@ -56,7 +56,7 @@ export function KpiCard({
   onClick?: () => void;
   active?: boolean;
   action?: React.ReactNode;
-  /** Accessible name of the toggle, e.g. "Show the funnel". */
+  /** Accessible name of the toggle, e.g. "Show details". */
   actionLabel?: string;
 }) {
   const interactive = !!onClick;

@@ -12,7 +12,7 @@ test("no active filter → no labels", () => {
 test("labels use the article list's wording, in its order", () => {
   assert.deepEqual(
     activeFilterLabels({ stance: "supportive", source: "gn", domain: "www.reuters.com" }),
-    ["Favorable", "Google News", "reuters.com"],
+    ["Positive", "Google News", "reuters.com"],
   );
-  assert.deepEqual(activeFilterLabels({ stance: "critical" }), ["Unfavorable"]);
+  assert.deepEqual(activeFilterLabels({ stance: "critical" }), ["Negative"]);
 });

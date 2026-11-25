@@ -1,8 +1,7 @@
 "use client";
 
 import { FAVORABILITY_TOOLTIP, favorabilityReadiness } from "@/lib/favorability";
-import { countChange, formatDayLabel, formatShare, formatShareFine, prevRangeLabel, shareChange, type DateWindow } from "@/lib/period";
-import { Funnel } from "lucide-react";
+import { countChange, formatDayLabel, formatShare, prevRangeLabel, shareChange, type DateWindow } from "@/lib/period";
 import type { CampaignFavorability, CampaignHeadline, ScopeParam } from "@/lib/types";
 import { countryName, iso2ToFlagEmoji } from "@/lib/country";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -34,17 +33,12 @@ export function CampaignKpiGrid({
   win,
   country,
   fallback,
-  funnelOpen = false,
-  onToggleFunnel,
 }: {
   compare: boolean;
   scope: ScopeParam | null;
   win: DateWindow;
   country: string | null;
   fallback: React.ReactNode;
-  /** The share card toggles the coverage funnel in the chart slot. */
-  funnelOpen?: boolean;
-  onToggleFunnel?: () => void;
 }) {
   const { coverage, coverageSettled, current, previous } = useCampaignHeadlines(
     scope,
@@ -94,14 +88,6 @@ export function CampaignKpiGrid({
       ? ` Collected through ${formatDayLabel(ingest.through)} so far — the figure can still grow.`
       : "";
 
-  // Share of ALL Tier-1 output (GDELT only); older backend / no counts yet
-  // → the card keeps the share of Ukraine coverage.
-  const allOut =
-    cur?.all_output && cur.all_output.articles > 0 && cur.all_output.share != null
-      ? cur.all_output
-      : null;
-  const prevAllOut = prev?.all_output ?? null;
-
   const fav = favorableShare(h?.favorability);
   const favPrev = favorableShare(ph?.favorability);
   const favCmp = favorableShare(c?.favorability);
@@ -140,34 +126,6 @@ export function CampaignKpiGrid({
         changeTitle={changeNote}
         isLoading={loading}
       />
-      {allOut ? (
-        <KpiCard
-          kicker="Share of coverage"
-          title={SHARE_ALL_TOOLTIP}
-          value={formatShareFine(allOut.share!)}
-          context={
-            allOut.complete || !allOut.covered_from
-              ? `of ≈${allOut.articles.toLocaleString()} Tier-1 articles`
-              : `of ≈${allOut.articles.toLocaleString()} since ${formatDayLabel(allOut.covered_from)}`
-          }
-          previous={prevValue(
-            prevAllOut?.complete && prevAllOut.share != null ? formatShareFine(prevAllOut.share) : undefined,
-          )}
-          previousLabel={win.prevLabel}
-          previousTitle={prevRangeLabel(win)}
-          change={
-            allOut.complete && prevAllOut?.complete
-              ? shareChange(allOut.share, prevAllOut.share)
-              : undefined
-          }
-          changeTitle={changeTitle}
-          isLoading={loading}
-          onClick={onToggleFunnel}
-          active={funnelOpen}
-          action={onToggleFunnel ? <Funnel className="size-3.5" strokeWidth={1.75} /> : undefined}
-          actionLabel={funnelOpen ? "hide the funnel" : "show the funnel"}
-        />
-      ) : (
         <KpiCard
           kicker="Share of coverage"
           title={SHARE_TOOLTIP}
@@ -175,7 +133,7 @@ export function CampaignKpiGrid({
           context={
             h?.pool_articles == null
               ? undefined
-              : `of all ${h.pool_articles.toLocaleString()} articles`
+              : `of ${h.pool_articles.toLocaleString()} articles about Ukraine`
           }
           previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
           previousLabel={win.prevLabel}
@@ -184,9 +142,8 @@ export function CampaignKpiGrid({
           changeTitle={changeNote}
           isLoading={loading}
         />
-      )}
       <KpiCard
-        kicker="Favorable to Ukraine"
+        kicker="Positive for Ukraine"
         title={FAVORABILITY_TOOLTIP}
         value={fav.value === null ? "—" : formatShare(fav.value)}
         context={fav.note}
@@ -223,10 +180,6 @@ export function CampaignKpiGrid({
     </>
   );
 }
-
-const SHARE_ALL_TOOLTIP =
-  "Of all news our Tier-1 media published in this period (sport, culture and lifestyle not " +
-  "counted), the share that matches the selected queries. Click for the funnel.";
 
 const SHARE_TOOLTIP =
   "Of all articles our Tier-1 media published about Ukraine or Russia in this period, " +
@@ -286,7 +239,7 @@ function CountriesCard({
   const top = rows.filter((c) => c.iso2).slice(0, 4);
   return (
     <div className="col-span-2 bg-card p-5 xl:col-span-1">
-      <KickerLabel>Top countries</KickerLabel>
+      <KickerLabel>Media by country of origin</KickerLabel>
       {top.length === 0 ? (
         <div className="mt-3 font-mono text-[11px] text-text-tertiary">No country data yet.</div>
       ) : (
@@ -320,7 +273,7 @@ function CountriesCard({
 function CountriesSkeleton() {
   return (
     <div className="col-span-2 bg-card p-5 xl:col-span-1" aria-hidden>
-      <KickerLabel>Top countries</KickerLabel>
+      <KickerLabel>Media by country of origin</KickerLabel>
       <div className="mt-3 space-y-2">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex h-4 items-center gap-2">

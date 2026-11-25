@@ -58,7 +58,7 @@ export function TopGeoCard({
 
   return (
     <div className="bg-card p-5">
-      <KickerLabel>Top countries</KickerLabel>
+      <KickerLabel>Media by country of origin</KickerLabel>
 
       {!enabled || isLoading ? (
         <div className="mt-3 space-y-2.5">

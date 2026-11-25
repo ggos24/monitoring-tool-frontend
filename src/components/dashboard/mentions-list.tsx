@@ -55,8 +55,8 @@ export type { SourceFilter, StanceFilter };
 type EnrichedFilter = "all" | "enriched" | "pending";
 const STANCE_OPTIONS: { key: StanceFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "supportive", label: "Favorable" },
-  { key: "critical", label: "Unfavorable" },
+  { key: "supportive", label: "Positive" },
+  { key: "critical", label: "Negative" },
   { key: "neutral", label: "Neutral" },
   { key: "mixed", label: "Mixed" },
 ];
