@@ -26,8 +26,10 @@ export const ALL_QUERIES_LABEL = "All queries";
 /**
  * Picks what the page looks at: one tracked query (a topic), or
  * "All queries" (the `Campaign` group — union, each article counted once).
- * The queries inside "All queries" are listed right under it; any other
- * query sits under "Not in All queries", other groups under "Groups".
+ * The queries inside "All queries" are listed right under it; other groups
+ * sit under "Groups". When "All queries" exists, queries outside it are not
+ * listed (owner decision 2026-11-25: the menu is All queries + its three).
+ * Without it, every query is listed under "Queries".
  * With `countWindow`, each row shows its article count for that window,
  * fetched only while the menu is open. The Tier-1 pool is never listed.
  *
@@ -123,13 +125,12 @@ export function QuerySelector({
           </>
         )}
 
-        {notInAll.length > 0 && (
+        {!allGroup && notInAll.length > 0 && (
           <>
-            {allGroup && <DropdownMenuSeparator className="my-0 bg-elevated" />}
             <DropdownMenuGroup>
               {/* GroupLabel (Base UI) MUST be inside a Group, else error #31 */}
               <DropdownMenuLabel className="px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
-                {allGroup ? "Not in All queries" : "Queries"}
+                Queries
               </DropdownMenuLabel>
               {notInAll.map((t) => (
                 <TopicItem

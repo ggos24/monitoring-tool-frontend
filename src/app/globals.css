@@ -209,16 +209,6 @@
     animation: bar-grow var(--dur-slow) var(--ease-out) both;
   }
 
-  /* Coverage funnel: each time it opens, the steps rise one after another
-     and the links between them fade in (delays set inline). */
-  [data-funnel-open] .funnel-bar {
-    transform-origin: center bottom;
-    animation: bar-grow var(--dur-slow) var(--ease-out) both;
-  }
-  [data-funnel-open] .funnel-link {
-    animation: link-in var(--dur-base) var(--ease-out) both;
-  }
-
   .refresh-line {
     position: absolute;
     inset-inline: 0;

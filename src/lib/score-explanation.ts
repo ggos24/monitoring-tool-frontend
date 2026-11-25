@@ -49,7 +49,7 @@ export const DIRECTION_TEXT: Record<Direction, string> = {
 
 export const COVERAGE_TEXT: Record<CoverageLabel, { label: string; meaning: string }> = {
   favorable: {
-    label: "Favorable",
+    label: "Positive",
     meaning: "shows Russia as responsible, Ukraine's need or resilience, or rebuts Kremlin claims",
   },
   neutral: {
@@ -57,7 +57,7 @@ export const COVERAGE_TEXT: Record<CoverageLabel, { label: string; meaning: stri
     meaning: "no framing either way",
   },
   unfavorable: {
-    label: "Unfavorable",
+    label: "Negative",
     meaning: "relays Kremlin claims unchallenged or argues against supporting Ukraine",
   },
   mixed: {

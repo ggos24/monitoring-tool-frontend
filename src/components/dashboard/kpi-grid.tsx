@@ -114,7 +114,7 @@ export function KpiGrid({
         isLoading={!enabled || (pool !== null && (currentMentions.isLoading || currentPool.isLoading))}
       />
       <KpiCard
-        kicker="Favorable share"
+        kicker="Positive share"
         title={FAVORABILITY_TOOLTIP}
         value={fav === null ? "—" : formatShare(fav)}
         context={`of ${scoredTotal(currentFav.data?.counts).toLocaleString()} analysed`}

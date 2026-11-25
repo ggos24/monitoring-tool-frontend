@@ -32,10 +32,10 @@ const SHOW_COVERAGE = false;
 const HATCH =
   "repeating-linear-gradient(135deg, var(--text-tertiary) 0 2px, transparent 2px 4px)";
 const ROWS: { key: Scored; stance: StanceLabel; label: string; bar: string; style?: React.CSSProperties }[] = [
-  { key: "favorable", stance: "supportive", label: "Favorable", bar: "bg-success" },
+  { key: "favorable", stance: "supportive", label: "Positive", bar: "bg-success" },
   { key: "neutral", stance: "neutral", label: "Neutral", bar: "bg-text-tertiary" },
   { key: "mixed", stance: "mixed", label: "Mixed", bar: "", style: { backgroundImage: HATCH } },
-  { key: "unfavorable", stance: "critical", label: "Unfavorable", bar: "bg-danger" },
+  { key: "unfavorable", stance: "critical", label: "Negative", bar: "bg-danger" },
 ];
 
 /**
@@ -178,7 +178,7 @@ export function FavorabilityPanel({
     >
       <RefreshLine active={current.isPlaceholderData} />
       <KickerLabel>
-        Good or bad for Ukraine
+        Impact on Ukraine
         {dayLabel && <span className="text-text-secondary"> · {dayLabel}</span>}
       </KickerLabel>
       <ActiveFilters labels={activeFilterLabels({ source, domain })} className="mt-2" />
@@ -228,7 +228,7 @@ export function FavorabilityPanel({
             >
               <AnimatedValue value={formatShare(counts.favorable / total)} />
             </span>
-            <span className="font-mono text-[11px] text-text-tertiary">favorable</span>
+            <span className="font-mono text-[11px] text-text-tertiary">positive</span>
             {prevCounts && prevTotal > 0 && (
               <ChangeBadge
                 change={shareChange(counts.favorable / total, prevCounts.favorable / prevTotal)!}
@@ -278,7 +278,7 @@ function CoverageBlock({ coverage }: { coverage: FavorabilityStats["coverage"] }
         <span className="text-[18px] font-medium leading-none tabular-nums text-foreground">
           {pct(coverage.favorable, coverage.n)}
         </span>
-        <span className="font-mono text-[11px] text-text-tertiary">favorable presentation</span>
+        <span className="font-mono text-[11px] text-text-tertiary">positive presentation</span>
       </div>
       <ToneBar counts={counts} total={coverage.n} className="mt-3 h-2" />
       <ul className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-[11px]">

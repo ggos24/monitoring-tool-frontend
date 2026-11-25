@@ -6,14 +6,14 @@ import type { ReportAggregates, ReportBasis, StanceLabel } from "./types";
  * neutral / mixed); the UI only ever shows these labels.
  */
 export const FAVORABILITY_LABEL: Record<StanceLabel, string> = {
-  supportive: "Favorable",
-  critical: "Unfavorable",
+  supportive: "Positive",
+  critical: "Negative",
   neutral: "Neutral",
   mixed: "Mixed",
 };
 
 export const FAVORABILITY_TOOLTIP =
-  "How favorable the article's content is to Ukraine";
+  "How positive the news in these articles is for Ukraine";
 
 /** Fallback thresholds when the backend does not send its own (pre-deploy). */
 export const MIN_SCORED = 20;
