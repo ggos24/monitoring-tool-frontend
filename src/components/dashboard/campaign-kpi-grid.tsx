@@ -10,9 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { KpiCard, PREVIOUS_LOADING } from "./kpi-card";
 import { CountDelta } from "./top-geo-card";
 import {
-  comparableTotals,
   excludedLanes,
-  excludedLanesText,
+  sourcesDifferNote,
   isNotFound,
   shownTotals,
   tier1NetworkSize,
@@ -21,10 +20,9 @@ import {
 
 /**
  * Headline KPIs from /api/campaign/headline. The VALUES count every source
- * (GDELT, Google News, RSS, …), each article once. The CHANGE vs the
- * previous period is like-for-like: only the sources that already covered
- * the previous window, so a newly added source doesn't read as growth; a
- * line under the cards names the sources left out. One call per window.
+ * (GDELT, Google News, RSS, …), each article once, and so does the change
+ * vs the previous period. When a source started inside the compared range
+ * no change is shown (the previous row's tooltip says why). One call per window.
  * `fallback` renders when the backend has no campaign endpoint (404).
  */
 export function CampaignKpiGrid({
@@ -78,10 +76,11 @@ export function CampaignKpiGrid({
   // Shown: all sources. Compared: the like-for-like subset of both windows.
   const h = shownTotals(cur);
   const ph = shownTotals(prev);
-  const c = comparableTotals(cur);
-  const pc = comparableTotals(prev);
-  const comparable = !!prev && !!c && !!pc;
+  // A source that started inside the compared range → no change at all
+  // (useSourcesDiffer): the numbers on screen and the badge always agree.
   const excluded = prev ? excludedLanes(cur) : [];
+  const comparable = !!prev && !!h && !!ph && excluded.length === 0;
+  const differNote = sourcesDifferNote(excluded);
   const changeTitle = win.prevLabel;
   const partial =
     ingest.kind === "partial"
@@ -90,8 +89,6 @@ export function CampaignKpiGrid({
 
   const fav = favorableShare(h?.favorability);
   const favPrev = favorableShare(ph?.favorability);
-  const favCmp = favorableShare(c?.favorability);
-  const favCmpPrev = favorableShare(pc?.favorability);
   const countries = h?.countries;
   // While loading, reserve the Top countries column: the backend sends
   // countries in every campaign response, so a 4-column skeleton would
@@ -101,9 +98,9 @@ export function CampaignKpiGrid({
   const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? PREVIOUS_LOADING : prev ? (v ?? null) : null);
   // Size of the Tier-1 network the outlets are counted out of.
   const network = tier1NetworkSize(coverage.data);
-  const changeNote = excluded.length
-    ? `${changeTitle}, without ${excludedLanesText(excluded)}`
-    : changeTitle;
+  const changeNote = changeTitle;
+  // With sources differing the badge is gone; the previous row says why.
+  const prevTitle = differNote || prevRangeLabel(win);
 
   return (
     // 2 columns until xl, then one row; Top countries takes a full row on
@@ -121,8 +118,8 @@ export function CampaignKpiGrid({
         context="in Tier-1 media"
         previous={prevValue(ph?.articles.toLocaleString())}
         previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
-        change={comparable ? countChange(c?.articles, pc?.articles) : undefined}
+        previousTitle={prevTitle}
+        change={comparable ? countChange(h?.articles, ph?.articles) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
       />
@@ -137,8 +134,8 @@ export function CampaignKpiGrid({
           }
           previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
           previousLabel={win.prevLabel}
-          previousTitle={prevRangeLabel(win)}
-          change={comparable ? shareChange(c?.pool_share, pc?.pool_share) : undefined}
+          previousTitle={prevTitle}
+          change={comparable ? shareChange(h?.pool_share, ph?.pool_share) : undefined}
           changeTitle={changeNote}
           isLoading={loading}
         />
@@ -149,8 +146,8 @@ export function CampaignKpiGrid({
         context={fav.note}
         previous={prevValue(favPrev.value === null ? undefined : formatShare(favPrev.value))}
         previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
-        change={comparable ? shareChange(favCmp.value, favCmpPrev.value) : undefined}
+        previousTitle={prevTitle}
+        change={comparable ? shareChange(fav.value, favPrev.value) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
       />
@@ -161,8 +158,8 @@ export function CampaignKpiGrid({
         context={network === null ? "with at least one article" : `of ${network} Tier-1 media`}
         previous={prevValue(ph?.outlets.toLocaleString())}
         previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
-        change={comparable ? countChange(c?.outlets, pc?.outlets) : undefined}
+        previousTitle={prevTitle}
+        change={comparable ? countChange(h?.outlets, ph?.outlets) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
       />
@@ -171,8 +168,8 @@ export function CampaignKpiGrid({
       ) : countries && (
         <CountriesCard
           rows={countries}
-          current={comparable ? c?.countries : undefined}
-          previous={comparable ? pc?.countries : undefined}
+          current={comparable ? h?.countries : undefined}
+          previous={comparable ? ph?.countries : undefined}
           win={win}
         />
       )}

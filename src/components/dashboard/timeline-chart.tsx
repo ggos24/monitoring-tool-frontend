@@ -38,10 +38,7 @@ import { theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ChangeBadge } from "./kpi-card";
 import {
-  comparableTotals,
-  excludedLanes,
-  excludedLanesText,
-  useCampaignHeadlines,
+  useSourcesDiffer,
 } from "./campaign-data";
 
 /** Plot-area geometry shared by the chart and the drag overlay. */
@@ -124,7 +121,6 @@ export function TimelineChart({
     source_domain: domain,
   };
   const filterLabels = activeFilterLabels({ stance, source, domain });
-  const listFiltered = filterLabels.length > 0;
 
   const current = useQuery({
     queryKey: ["timeline", scope, granularity, country, stance, source, domain, win.from, win.to],
@@ -175,23 +171,11 @@ export function TimelineChart({
 
   const total = data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
   const prevTotal = showPrev ? previous.data!.reduce((sum, d) => sum + d.count, 0) : undefined;
-  // Same queries (and cache) as the KPI grid when no day is drilled into.
-  const campaign = useCampaignHeadlines(scope, win, country, compare);
-  const cmp = comparableTotals(campaign.current.data);
-  const cmpPrev = comparableTotals(campaign.previous.data);
-  const likeForLike =
-    compare && !listFiltered && campaign.current.data?.all_sources !== undefined;
-  const change = !showPrev
-    ? undefined
-    : likeForLike
-      ? cmp && cmpPrev
-        ? countChange(cmp.articles, cmpPrev.articles)
-        : undefined
-      : countChange(total, prevTotal);
-  const excluded = likeForLike ? excludedLanes(campaign.current.data) : [];
-  const changeTitle =
-    `${win.prevLabel}: ${prevTotal}` +
-    (excluded.length ? ` · change without ${excludedLanesText(excluded)}` : "");
+  // Same rule as the KPI grid: a source that started inside the compared
+  // range → no change (the badge would contradict the legend's totals).
+  const sources = useSourcesDiffer(scope, win, country, compare);
+  const change = showPrev && !sources.differ ? countChange(total, prevTotal) : undefined;
+  const changeTitle = `${win.prevLabel}: ${prevTotal}`;
   const peak = data?.reduce<(typeof data)[number] | null>(
     (best, d) => (d.count > 0 && (!best || d.count > best.count) ? d : best),
     null,
