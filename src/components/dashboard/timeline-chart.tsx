@@ -189,9 +189,13 @@ export function TimelineChart({
         : undefined
       : countChange(total, prevTotal);
   const excluded = likeForLike ? excludedLanes(campaign.current.data) : [];
+  // With a source left out, say which pair the badge compares (the legend's
+  // totals include every source and would not explain it).
   const changeTitle =
-    `${win.prevLabel}: ${prevTotal}` +
-    (excluded.length ? ` · change without ${excludedLanesText(excluded)}` : "");
+    excluded.length && cmp && cmpPrev
+      ? `Same sources: ${cmpPrev.articles} before, ${cmp.articles} now. ` +
+        `Not included: ${excludedLanesText(excluded)}.`
+      : `${win.prevLabel}: ${prevTotal}`;
   const peak = data?.reduce<(typeof data)[number] | null>(
     (best, d) => (d.count > 0 && (!best || d.count > best.count) ? d : best),
     null,

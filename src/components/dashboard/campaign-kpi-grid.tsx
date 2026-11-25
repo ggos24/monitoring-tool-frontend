@@ -99,6 +99,22 @@ export function CampaignKpiGrid({
   const showCountries = loading || !!countries;
   // Previous-period row: absent when not comparing, "—" when the value is missing.
   const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? PREVIOUS_LOADING : prev ? (v ?? null) : null);
+  // When a source started inside the compared range, the change badge counts
+  // only the sources both periods have (comparableTotals), so the big number
+  // and the previous period's total would not explain it. The row then shows
+  // the exact pair the badge compares; the totals move to its tooltip.
+  const sameSources = comparable && excluded.length > 0;
+  const prevRow = (shownPrev: string | undefined, cmpCur: string | undefined, cmpPrev: string | undefined) =>
+    sameSources && cmpCur !== undefined && cmpPrev !== undefined
+      ? {
+          previous: prevValue(`${cmpPrev} before, ${cmpCur} now`),
+          previousLabel: "Same sources",
+          previousTitle:
+            `The change compares only sources that were already collecting in ${prevRangeLabel(win)}: ` +
+            `${cmpPrev} then, ${cmpCur} in this period. Not included: ${excludedLanesText(excluded)}.` +
+            (shownPrev ? ` With every source, ${win.prevLabel.toLowerCase()}: ${shownPrev}.` : ""),
+        }
+      : { previous: prevValue(shownPrev), previousLabel: win.prevLabel, previousTitle: prevRangeLabel(win) };
   // Size of the Tier-1 network the outlets are counted out of.
   const network = tier1NetworkSize(coverage.data);
   const changeNote = excluded.length
@@ -119,9 +135,7 @@ export function CampaignKpiGrid({
         title={"Articles from our Tier-1 media matching the selected queries. Each article is counted once." + partial}
         value={(h?.articles ?? 0).toLocaleString()}
         context="in Tier-1 media"
-        previous={prevValue(ph?.articles.toLocaleString())}
-        previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
+        {...prevRow(ph?.articles.toLocaleString(), c?.articles.toLocaleString(), pc?.articles.toLocaleString())}
         change={comparable ? countChange(c?.articles, pc?.articles) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
@@ -135,9 +149,11 @@ export function CampaignKpiGrid({
               ? undefined
               : `of ${h.pool_articles.toLocaleString()} articles about Ukraine`
           }
-          previous={prevValue(ph?.pool_share == null ? undefined : formatShare(ph.pool_share))}
-          previousLabel={win.prevLabel}
-          previousTitle={prevRangeLabel(win)}
+          {...prevRow(
+            ph?.pool_share == null ? undefined : formatShare(ph.pool_share),
+            c?.pool_share == null ? undefined : formatShare(c.pool_share),
+            pc?.pool_share == null ? undefined : formatShare(pc.pool_share),
+          )}
           change={comparable ? shareChange(c?.pool_share, pc?.pool_share) : undefined}
           changeTitle={changeNote}
           isLoading={loading}
@@ -147,9 +163,11 @@ export function CampaignKpiGrid({
         title={FAVORABILITY_TOOLTIP}
         value={fav.value === null ? "—" : formatShare(fav.value)}
         context={fav.note}
-        previous={prevValue(favPrev.value === null ? undefined : formatShare(favPrev.value))}
-        previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
+        {...prevRow(
+          favPrev.value === null ? undefined : formatShare(favPrev.value),
+          favCmp.value === null ? undefined : formatShare(favCmp.value),
+          favCmpPrev.value === null ? undefined : formatShare(favCmpPrev.value),
+        )}
         change={comparable ? shareChange(favCmp.value, favCmpPrev.value) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
@@ -159,9 +177,7 @@ export function CampaignKpiGrid({
         title="How many different Tier-1 media published at least one of these articles."
         value={(h?.outlets ?? 0).toLocaleString()}
         context={network === null ? "with at least one article" : `of ${network} Tier-1 media`}
-        previous={prevValue(ph?.outlets.toLocaleString())}
-        previousLabel={win.prevLabel}
-        previousTitle={prevRangeLabel(win)}
+        {...prevRow(ph?.outlets.toLocaleString(), c?.outlets.toLocaleString(), pc?.outlets.toLocaleString())}
         change={comparable ? countChange(c?.outlets, pc?.outlets) : undefined}
         changeTitle={changeNote}
         isLoading={loading}
