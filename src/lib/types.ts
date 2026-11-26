@@ -188,6 +188,46 @@ export type Mention = {
   event_type?: string | null;
   coverage_label?: string | null;
   stance_detail?: StanceDetail | null;
+  // Why the article is in each query of `topic_ids` (that query's row:
+  // rule or AI-judge verdict). Absent on older backends.
+  query_reasons?: QueryReason[];
+};
+
+export type QueryReason = {
+  topic_id: number;
+  mention_id: number;
+  method: string | null;
+  score: number | null;
+  reason: string | null;
+};
+
+export type CorrectionReasonCode =
+  | "off_topic"
+  | "not_ukraine"
+  | "better_fit"
+  | "duplicate"
+  | "other";
+
+// POST /api/mentions/{id}/query-correction (via the admin proxy).
+// to_topic_id null = remove from the query without moving it.
+export type QueryCorrectionIn = {
+  from_topic_id: number;
+  to_topic_id: number | null;
+  reason_code: CorrectionReasonCode;
+  note: string | null;
+  editor: string;
+};
+
+export type QueryCorrectionOut = {
+  id: number;
+  action: "move" | "remove";
+  from_topic_id: number;
+  to_topic_id: number | null;
+  from_mention_id: number | null;
+  to_mention_id: number | null;
+  reason_code: CorrectionReasonCode;
+  editor: string;
+  created_at: string;
 };
 
 export type StanceDetail = {

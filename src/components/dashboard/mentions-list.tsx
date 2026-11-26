@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { ChevronDown, Loader2, Search, Sparkles, X } from "lucide-react";
+import { Popover } from "@base-ui/react/popover";
 import { Tooltip } from "@base-ui/react/tooltip";
 
 import { apiClient } from "@/lib/api";
@@ -29,6 +30,7 @@ import {
   signed,
   type ScoreExplanation,
 } from "@/lib/score-explanation";
+import { QueryReasonsBlock } from "@/components/dashboard/query-correction";
 import { KickerLabel } from "@/components/ui/kicker-label";
 import { RefreshLine } from "@/components/ui/refresh-line";
 import { SentimentPill } from "@/components/ui/sentiment-pill";
@@ -324,6 +326,7 @@ export function MentionsList({
                 index={i}
                 mention={m}
                 listQueryKey={queryKey}
+                topicNames={topicNames}
                 narratives={
                   isGroup
                     ? (m.topic_ids ?? []).map((id) => topicNames.get(id) ?? `#${id}`)
@@ -384,12 +387,15 @@ function MentionRow({
   index,
   mention,
   listQueryKey,
+  topicNames,
   narratives,
 }: {
   /** Position on the page — staggers the row's entrance. */
   index: number;
   mention: Mention;
   listQueryKey: readonly unknown[];
+  /** All queries (id → name) — the hover card's reasons and move targets. */
+  topicNames: Map<number, string>;
   /** Narrative chips — only filled for "All queries" (group) scope. */
   narratives: string[];
 }) {
@@ -405,8 +411,11 @@ function MentionRow({
           prev
             ? {
                 ...prev,
+                // The enrich answer has no list-scope fields: keep them.
                 items: prev.items.map((it) =>
-                  it.id === updated.id ? updated : it,
+                  it.id === updated.id
+                    ? { ...updated, topic_ids: it.topic_ids, query_reasons: it.query_reasons }
+                    : it,
                 ),
               }
             : prev,
@@ -453,7 +462,7 @@ function MentionRow({
               title only
             </span>
           )}
-          <StanceBadge mention={mention} />
+          <StanceBadge mention={mention} topicNames={topicNames} />
           <EnrichButton
             isEnriched={isEnriched}
             isPending={enrichMutation.isPending}
@@ -521,72 +530,103 @@ const STANCE_PILL: Record<
   mixed: { variant: "mixed", label: FAVORABILITY_LABEL.mixed },
 };
 
-function StanceBadge({ mention }: { mention: Mention }) {
-  if (!mention.stance_label) {
-    return <SentimentPill variant="muted">Not analysed</SentimentPill>;
-  }
-  const { variant, label } = STANCE_PILL[mention.stance_label];
-  const explanation = explainScore({
-    stance: mention.stance,
-    stance_label: mention.stance_label,
-    fact_status: mention.fact_status ?? null,
-    coverage_label: mention.coverage_label ?? null,
-    stance_detail: mention.stance_detail ?? null,
-  });
-  // `title` fallback for keyboard users and occluded popups: the score
-  // and the rule in one line.
-  const tip =
-    explanation.version === "v2"
+function StanceBadge({
+  mention,
+  topicNames,
+}: {
+  mention: Mention;
+  topicNames: Map<number, string>;
+}) {
+  // A popover (not a tooltip): the card holds buttons and a small form.
+  // Opens on hover like before; stays open while a form is being filled.
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+
+  const pill = mention.stance_label ? STANCE_PILL[mention.stance_label] : null;
+  const label = pill?.label ?? "Not analysed";
+  const explanation = mention.stance_label
+    ? explainScore({
+        stance: mention.stance,
+        stance_label: mention.stance_label,
+        fact_status: mention.fact_status ?? null,
+        coverage_label: mention.coverage_label ?? null,
+        stance_detail: mention.stance_detail ?? null,
+      })
+    : null;
+  // `title` fallback for occluded popups: the score and the rule in one line.
+  const tip = !explanation
+    ? "Not analysed yet — hover for why it is in this query"
+    : explanation.version === "v2"
       ? `${label} ${signed(explanation.score)} — ${explanation.rule}`
       : `${label} — old method: ${FAVORABILITY_TOOLTIP}`;
 
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger
+    <Popover.Root
+      open={open}
+      onOpenChange={(next, details) => {
+        // Leaving the card with the mouse must not drop a half-filled form.
+        if (!next && editing && details.reason === "trigger-hover") return;
+        setOpen(next);
+        if (!next) setEditing(false);
+      }}
+    >
+      <Popover.Trigger
+        openOnHover
         delay={150}
-        closeDelay={100}
+        closeDelay={150}
         render={
-          <span title={tip}>
-            <SentimentPill variant={variant}>{label}</SentimentPill>
-          </span>
+          <button type="button" title={tip} className="cursor-pointer">
+            <SentimentPill variant={pill?.variant ?? "muted"}>{label}</SentimentPill>
+          </button>
         }
       />
-      <Tooltip.Portal>
-        <Tooltip.Positioner className="z-[100]" sideOffset={4} side="top" align="end">
-          <Tooltip.Popup
+      <Popover.Portal>
+        <Popover.Positioner className="z-[100]" sideOffset={4} side="top" align="end">
+          <Popover.Popup
             className={cn(
-              "max-w-md",
+              "max-h-[80vh] max-w-md overflow-y-auto",
               "z-50 border border-border bg-overlay px-3 py-2.5",
               "font-mono text-[11px] leading-relaxed text-text-secondary outline-none",
               "duration-100 data-[instant]:duration-0",
               "data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
             )}
           >
-            {explanation.version === "v2" ? (
-              <ScoreExplanationBlock
-                label={label}
-                explanation={explanation}
+            <div className="flex flex-col gap-2">
+              {!explanation ? (
+                <div className="text-text-tertiary">
+                  Favorability not analysed yet.
+                </div>
+              ) : explanation.version === "v2" ? (
+                <ScoreExplanationBlock
+                  label={label}
+                  explanation={explanation}
+                  mention={mention}
+                />
+              ) : (
+                <div>
+                  <div className="text-foreground">
+                    {label}
+                    {mention.stance !== null && ` ${signed(mention.stance)}`}
+                  </div>
+                  <div className="mt-1">
+                    Scored with the old method: {FAVORABILITY_TOOLTIP.toLowerCase()},
+                    not whether other states decided something for or against
+                    Ukraine. It changes when the article is re-analysed.
+                  </div>
+                  <BasisLine mention={mention} />
+                  {mention.claim_card && <ClaimCardBlock card={mention.claim_card} />}
+                </div>
+              )}
+              <QueryReasonsBlock
                 mention={mention}
+                topicNames={topicNames}
+                onEditingChange={setEditing}
               />
-            ) : (
-              <>
-                <div className="text-foreground">
-                  {label}
-                  {mention.stance !== null && ` ${signed(mention.stance)}`}
-                </div>
-                <div className="mt-1">
-                  Scored with the old method: {FAVORABILITY_TOOLTIP.toLowerCase()},
-                  not whether other states decided something for or against
-                  Ukraine. It changes when the article is re-analysed.
-                </div>
-                <BasisLine mention={mention} />
-                {mention.claim_card && <ClaimCardBlock card={mention.claim_card} />}
-              </>
-            )}
-          </Tooltip.Popup>
-        </Tooltip.Positioner>
-      </Tooltip.Portal>
-    </Tooltip.Root>
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
