@@ -13,7 +13,7 @@ import {
 } from "@/lib/favorability";
 import { formatShare, shareChange, type DateWindow } from "@/lib/period";
 import { ChangeBadge } from "./kpi-card";
-import { useSourcesDiffer } from "./campaign-data";
+import { useNewSourcesNote } from "./campaign-data";
 import type { FavorabilityCounts, FavorabilityStats, ScopeParam, StanceLabel } from "@/lib/types";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { KickerLabel } from "@/components/ui/kicker-label";
@@ -128,8 +128,7 @@ export function FavorabilityPanel({
   const total = scoredTotal(counts);
   const prevTotal = scoredTotal(prevCounts);
   const mean = readiness.ready ? (current.data?.mean_score ?? null) : null;
-  // Same rule as the KPI cards: no change badge while the periods' sources differ.
-  const sources = useSourcesDiffer(scope, win, country, compare);
+  const addedNote = useNewSourcesNote(scope, win, country, compare);
 
   const analysed = counts ? total + counts.unscored : 0;
   const rows = (showShares: boolean) => (
@@ -232,10 +231,10 @@ export function FavorabilityPanel({
               <AnimatedValue value={formatShare(counts.favorable / total)} />
             </span>
             <span className="font-mono text-[11px] text-text-tertiary">positive</span>
-            {prevCounts && prevTotal > 0 && !sources.differ && (
+            {prevCounts && prevTotal > 0 && (
               <ChangeBadge
                 change={shareChange(counts.favorable / total, prevCounts.favorable / prevTotal)!}
-                title={`${win.prevLabel}: ${pct(prevCounts.favorable, prevTotal)}`}
+                title={`${win.prevLabel}: ${pct(prevCounts.favorable, prevTotal)}${addedNote ? `. ${addedNote}` : ""}`}
               />
             )}
           </div>

@@ -38,7 +38,7 @@ import { theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { ChangeBadge } from "./kpi-card";
 import {
-  useSourcesDiffer,
+  useNewSourcesNote,
 } from "./campaign-data";
 
 /** Plot-area geometry shared by the chart and the drag overlay. */
@@ -171,11 +171,10 @@ export function TimelineChart({
 
   const total = data?.reduce((sum, d) => sum + d.count, 0) ?? 0;
   const prevTotal = showPrev ? previous.data!.reduce((sum, d) => sum + d.count, 0) : undefined;
-  // Same rule as the KPI grid: a source that started inside the compared
-  // range → no change (the badge would contradict the legend's totals).
-  const sources = useSourcesDiffer(scope, win, country, compare);
-  const change = showPrev && !sources.differ ? countChange(total, prevTotal) : undefined;
-  const changeTitle = `${win.prevLabel}: ${prevTotal}`;
+  // Change over every source, as the legend shows (same rule as the KPI grid).
+  const addedNote = useNewSourcesNote(scope, win, country, compare);
+  const change = showPrev ? countChange(total, prevTotal) : undefined;
+  const changeTitle = addedNote || `${win.prevLabel}: ${prevTotal}`;
   const peak = data?.reduce<(typeof data)[number] | null>(
     (best, d) => (d.count > 0 && (!best || d.count > best.count) ? d : best),
     null,
