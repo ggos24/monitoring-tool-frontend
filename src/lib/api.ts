@@ -33,6 +33,8 @@ import type {
   PickupsResponse,
   PromptTemplateOut,
   Report,
+  QueryCorrectionIn,
+  QueryCorrectionOut,
   ReportPreview,
   RssFeed,
   ScopeParam,
@@ -396,6 +398,12 @@ export const apiClient = {
 
   enrichMention: (id: number) =>
     localApi<Mention>(`/api/admin/mentions/${id}/enrich`, { method: "POST" }),
+  // Editor moves the article to another query or removes it (recorded).
+  correctQuery: (mentionId: number, body: QueryCorrectionIn) =>
+    localApi<QueryCorrectionOut>(`/api/admin/mentions/${mentionId}/query-correction`, {
+      method: "POST",
+      body,
+    }),
 
   rssFeeds: () => api<RssFeed[]>("/api/rss-feeds"),
 
