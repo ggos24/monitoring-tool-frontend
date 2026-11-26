@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { countryName, formatConfidence, iso2ToFlagEmoji } from "@/lib/country";
 import type { DateWindow } from "@/lib/period";
 import { CountDelta } from "@/components/dashboard/top-geo-card";
-import { tier1NetworkSize, useCampaignCoverage, useSourcesDiffer } from "@/components/dashboard/campaign-data";
+import { tier1NetworkSize, useCampaignCoverage } from "@/components/dashboard/campaign-data";
 import type { CountryConfidence, ScopeParam } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -77,9 +77,7 @@ export function SourcesList({
   // Tier-1 network size ("41 of 93 Tier-1 media"), as on the KPI card.
   const network = tier1NetworkSize(useCampaignCoverage().data);
 
-  // Same rule as the KPI cards: no change column while the periods' sources differ.
-  const sources = useSourcesDiffer(scope, win, country, compare);
-  const prevByDomain = previous.data && !sources.differ
+  const prevByDomain = previous.data
     ? new Map(previous.data.map((s) => [s.domain, s.count] as const))
     : null;
 

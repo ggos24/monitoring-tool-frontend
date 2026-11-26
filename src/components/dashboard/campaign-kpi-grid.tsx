@@ -11,7 +11,7 @@ import { KpiCard, PREVIOUS_LOADING } from "./kpi-card";
 import { CountDelta } from "./top-geo-card";
 import {
   excludedLanes,
-  sourcesDifferNote,
+  newSourcesNote,
   isNotFound,
   shownTotals,
   tier1NetworkSize,
@@ -22,7 +22,7 @@ import {
  * Headline KPIs from /api/campaign/headline. The VALUES count every source
  * (GDELT, Google News, RSS, …), each article once, and so does the change
  * vs the previous period. When a source started inside the compared range
- * no change is shown (the previous row's tooltip says why). One call per window.
+ * the badge tooltip says part of the change comes from it. One call per window.
  * `fallback` renders when the backend has no campaign endpoint (404).
  */
 export function CampaignKpiGrid({
@@ -73,14 +73,12 @@ export function CampaignKpiGrid({
     );
   }
 
-  // Shown: all sources. Compared: the like-for-like subset of both windows.
   const h = shownTotals(cur);
   const ph = shownTotals(prev);
-  // A source that started inside the compared range → no change at all
-  // (useSourcesDiffer): the numbers on screen and the badge always agree.
-  const excluded = prev ? excludedLanes(cur) : [];
-  const comparable = !!prev && !!h && !!ph && excluded.length === 0;
-  const differNote = sourcesDifferNote(excluded);
+  // Changes over every source, the same numbers the cards show. A source
+  // that started inside the compared range is named in the badge tooltip.
+  const comparable = !!prev && !!h && !!ph;
+  const addedNote = prev ? newSourcesNote(excludedLanes(cur)) : "";
   const changeTitle = win.prevLabel;
   const partial =
     ingest.kind === "partial"
@@ -98,9 +96,8 @@ export function CampaignKpiGrid({
   const prevValue = (v: string | undefined) => (!compare ? undefined : previous.isLoading ? PREVIOUS_LOADING : prev ? (v ?? null) : null);
   // Size of the Tier-1 network the outlets are counted out of.
   const network = tier1NetworkSize(coverage.data);
-  const changeNote = changeTitle;
-  // With sources differing the badge is gone; the previous row says why.
-  const prevTitle = differNote || prevRangeLabel(win);
+  const changeNote = addedNote || changeTitle;
+  const prevTitle = prevRangeLabel(win);
 
   return (
     // 2 columns until xl, then one row; Top countries takes a full row on

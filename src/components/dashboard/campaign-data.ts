@@ -109,33 +109,30 @@ export function excludedLanesText(lanes: CampaignSourceLane[]): string {
 }
 
 /**
- * Owner decision 2026-11-25: when a source started collecting inside the
- * compared range, the previous period has fewer sources and any change
- * would mislead — show no change at all (badges hidden) instead of a
- * like-for-like subset that does not match the numbers on screen.
- * Same queries (and cache) as the KPI grid.
+ * Changes are always counted over every source (owner decision 2026-11-26).
+ * When a source started collecting inside the compared range, part of the
+ * change comes from the new source: the badge tooltip says so. Same
+ * queries (and cache) as the KPI grid.
  */
-export function useSourcesDiffer(
+export function useNewSourcesNote(
   scope: ScopeParam | null,
   win: DateWindow,
   country: string | null,
   compare: boolean,
-): { differ: boolean; note: string } {
+): string {
   const { current } = useCampaignHeadlines(scope, win, country, compare);
-  const excluded = compare ? excludedLanes(current.data) : [];
-  // Unknown until the headline lands: hide rather than flash a badge.
-  const unknown = compare && !current.data && !current.error;
-  return { differ: unknown || excluded.length > 0, note: sourcesDifferNote(excluded) };
+  return newSourcesNote(compare ? excludedLanes(current.data) : []);
 }
 
-export function sourcesDifferNote(excluded: CampaignSourceLane[]): string {
-  if (!excluded.length) return "";
-  const names = excluded.map((l) => laneLabel(l.code));
+export function newSourcesNote(added: CampaignSourceLane[]): string {
+  if (!added.length) return "";
+  const names = added.map((l) => laneLabel(l.code));
   const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-  const since = excluded.map((l) => l.comparable_since).filter(Boolean).sort().at(-1);
+  const since = added.map((l) => l.comparable_since).filter(Boolean).sort().at(-1);
   return (
-    `No change shown: ${list} ${names.length > 1 ? "were" : "was"} added` +
+    `${list} ${names.length > 1 ? "were" : "was"} added` +
     (since ? ` on ${formatDayLabel(since)}` : "") +
-    ", so the previous period has fewer sources. The change returns once both periods have the same sources."
-  );
+    ": the previous period has fewer sources, so part of this change comes from them. " +
+    "It evens out once both periods have the same sources."
+  )
 }
