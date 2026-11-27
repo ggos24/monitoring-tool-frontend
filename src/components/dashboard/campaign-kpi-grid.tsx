@@ -229,8 +229,8 @@ function CountriesCard({
   const total = rows.reduce((sum, c) => sum + c.count, 0);
   const prevByIso = new Map((previous ?? []).map((c) => [c.iso2, c.count] as const));
   const curByIso = new Map((current ?? []).map((c) => [c.iso2, c.count] as const));
-  // 4 rows = exactly the height of the KPI cards next to it; a 5th makes the row taller.
-  const top = rows.filter((c) => c.iso2).slice(0, 4);
+  // Top 3 countries: the card stays within the height of the KPI cards next to it.
+  const top = rows.filter((c) => c.iso2).slice(0, 3);
   return (
     <div className="col-span-2 bg-card p-5 xl:col-span-1">
       <KickerLabel>Media by country of origin</KickerLabel>
@@ -263,13 +263,13 @@ function CountriesCard({
   );
 }
 
-/** Same shape as CountriesCard: kicker, then four flag · name · count rows. */
+/** Same shape as CountriesCard: kicker, then three flag · name · count rows. */
 function CountriesSkeleton() {
   return (
     <div className="col-span-2 bg-card p-5 xl:col-span-1" aria-hidden>
       <KickerLabel>Media by country of origin</KickerLabel>
       <div className="mt-3 space-y-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex h-4 items-center gap-2">
             <Skeleton className="size-3.5" />
             <Skeleton className="h-3" style={{ width: `${56 + ((i * 23) % 40)}px` }} />

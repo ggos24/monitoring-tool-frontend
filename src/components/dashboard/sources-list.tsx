@@ -42,10 +42,11 @@ export function SourcesList({
   onToggleDomain: (domain: string) => void;
 }) {
   const enabled = scope !== null;
-  // /api/stats/sources caps `limit` at 50 (422 above that). The panel is as
-  // tall as the article list next to it and scrolls inside, so show the cap.
-  const LIMIT = 50;
-  const PREV_LIMIT = 50;
+  // /api/stats/sources caps `limit` at 200 (422 above that), well above the
+  // Tier-1 network (~94), so every outlet with an article is listed. The
+  // panel is as tall as the article list next to it and scrolls inside.
+  const LIMIT = 200;
+  const PREV_LIMIT = 200;
 
   const { data, isLoading, isPlaceholderData, error, refetch } = useQuery({
     queryKey: ["sources", scope, country, source, stance, LIMIT, win.from, win.to],
@@ -60,8 +61,7 @@ export function SourcesList({
     placeholderData: keepPreviousData,
   });
 
-  // Previous window's top 50: a domain outside it reads as "new" (the
-  // backend cap; in practice a query has fewer than 50 media).
+  // Previous window's media: a domain missing from it reads as "new".
   const previous = useQuery({
     queryKey: ["sources", scope, country, source, stance, PREV_LIMIT, win.prevFrom, win.prevTo],
     queryFn: () =>
@@ -90,11 +90,13 @@ export function SourcesList({
       <KickerLabel>Top media</KickerLabel>
       <ActiveFilters labels={activeFilterLabels({ stance, source })} className="mt-2" />
       <div className="mt-1 mb-4 text-xs text-text-tertiary">
-        {data && data.length > 0 && data.length < LIMIT
-          ? network !== null
-            ? `${data.length} of ${network} Tier-1 media, by number of articles`
-            : `All ${data.length} media by number of articles`
-          : `Top ${LIMIT} media by number of articles`}
+        {!data || data.length === 0
+          ? "Media by number of articles"
+          : data.length >= LIMIT
+            ? `Top ${LIMIT} media by number of articles`
+            : network !== null
+              ? `${data.length} of ${network} Tier-1 media published, by number of articles`
+              : `All ${data.length} media by number of articles`}
       </div>
 
       {!enabled || isLoading ? (
