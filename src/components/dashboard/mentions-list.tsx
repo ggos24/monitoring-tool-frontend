@@ -28,6 +28,7 @@ import {
   FACT_STATUS_TEXT,
   explainScore,
   signed,
+  type Actor as ScoreExplanationActor,
   type ScoreExplanation,
 } from "@/lib/score-explanation";
 import { QueryReasonsBlock } from "@/components/dashboard/query-correction";
@@ -640,8 +641,16 @@ function ScoreExplanationBlock({
   mention: Mention;
 }) {
   const coverage = e.coverage ? COVERAGE_TEXT[e.coverage] : null;
+  // One line instead of a five-row table: who · status · effect → score.
+  // The full rule (incl. the ±1 cap) and each step's meaning sit in `title`.
+  const chainTitle = [
+    `Who acted: ${ACTOR_TEXT[e.actor]}`,
+    `Status: ${FACT_STATUS_TEXT[e.status].label} — ${FACT_STATUS_TEXT[e.status].meaning}`,
+    `Effect: ${DIRECTION_TEXT[e.direction]}`,
+    `Rule: ${e.rule}`,
+  ].join("\n");
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[12px] uppercase tracking-[0.08em] text-foreground">
           {label} {signed(e.score)}
@@ -649,52 +658,69 @@ function ScoreExplanationBlock({
         <span className="text-text-tertiary">event score</span>
       </div>
 
-      <dl className="grid grid-cols-[7.5rem_1fr] gap-x-3 gap-y-1">
-        <dt className="text-text-tertiary">What happened</dt>
-        <dd className="text-foreground">{e.event ?? "—"}</dd>
-        <dt className="text-text-tertiary">Who acted</dt>
-        <dd>{ACTOR_TEXT[e.actor]}</dd>
-        <dt className="text-text-tertiary">Status</dt>
-        <dd>
-          {FACT_STATUS_TEXT[e.status].label}
-          <span className="text-text-tertiary"> — {FACT_STATUS_TEXT[e.status].meaning}</span>
-        </dd>
-        <dt className="text-text-tertiary">Effect</dt>
-        <dd>{DIRECTION_TEXT[e.direction]}</dd>
-        <dt className="text-text-tertiary">Rule</dt>
-        <dd className="text-foreground">{e.rule}</dd>
-      </dl>
+      {e.event && <div className="text-foreground">{e.event}</div>}
+
+      <div className="text-text-tertiary" title={chainTitle}>
+        {ACTOR_SHORT[e.actor]} · {FACT_STATUS_TEXT[e.status].label.toLowerCase()} ·{" "}
+        {DIRECTION_TEXT[e.direction].replace(/^./, (c) => c.toLowerCase())} →{" "}
+        <span className="text-foreground">{signed(e.score)}</span>
+        <span className="ml-1 cursor-help underline decoration-dotted">why</span>
+      </div>
 
       {e.downgrade && <div className="text-warning">{e.downgrade}</div>}
 
       {e.evidence && (
-        <div>
-          <div className="border-l-2 border-strong pl-2 italic">“{e.evidence}”</div>
-          <div className={cn("mt-0.5 pl-2.5", e.evidenceFound ? "text-success" : "text-warning")}>
-            {e.evidenceFound ? "✓ quote found in the article" : "✗ quote not found in the article"}
+        <div className="mt-0.5 border-l-2 border-strong pl-2 italic">
+          “{e.evidence}”{" "}
+          <span
+            className={cn("not-italic", e.evidenceFound ? "text-success" : "text-warning")}
+            title={
+              e.evidenceFound
+                ? "Quote found in the article"
+                : "Quote not found in the article — not counted as confirmed"
+            }
+          >
+            {e.evidenceFound ? "✓ in article" : "✗ not in article"}
+          </span>
+        </div>
+      )}
+
+      {(coverage || e.reasoning) && (
+        <details className="group">
+          <summary className="cursor-pointer list-none text-text-tertiary hover:text-text-secondary">
+            <span className="inline-block group-open:rotate-90">▸</span> Details
+            {coverage && ` · coverage ${coverage.label.toLowerCase()}`}
+            {mention.stance_confidence !== null &&
+              ` · ${Math.round(mention.stance_confidence * 100)}%`}
+          </summary>
+          <div className="mt-1 flex flex-col gap-1 pl-3">
+            {coverage && (
+              <div>
+                <span className="text-text-tertiary">Coverage (separate from the score): </span>
+                <span className="text-foreground">{coverage.label}</span>
+                <span className="text-text-tertiary"> — {coverage.meaning}</span>
+              </div>
+            )}
+            {e.reasoning && (
+              <div>
+                <span className="text-text-tertiary">Model's reasoning: </span>
+                {e.reasoning}
+              </div>
+            )}
+            <BasisLine mention={mention} />
           </div>
-        </div>
+        </details>
       )}
-
-      {coverage && (
-        <div className="border-t border-border pt-2">
-          <span className="text-text-tertiary">Coverage (separate): </span>
-          <span className="text-foreground">{coverage.label}</span>
-          <span className="text-text-tertiary"> — {coverage.meaning}</span>
-        </div>
-      )}
-
-      {e.reasoning && (
-        <div>
-          <span className="text-text-tertiary">Model's reasoning: </span>
-          {e.reasoning}
-        </div>
-      )}
-
-      <BasisLine mention={mention} />
     </div>
   );
 }
+
+const ACTOR_SHORT: Record<ScoreExplanationActor, string> = {
+  international: "Another state",
+  russia: "Russia",
+  ukraine: "Ukraine",
+  none: "No clear actor",
+};
 
 function BasisLine({ mention }: { mention: Mention }) {
   const parts = [
