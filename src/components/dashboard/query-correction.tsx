@@ -61,23 +61,19 @@ export function QueryReasonsBlock({
 
   return (
     <div className="flex flex-col gap-2 border-t border-border pt-2">
-      <div className="text-[12px] uppercase tracking-[0.08em] text-foreground">
-        Why it is in {reasons.length > 1 ? "these queries" : "this query"}
-      </div>
       {reasons.map((r) => {
         const e = explainQueryReason(r.method, r.reason);
         const name = topicNames.get(r.topic_id) ?? `Query #${r.topic_id}`;
         const open = draft?.topicId === r.topic_id;
         return (
           <div key={r.topic_id} className="flex flex-col gap-1">
-            {reasons.length > 1 && <div className="text-foreground">{name}</div>}
-            <div>
-              <span className="text-text-tertiary">{e.source}: </span>
+            {/* Raw matcher rule only on hover: it is for debugging, not reading. */}
+            <div title={r.reason ? `${e.source} — rule: ${r.reason}` : e.source}>
+              <span className="text-text-tertiary">
+                In {reasons.length > 1 ? `“${name}”` : "this query"}:{" "}
+              </span>
               <span className="text-foreground">{e.detail}</span>
             </div>
-            {r.reason && (
-              <div className="break-words text-[10px] text-text-tertiary">rule: {r.reason}</div>
-            )}
             {open ? (
               <CorrectionForm
                 draft={draft}
@@ -104,7 +100,7 @@ export function QueryReasonsBlock({
                       })
                     }
                   >
-                    Move to another query
+                    Move
                   </ActionButton>
                   <ActionButton
                     onClick={() =>
@@ -117,7 +113,7 @@ export function QueryReasonsBlock({
                       })
                     }
                   >
-                    Remove from query
+                    Remove
                   </ActionButton>
                 </div>
               )
